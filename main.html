@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema INIFAP - Panel de Departamento</title>
+    <link rel="icon" href="./favicon.ico" type="image/x-icon">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+    <!-- ELIMINADA la librería xlsx estándar para evitar conflictos de sobreescritura -->
+
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="./css/styles.css">
+
+    <!-- ÚNICA librería XLSX: xlsx-js-style (Incluye soporte completo para estilos, celdas y semáforos) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+
+</head>
+
+<body class="min-h-screen flex flex-col bg-[#F2F2F2] text-[#1A1A1B] font-['Plus_Jakarta_Sans',sans-serif]">
+    <!-- Overlay de Carga General -->
+    <div id="loading-overlay" style="display: none;"
+        class="fixed inset-0 z-[100] flex-col items-center justify-center bg-stone-900/60 backdrop-blur-sm">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+        <p class="text-xs font-bold uppercase tracking-widest text-white">Procesando información...</p>
+    </div>
+
+    <!-- Barra de Navegación / Cabecera Principal -->
+    <header class="bg-white shadow-md sticky top-0 z-50 border-b-4 border-[#249444]">
+        <div class="container mx-auto px-6 py-3 flex items-center justify-between">
+
+            <div class="flex items-center gap-3">
+                <a id="btn-regresar" href="index.html"
+                    class="flex items-center justify-center p-2.5 rounded-xl bg-stone-100 text-stone-600 hover:bg-[#249444] hover:text-white transition-all shadow-xs shrink-0"
+                    title="Regresar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5">
+                        <path d="M19 12H5M12 19l-7-7 7-7" />
+                    </svg>
+                </a>
+
+                <div class="inifap-logo-wrapperIndex flex flex-col justify-center">
+                    <div class="logo-mainIndex flex items-baseline">
+                        <span class="letterIndex">i</span>
+                        <span class="letterIndex kern-inIndex">n</span>
+                        <span class="letterIndex">i</span>
+                        <div class="f-containerIndex relative inline-flex items-baseline">
+                            <div class="seedIndex absolute"></div>
+                            <span class="letterIndex">f</span>
+                        </div>
+                        <span class="Index">a</span>
+                        <span class="letterIndex kern-ap">p</span>
+                    </div>
+                    <div class="logo-legendIndex">
+                        Instituto Nacional de Investigaciones<br>
+                        Forestales, Agrícolas y Pecuarias
+                    </div>
+                </div>
+            </div>
+
+            <div class="absolute left-1/2 -translate-x-1/2 -translate-y-10 hidden md:block">
+                <span id="header-depto-title"
+                    class="text-xl font-black italic text-[#249444] tracking-wide uppercase">SISTEMA REGIONAL
+                    INTERNO</span>
+            </div>
+
+            <nav id="dept-options-nav" class="class=hidden lg:flex items-center gap-1 mt-15 p-1.5">
+            </nav>
+
+            <!-- Usuario y Salida -->
+            <div class="flex items-center gap-4 mt-15">
+                <!-- Contenedor alineado estrictamente a la izquierda -->
+                <div class="flex items-center gap-1.5 hidden sm:flex whitespace-nowrap">
+                    <p class="text-[10px] text-stone-400 font-semibold tracking-wider">Sesión Activa:</p>
+                    <p id="user-display-name" class="text-xs font-bold text-stone-700 uppercase">Cargando usuario...</p>
+                </div>
+                <button onclick="logout()"
+                    class="nav-btn px-3 py-2 rounded-lg flex flex-col md:flex-row items-center gap-1 text-[10px] font-bold opacity-50 hover:opacity-100 uppercase tracking-tighter transition-all text-red-500 cursor-pointer">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                    <span>Salir</span>
+                </button>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- Contenedor Principal del Departamento -->
+    <main id="app-container" class="flex-grow container mx-auto px-3 py-8">
+        <!-- Contenido dinámico del submódulo seleccionado -->
+    </main>
+
+    <!-- Pie de página -->
+    <footer class="bg-white border-t border-stone-200 py-4 text-center text-xs text-stone-400">
+        <p>INIFAP &copy; 2026 - Todos los derechos reservados.</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/appConfig/api.js" defer></script>
+    <script src="js/cirnoof/cirnoof.js" defer></script>
+
+    <script src="js/cirnorh/cirnorh.js"></script>
+    <script src="js/cirnorh/Personal/RhPerCore.js"></script>
+    <script src="js/cirnorh/Personal/RhPerCasc.js"></script>
+    <script src="js/cirnorh/Personal/RhPerForm.js"></script>
+
+    <script src="js/cirnorh/CtrlAsist/RhAsisCore.js"></script>
+    <script src="js/cirnorh/CtrlAsist/RhAsisCasc.js"></script>
+
+    <script src="js/appConfig/router.js" defer></script>
+    <script src="js/appConfig/app.js" defer></script>
+    <script src="./js/appConfig/login.js"></script>
+
+    <script src="js/cirnosis/cirnosis.js" defer></script>
+    <script src="js/cirnosis/Permisos/SisPerCasc.js"></script>
+    <script src="js/cirnosis/Permisos/SisPerCore.js"></script>
+    <script src="js/cirnosis/Permisos/SisPerForm.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema INIFAP - Acceso</title>
+    <link rel="icon" href="./favicon.ico" type="image/x-icon">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap"
+        rel="stylesheet">
+    <!-- Archivo CSS externo e independiente -->
+    <link rel="stylesheet" href="./css/styles.css">
+</head>
+
+<body class="min-h-screen flex flex-col bg-[#F2F2F2] text-[#1A1A1B] font-['Plus_Jakarta_Sans',sans-serif]">
+
+    <!-- Overlay de Carga -->
+    <div id="loading-overlay" style="display: none;"
+        class="fixed inset-0 z-[100] flex-col items-center justify-center bg-stone-900/60 backdrop-blur-sm">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+        <p class="text-xs font-bold uppercase tracking-widest text-white">Conectando con el Sistema...</p>
+    </div>
+
+    <!-- Contenido Principal: Tarjeta de Acceso centrada -->
+    <main class="flex-grow flex items-center justify-center px-4 py-12">
+        <div class="w-full max-w-md bg-white p-8 rounded-2xl soft-shadow border border-[#249444]/10 shadow-xl">
+
+            <form id="login-form" onsubmit="event.preventDefault(); AuthModule.ejecutarLogin();">
+                <!-- Logotipo INIFAP centrado y proporcionado simétricamente -->
+                <div class="mb-8 flex flex-col items-center justify-center text-center">
+                    <div class="inifap-logo-wrapper">
+                        <div class="logo-main">
+                            <span class="letter">i</span>
+                            <span class="letter kern-in">n</span>
+                            <span class="letter">i</span>
+                            <div class="f-container">
+                                <div class="seed"></div>
+                                <span class="letter">f</span>
+                            </div>
+                            <span class="letter">a</span>
+                            <span class="letter kern-ap">p</span>
+                        </div>
+                        <div class="logo-legend">
+                            Instituto Nacional de Investigaciones<br>
+                            Forestales, Agrícolas y Pecuarias
+                        </div>
+                    </div>
+                    <span class="text-2xl font-black text-[#249444] font-bold mt-8 ">SISTEMA REGIONAL INTERNO
+                    </span>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="mt-10">
+                        <label
+                            class="text-[11px] font-bold uppercase tracking-wider text-stone-500 block mb-1">Usuario</label>
+                        <input type="text" id="login-user" autocomplete="username" placeholder="Número de Empleado"
+                            class="w-full p-4 rounded-xl bg-stone-50 outline-none text-sm border border-stone-200 focus:border-[#249444] focus:bg-white transition-all">
+                    </div>
+                    <div class="mt-10">
+                        <label
+                            class="text-[11px] font-bold uppercase tracking-wider text-stone-500 block mb-1">Contraseña</label>
+                        <div class="password-container" style="position: relative; width: 100%;">
+                            <input type="password" id="login-pass" autocomplete="current-password"
+                                placeholder="Contraseña"
+                                class="w-full p-4 rounded-xl bg-stone-50 outline-none text-sm border border-stone-200 focus:border-[#249444] focus:bg-white transition-all"
+                                style="padding-right: 45px;">
+
+                            <button type="button" id="btn-toggle-pass"
+                                style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #6b7280; padding: 0; display: flex; align-items: center; z-index: 10;">
+
+                                <svg id="eye-open" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+
+                                <svg id="eye-closed" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round"
+                                    style="display: none; pointer-events: none;">
+                                    <path
+                                        d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24">
+                                    </path>
+                                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <p id="login-error" class="text-rose-500 text-xs font-semibold hidden text-center"></p>
+
+                    <form onsubmit="event.preventDefault(); AuthModule.ejecutarLogin();">
+                        <!-- Tus inputs de usuario y contraseña -->
+                        <button type="submit" class="w-full bg-[#249444] text-white py-4 rounded-xl ...">
+                            Ingresar al Sistema
+                        </button>
+                    </form>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <script src="js/appConfig/api.js" defer></script>
+    <script src="js/appConfig/app.js" defer></script>
+    <script src="./js/appConfig/login.js"></script>
+</body>
+
+</html>
