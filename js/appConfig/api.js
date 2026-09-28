@@ -9,14 +9,14 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Configuración de la conexión a SQL Server basada en tus propiedades actuales
+// Configuración de la conexión a SQL Server
 const dbConfig = {
-    server: 'SERVIDORSRINIFA', // Nombre de tu equipo
+    server: 'SERVIDORSRINIFA',
     options: {
-        instanceName: 'EXP2012', // Instancia SQL Express
-        database: 'PrevSRInifapCIRNO',      // Cambia 'master' por la base de datos de tu sistema (ej: PrevSRINifapCIRNO)
-        trustedConnection: true, // Utiliza Autenticación de Windows
-        encrypt: false,          // Falso para entornos locales de desarrollo
+        instanceName: 'EXP2012',
+        database: 'PrevSRInifapCIRNO',
+        trustedConnection: true,
+        encrypt: false,
         trustServerCertificate: true
     }
 };
@@ -27,7 +27,7 @@ let poolConnection;
 async function conectarDB() {
     try {
         poolConnection = await sql.connect(dbConfig);
-        console.log('¡Conexión exitosa a SQL Server (SERVIDORSRINIFA\\EXP2012)!');
+        console.log('¡Conexión exitosa a SQL Server (SERVIDORSRINIFA\\EXP2012) desde api.js!');
     } catch (err) {
         console.error('Error crítico al conectar con SQL Server:', err.message);
         process.exit(1);
@@ -37,7 +37,7 @@ async function conectarDB() {
 // Iniciar conexión y levantar servidor
 conectarDB().then(() => {
     app.listen(PORT, () => {
-        console.log(`Servidor API corriendo en http://localhost:${PORT}`);
+        console.log(`API corriendo en http://localhost:${PORT}`);
     });
 });
 
@@ -49,29 +49,64 @@ conectarDB().then(() => {
  * Ruta de prueba para verificar estado
  */
 app.get('/api/health', (req, res) => {
-    res.json({ success: true, message: 'Servidor y Base de Datos operativos.' });
+    res.json({ success: true, message: 'API y Base de Datos operativos.' });
 });
 
 /**
- * Ejemplo de Endpoint para obtener datos del sistema
- * (Adapta esta consulta a las tablas reales de tu base de datos SQL)
+ * Endpoint usando los nombres exactos de los campos en las tablas SQL
  */
 app.get('/api/sistema/datos', async (req, res) => {
     try {
         const pool = await poolConnection;
         
-        // Ejemplo de consulta genérica para extraer información de catálogos
-        // Modifica esto por tus tablas reales (ej: SELECT * FROM Departamentos)
-        const resultadoDeptos = await pool.request().query('SELECT * FROM sys.tables');
+        // 1. Consultamos SRIModulo con sus campos originales
+        const queryModulos = pool.request().query(`
+            SELECT SRIModId, SRIModNom, SRIModNomC 
+            FROM dbo.SRIModulo
+        `);
 
+        // 2. Consultamos SRICnfMenu con sus campos originales
+        const queryCnfMenu = pool.request().query(`
+            SELECT SRIRegId, SRICenId, SRIModId 
+            FROM dbo.SRICnfMenu
+        `);
+
+        // 3. Consultamos SRIRegion con sus campos originales
+        const queryRegionales = pool.request().query(`
+            SELECT SRIRegId, SRIRegNom, SRIRegNomC 
+            FROM dbo.SRIRegion
+        `);
+
+        // 4. Consulta auxiliar para Sitios / Centros
+        const querySitios = pool.request().query('SELECT * FROM dbo.SRISitio');
+
+        // Ejecutamos todas las consultas en paralelo
+        const [modulosRes, cnfMenuRes, regionalesRes, sitiosRes] = await Promise.all([
+            queryModulos,
+            queryCnfMenu,
+            queryRegionales,
+            querySitios
+        ]);
+
+        // Estructuramos la respuesta conservando los nombres de tus campos originales
         res.json({
             success: true,
-            message: 'Datos del sistema obtenidos correctamente',
+            message: 'Datos del sistema obtenidos correctamente con campos nativos',
             data: {
-                tablasSistema: resultadoDeptos.recordset,
-                servidor: 'SERVIDORSRINIFA\\EXP2012'
+                modulos: modulosRes.recordset.map(mod => {
+                    const relCnf = cnfMenuRes.recordset.find(c => c.SRIModId === mod.SRIModId);
+                    return {
+                        ...mod,
+                        SRIRegId: relCnf ? relCnf.SRIRegId : null,
+                        SRICenId: relCnf ? relCnf.SRICenId : null
+                    };
+                }),
+                regiones: regionalesRes.recordset,
+                sitios: sitiosRes.recordset,
+                configMenu: cnfMenuRes.recordset
             }
         });
+
     } catch (err) {
         console.error('Error en consulta SQL:', err.message);
         res.status(500).json({
