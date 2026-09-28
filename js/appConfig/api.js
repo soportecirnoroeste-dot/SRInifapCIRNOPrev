@@ -1,53 +1,83 @@
-// ========================================================
-// MÓDULO DE CONEXIÓN CON APPS SCRIPT / BACKEND (MEJORADO)
-// ========================================================
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz1wzz5zC_6Cf4thUdl_5BkAca6m_MM7IWQyPwVAQcMaraPqfX8nBGMQpSdy31_tjz1Aw/exec";
+const express = require('express');
+const sql = require('mssql');
+const cors = require('cors');
 
-// Hacemos la URL global para que cualquier submódulo pueda usarla
-window.APPS_SCRIPT_URL = APPS_SCRIPT_URL;
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-async function FetchAPI(action, payload = {}) {
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Configuración de la conexión a SQL Server basada en tus propiedades actuales
+const dbConfig = {
+    server: 'SERVIDORSRINIFA', // Nombre de tu equipo
+    options: {
+        instanceName: 'EXP2012', // Instancia SQL Express
+        database: 'PrevSRInifapCIRNO',      // Cambia 'master' por la base de datos de tu sistema (ej: PrevSRINifapCIRNO)
+        trustedConnection: true, // Utiliza Autenticación de Windows
+        encrypt: false,          // Falso para entornos locales de desarrollo
+        trustServerCertificate: true
+    }
+};
+
+// Pool de conexión global
+let poolConnection;
+
+async function conectarDB() {
     try {
-        let bodyData;
-
-        // Creamos una copia limpia para no mutar el objeto original del usuario
-        if (payload instanceof FormData) {
-            let plainObject = {};
-            payload.forEach((value, key) => {
-                plainObject[key] = value;
-            });
-            plainObject.action = action;
-            bodyData = JSON.stringify(plainObject);
-        } else {
-            let clonedPayload = Object.assign({}, payload);
-            clonedPayload.action = action;
-            bodyData = JSON.stringify(clonedPayload);
-        }
-
-        let response = await fetch(APPS_SCRIPT_URL, {
-            method: "POST",
-            redirect: "follow", // 👈 Vital para seguir las redirecciones de Google Apps Script sin romper el POST
-            headers: {
-                "Content-Type": "text/plain;charset=utf-8", // 👈 Evita la pre-verificación OPTIONS que bloquea CORS en Google
-            },
-            body: bodyData
-        });
-
-        // Capturamos el texto primero para depurar si ocurre un error de servidor
-        let rawText = await response.text();
-        
-        try {
-            let data = JSON.parse(rawText);
-            return data;
-        } catch (parseError) {
-            console.error("El servidor no devolvió un JSON válido. Respuesta cruda:", rawText);
-            throw new Error("Respuesta inválida del servidor (verifica los permisos de implementación en Apps Script).");
-        }
-
-    } catch (error) {
-        console.error("Error en FetchAPI:", error);
-        throw error;
+        poolConnection = await sql.connect(dbConfig);
+        console.log('¡Conexión exitosa a SQL Server (SERVIDORSRINIFA\\EXP2012)!');
+    } catch (err) {
+        console.error('Error crítico al conectar con SQL Server:', err.message);
+        process.exit(1);
     }
 }
 
-window.FetchAPI = FetchAPI;
+// Iniciar conexión y levantar servidor
+conectarDB().then(() => {
+    app.listen(PORT, () => {
+        console.log(`Servidor API corriendo en http://localhost:${PORT}`);
+    });
+});
+
+// ==========================================
+// RUTAS DE LA API (Endpoints)
+// ==========================================
+
+/**
+ * Ruta de prueba para verificar estado
+ */
+app.get('/api/health', (req, res) => {
+    res.json({ success: true, message: 'Servidor y Base de Datos operativos.' });
+});
+
+/**
+ * Ejemplo de Endpoint para obtener datos del sistema
+ * (Adapta esta consulta a las tablas reales de tu base de datos SQL)
+ */
+app.get('/api/sistema/datos', async (req, res) => {
+    try {
+        const pool = await poolConnection;
+        
+        // Ejemplo de consulta genérica para extraer información de catálogos
+        // Modifica esto por tus tablas reales (ej: SELECT * FROM Departamentos)
+        const resultadoDeptos = await pool.request().query('SELECT * FROM sys.tables');
+
+        res.json({
+            success: true,
+            message: 'Datos del sistema obtenidos correctamente',
+            data: {
+                tablasSistema: resultadoDeptos.recordset,
+                servidor: 'SERVIDORSRINIFA\\EXP2012'
+            }
+        });
+    } catch (err) {
+        console.error('Error en consulta SQL:', err.message);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno en el servidor al consultar la base de datos',
+            error: err.message
+        });
+    }
+});
