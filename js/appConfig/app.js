@@ -47,7 +47,12 @@ const AuthGuard = {
 
             const labelUser = document.getElementById('user-display-name');
             if (labelUser) {
-                labelUser.textContent = localStorage.getItem('session_userName') || 'Usuario';
+                // Búsqueda inteligente de respaldo para evitar que aparezca vacío o genérico
+                const nombreEnSesion = localStorage.getItem('session_userName') || 
+                                       localStorage.getItem('nombre_usuario') || 
+                                       localStorage.getItem('usuario_sesion') || 
+                                       'Usuario';
+                labelUser.textContent = nombreEnSesion;
             }
 
             if (!paginaActual.includes('login.html')) {
@@ -96,7 +101,8 @@ const SistemaGlobal = {
                             .obtenerDatosSistema();
                     });
                 } else {
-                    const URL_DIRECTA = "https://script.google.com/macros/s/AKfycbzDs5fvFxykQniWFZnbUqpbuDAmrIDhMHlVwU4r5B3iPLxBp4FDG7uKrtDBDQEXxEX8fQ/exec?action=obtenerDatosSistema";
+                    // URL directa actualizada a tu Web App actual con soporte para SQL Server / Cloudflare
+                    const URL_DIRECTA = "https://script.google.com/macros/s/AKfycbxCHnQUUDwzdyxkzY9ZzpzGtdWlfTkfBBS0ht6UdHD-ptwiRM1cP6Ilr_ZpHbDg_RhNTw/exec?action=obtenerDatosSistema";
                     const res = await fetch(URL_DIRECTA);
                     datosReales = await res.json();
                 }
@@ -257,7 +263,7 @@ const SistemaGlobal = {
 
     renderizarRegional(claveReg, regionales) {
         const infoRegional = regionales.find(r => String(r.claveReg).trim() === claveReg);
-        const nombreRegionalOficial = infoRegional ? infoRegional.regional : "REGIONAL NO ENCONTRADA EN SHEETS";
+        const nombreRegionalOficial = infoRegional ? infoRegional.regional : "REGIONAL NO ENCONTRADA";
 
         const labelRegional = document.getElementById('user-regional-display');
         if (labelRegional) {
