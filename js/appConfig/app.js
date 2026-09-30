@@ -47,12 +47,23 @@ const AuthGuard = {
 
             const labelUser = document.getElementById('user-display-name');
             if (labelUser) {
-                // Búsqueda inteligente de respaldo para evitar que aparezca vacío o genérico
-                const nombreEnSesion = localStorage.getItem('session_userName') ||
-                    localStorage.getItem('nombre_usuario') ||
-                    localStorage.getItem('usuario_sesion') ||
-                    'Usuario';
-                labelUser.textContent = nombreEnSesion;
+                // Extracción robusta: revisa variables individuales y también el objeto JSON completo de la sesión
+                let nombreReal = 'Usuario';
+                
+                try {
+                    const usuarioActivoObj = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
+                    nombreReal = localStorage.getItem('session_userName') || 
+                                 usuarioActivoObj.userName || 
+                                 usuarioActivoObj.nombre || 
+                                 usuarioActivoObj.usuario || 
+                                 localStorage.getItem('nombre_usuario') || 
+                                 localStorage.getItem('usuario_sesion') || 
+                                 'Usuario';
+                } catch (e) {
+                    nombreReal = localStorage.getItem('session_userName') || localStorage.getItem('usuario_sesion') || 'Usuario';
+                }
+
+                labelUser.textContent = nombreReal;
             }
 
             if (!paginaActual.includes('login.html')) {
