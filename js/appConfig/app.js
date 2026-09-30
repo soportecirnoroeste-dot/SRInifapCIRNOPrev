@@ -93,19 +93,9 @@ const SistemaGlobal = {
 
         if (!datosReales) {
             try {
-                if (typeof google !== 'undefined' && google.script && google.script.run) {
-                    datosReales = await new Promise((resolve, reject) => {
-                        google.script.run
-                            .withSuccessHandler(res => resolve(res))
-                            .withFailureHandler(err => reject(err))
-                            .obtenerDatosSistema();
-                    });
-                } else {
-                    // URL directa actualizada a tu Web App actual con soporte para SQL Server / Cloudflare
-                    const URL_DIRECTA = "https://script.google.com/macros/s/AKfycbxCHnQUUDwzdyxkzY9ZzpzGtdWlfTkfBBS0ht6UdHD-ptwiRM1cP6Ilr_ZpHbDg_RhNTw/exec?action=obtenerDatosSistema";
-                    const res = await fetch(URL_DIRECTA);
-                    datosReales = await res.json();
-                }
+                // Petición unificada a través de tu API hacia Google Apps Script y SQL Server
+                datosReales = await callAppsScript("obtenerDatosSistema");
+                
                 this.guardarEnCache(datosReales);
             } catch (err) {
                 console.error("Error al obtener datos del sistema:", err);
@@ -118,9 +108,9 @@ const SistemaGlobal = {
         const noEmp = String(localStorage.getItem('session_noEmp') || localStorage.getItem('usuario_sesion') || '').trim();
         let permisosUsuario = {};
 
-        if (noEmp && typeof FetchAPI === 'function') {
+        if (noEmp) {
             try {
-                permisosUsuario = await FetchAPI('obtenerPermisosColaborador', { numEmp: noEmp }) || {};
+                permisosUsuario = await callAppsScript('obtenerPermisosColaborador', { numEmp: noEmp }) || {};
             } catch (e) {
                 console.warn("No se pudieron cargar los permisos del empleado:", e);
             }
