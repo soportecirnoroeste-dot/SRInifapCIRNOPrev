@@ -63,8 +63,12 @@ var AuthModule = {
             var res = await API.login(usuarioInput, passwordInput);
 
             if (res && res.success) {
+                // Mapeo inteligente y seguro para capturar el nombre y número de empleado de cualquier variante del backend
+                const nombreReal = res.userName || res.nombre || res.usuario || usuarioInput;
+
                 localStorage.setItem('usuario_sesion', res.usuario || usuarioInput);
-                localStorage.setItem('session_userName', res.userName || "Usuario");
+                localStorage.setItem('session_userName', nombreReal);
+                localStorage.setItem('session_noEmp', res.noEmp || res.numEmpleado || res.id || '');
                 localStorage.setItem('session_area', res.area || "CIRNODIR");
                 localStorage.setItem('isLoggedIn', 'true');
                 localStorage.setItem('usuarioActivo', JSON.stringify(res));
@@ -107,5 +111,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function logout() {
     localStorage.removeItem('usuario_sesion');
+    localStorage.removeItem('session_userName');
+    localStorage.removeItem('session_noEmp');
+    localStorage.removeItem('session_area');
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('usuarioActivo');
     window.location.href = 'login.html';
 }
