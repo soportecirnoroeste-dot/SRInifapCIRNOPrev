@@ -59,8 +59,8 @@ var AuthModule = {
                 `;
             }
 
-            // Petición al backend
-            var res = await FetchAPI("login", { user: usuarioInput, pass: passwordInput });
+            // Petición al backend utilizando el objeto global API definido en api.js
+            var res = await API.login(usuarioInput, passwordInput);
 
             if (res && res.success) {
                 localStorage.setItem('usuario_sesion', res.usuario || usuarioInput);
