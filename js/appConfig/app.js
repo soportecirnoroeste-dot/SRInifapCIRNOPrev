@@ -48,10 +48,10 @@ const AuthGuard = {
             const labelUser = document.getElementById('user-display-name');
             if (labelUser) {
                 // Búsqueda inteligente de respaldo para evitar que aparezca vacío o genérico
-                const nombreEnSesion = localStorage.getItem('session_userName') || 
-                                       localStorage.getItem('nombre_usuario') || 
-                                       localStorage.getItem('usuario_sesion') || 
-                                       'Usuario';
+                const nombreEnSesion = localStorage.getItem('session_userName') ||
+                    localStorage.getItem('nombre_usuario') ||
+                    localStorage.getItem('usuario_sesion') ||
+                    'Usuario';
                 labelUser.textContent = nombreEnSesion;
             }
 
@@ -95,7 +95,7 @@ const SistemaGlobal = {
             try {
                 // Petición unificada a través de tu API hacia Google Apps Script y SQL Server
                 datosReales = await callAppsScript("obtenerDatosSistema");
-                
+
                 this.guardarEnCache(datosReales);
             } catch (err) {
                 console.error("Error al obtener datos del sistema:", err);
@@ -137,12 +137,12 @@ const SistemaGlobal = {
     },
 
     procesarRespuestaServidor(datosReales) {
-        this.datos = datosReales;
-        window.allSubModulosData = datosReales.submodulos || [];
+        this.datos = datosReales || {};
+        window.allSubModulosData = this.datos.submodulos || [];
 
-        const todosLosDepartamentos = datosReales.departamentos || [];
-        const todasLasRegionales = datosReales.regionales || [];
-        let todosLosCampos = datosReales.campos || [];
+        const todosLosDepartamentos = this.datos.departamentos || [];
+        const todasLasRegionales = this.datos.regionales || [];
+        let todosLosCampos = this.datos.campos || [];
 
         // 🚀 Detección infalible de Administrador General (Nivel 4 o Empleado 4398)
         const noEmp = String(localStorage.getItem('session_noEmp') || localStorage.getItem('usuario_sesion') || '').trim();
@@ -172,28 +172,28 @@ const SistemaGlobal = {
         let claveRegUsuario = "";
 
         const regionalEncontrada = todasLasRegionales.find(r =>
-            String(r.claveReg).trim().toUpperCase() === areaUsuario ||
-            String(r.nomCorto).trim().toUpperCase() === areaUsuario
+            String(r.claveReg || '').trim().toUpperCase() === areaUsuario ||
+            String(r.nomCorto || '').trim().toUpperCase() === areaUsuario
         );
 
         if (regionalEncontrada) {
-            claveRegUsuario = String(regionalEncontrada.claveReg).trim();
+            claveRegUsuario = String(regionalEncontrada.claveReg || '').trim();
         } else {
             const depUsuario = todosLosDepartamentos.find(dep =>
-                String(dep.nomCorDep).trim().toUpperCase() === areaUsuario ||
-                String(dep.claveCentro).trim().toUpperCase() === areaUsuario
+                String(dep.nomCorDep || '').trim().toUpperCase() === areaUsuario ||
+                String(dep.claveCentro || '').trim().toUpperCase() === areaUsuario
             );
 
             if (depUsuario) {
-                claveRegUsuario = String(depUsuario.claveReg).trim();
+                claveRegUsuario = String(depUsuario.claveReg || '').trim();
             } else {
-                claveRegUsuario = todasLasRegionales.length > 0 ? String(todasLasRegionales[0].claveReg).trim() : "";
+                claveRegUsuario = todasLasRegionales.length > 0 ? String(todasLasRegionales[0].claveReg || '').trim() : "";
             }
         }
 
         this.renderizarRegional(claveRegUsuario, todasLasRegionales);
 
-        const departamentosDeLaRegional = todosLosDepartamentos.filter(dep => String(dep.claveReg).trim() === claveRegUsuario);
+        const departamentosDeLaRegional = todosLosDepartamentos.filter(dep => String(dep.claveReg || '').trim() === claveRegUsuario);
 
         if (todosLosCampos.length === 0 && departamentosDeLaRegional.length > 0) {
             const centrosUnicos = [...new Set(departamentosDeLaRegional.map(d => d.claveCentro))];
@@ -222,17 +222,17 @@ const SistemaGlobal = {
             }
         }
 
-        const camposDeLaRegional = todosLosCampos.filter(c => String(c.claveReg).trim() === claveRegUsuario);
+        const camposDeLaRegional = todosLosCampos.filter(c => String(c.claveReg || '').trim() === claveRegUsuario);
         const depDelUsuarioLogueado = departamentosDeLaRegional.find(dep =>
-            String(dep.nomCorDep).trim().toUpperCase() === areaUsuario ||
-            String(dep.claveCentro).trim().toUpperCase() === areaUsuario
+            String(dep.nomCorDep || '').trim().toUpperCase() === areaUsuario ||
+            String(dep.claveCentro || '').trim().toUpperCase() === areaUsuario
         );
 
         let claveCentroInicial = "";
         if (depDelUsuarioLogueado) {
-            claveCentroInicial = String(depDelUsuarioLogueado.claveCentro).trim();
+            claveCentroInicial = String(depDelUsuarioLogueado.claveCentro || '').trim();
         } else if (camposDeLaRegional.length > 0) {
-            claveCentroInicial = String(camposDeLaRegional[0].claveCentro).trim();
+            claveCentroInicial = String(camposDeLaRegional[0].claveCentro || '').trim();
         }
 
         if (claveCentroInicial) {
@@ -244,7 +244,7 @@ const SistemaGlobal = {
         }
 
         if (claveCentroInicial) {
-            const filtradosIniciales = departamentosDeLaRegional.filter(dep => String(dep.claveCentro).trim() === claveCentroInicial);
+            const filtradosIniciales = departamentosDeLaRegional.filter(dep => String(dep.claveCentro || '').trim() === claveCentroInicial);
             this.pintarTarjetasDepartamentos(filtradosIniciales);
         } else {
             this.pintarTarjetasDepartamentos(departamentosDeLaRegional);
