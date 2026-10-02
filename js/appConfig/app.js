@@ -161,12 +161,16 @@ const SistemaGlobal = {
                 this.renderizarFiltroCampos(respuestaProcesada.campos || [], claveRegUser);
             }
 
-            const departamentosDeLaRegional = (respuestaProcesada.departamentos || []).filter(dep => {
+            // --- PROTECCIÓN Y COMPATIBILIDAD DE DATOS ---
+            const fuenteModulos = respuestaProcesada.departamentos || respuestaProcesada.modulos || [];
+            window.allModulosData = fuenteModulos; // Guardamos respaldo global
+
+            const departamentosDeLaRegional = fuenteModulos.filter(dep => {
                 const regDep = String(dep.SRIRegId || dep.claveReg || '').trim();
-                return regDep.toLowerCase() === claveRegUser.toLowerCase();
+                return !regDep || regDep.toLowerCase() === claveRegUser.toLowerCase();
             });
 
-            const listaA_Pintar = departamentosDeLaRegional.length > 0 ? departamentosDeLaRegional : (respuestaProcesada.departamentos || []);
+            const listaA_Pintar = departamentosDeLaRegional.length > 0 ? departamentosDeLaRegional : fuenteModulos;
 
             this.pintarTarjetasDepartamentos(listaA_Pintar);
         }
