@@ -354,78 +354,80 @@ const SistemaGlobal = {
         };
         if (!esAdminGeneral) esAdminGeneral = buscarNivelCuatro(permisosUsuario);
 
-        const departamentosFiltrados = esAdminGeneral ? listaDepartamentos : listaDepartamentos.filter(dep => {
-            const idDep = String(dep.SRIDepId || dep.claveDep || dep.ClaveDep || '').trim();
-            const nomCor = String(dep.nomCorDep || dep.NomCorDep || '').trim().toUpperCase();
+        const submodulosTotales = window.allSubModulosData || this.datos.submodulos || [];
 
-            const deptoPermisos = permisosUsuario[idDep] || permisosUsuario[nomCor] || permisosUsuario[Number(idDep)];
-            if (!deptoPermisos) return false;
-
-            if (typeof deptoPermisos === 'object') {
-                return Object.values(deptoPermisos).some(p => {
-                    if (typeof p === 'number') return p > 0;
-                    if (p && typeof p === 'object') {
-                        const ver = Number(p.ver || p.Ver || 0);
-                        const niv = Number(p.nivper || p.nivPer || p.NivPer || 0);
-                        return ver > 0 || niv > 0;
-                    }
-                    return false;
-                });
-            }
-            return Number(deptoPermisos) > 0;
-        });
-
-        if (departamentosFiltrados.length === 0) {
-            contenedorMenu.innerHTML = '<p class="text-xs text-stone-400 col-span-full text-center py-8">No tienes módulos o submódulos con permisos de acceso asignados.</p>';
+        if (listaDepartamentos.length === 0) {
+            contenedorMenu.innerHTML = '<p class="text-xs text-stone-400 col-span-full text-center py-8">No hay módulos disponibles para esta selección.</p>';
             return;
         }
 
         let htmlAcumulado = '';
 
-        departamentosFiltrados.forEach((dep) => {
-            const claveDep = String(dep.nomCorDep || dep.NomCorDep || '').toUpperCase();
-            const nombreDepReal = String(dep.nomDep || dep.NomDep || dep.nombre || 'Departamento');
-            let iconoSvg = '';
+        listaDepartamentos.forEach((dep) => {
+            const modId = String(dep.SRIModId || dep.id || '').trim();
+            const claveDep = String(dep.SRIModNomC || dep.nomCorDep || dep.NomCorDep || '').toUpperCase();
+            const nombreDepReal = String(dep.SRIModNom || dep.nomDep || dep.NomDep || dep.nombre || 'Módulo');
+            
+            // Icono del módulo principal
+            let iconoSvg = dep.SRIModIcon || dep.icono || `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-network"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>`;
 
-            switch (claveDep) {
-                case 'CIRNODIR':
-                    iconoSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-landmark"><line x1="3" y1="21" x2="21" y2="21"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="10" y1="12" x2="14" y2="12"/><line x1="6" y1="16" x2="18" y2="16"/><path d="m3 9 9-6 9 6v3H3z"/></svg>`;
-                    break;
-                case 'CIRNODIRIN':
-                    iconoSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book-search"><path d="M11 22H5.5a1 1 0 0 1 0-5h4.501"/><path d="m21 22-1.879-1.878"/><path d="M3 19.5v-15A2.5 2.5 0 0 1 5.5 2H18a1 1 0 0 1 1 1v8"/><circle cx="17" cy="18" r="3"/></svg>`;
-                    break;
-                case 'CIRNODIRAD':
-                    iconoSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-blocks"><path d="M10 22V7a1 1 0 0 0-1-1H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5a1 1 0 0 0-1-1H2"/><rect x="14" y="2" width="8" height="8" rx="1"/></svg>`;
-                    break;
-                case 'CIRNORF':
-                    iconoSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chart-line"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/></svg>`;
-                    break;
-                case 'CIRNORH':
-                    iconoSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-handshake"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>`;
-                    break;
-                case 'CIRNORM':
-                    iconoSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-hand-coins"><path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/><path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 16 6 6"/><circle cx="16" cy="9" r="2.9"/><circle cx="6" cy="5" r="3"/></svg>`;
-                    break;
-                case 'CIRNOSIS':
-                    iconoSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-terminal"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="m8 16 2-2-2-2"/><path d="M12 18h4"/></svg>`;
-                    break;
-                case 'CIRNOOF':
-                    iconoSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mailbox"><path d="M22 17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9.5C2 7 4 5 6.5 5H18c2.2 0 4 1.8 4 4v8Z"/><polyline points="15,9 18,9 18,11"/><path d="M6.5 5C9 5 11 7 11 9.5V17a2 2 0 0 1-2 2"/><line x1="6" x2="7" y1="10" y2="10"/></svg>`;
-                    break;
-                default:
-                    iconoSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-network"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>`;
-                    break;
+            // Regla 1: Verificar si el módulo tiene submódulos dados de alta
+            const submodulosDelModulo = submodulosTotales.filter(sub => {
+                const sModId = String(sub.SRIModId || sub.ClaveDep || '').trim();
+                return sModId === modId || sModId.toUpperCase() === claveDep.toUpperCase();
+            });
+
+            if (submodulosDelModulo.length === 0) {
+                // Tarjeta de Módulo en Construcción (Sin submódulos)
+                htmlAcumulado += `
+                <div class="border-red-200 bg-red-50/30 flex flex-col items-center justify-center p-4 rounded-xl border text-center cursor-not-allowed opacity-90">
+                    <span class="uppercase text-xs font-bold text-red-600 mb-1">En construcción</span>
+                    <span class="text-xs font-semibold text-stone-600 mb-2">${nombreDepReal}</span>
+                    <div class="w-10 h-10 rounded-lg bg-red-100 text-red-500 flex items-center justify-center">
+                        ${iconoSvg}
+                    </div>
+                </div>`;
+                return;
             }
 
-            htmlAcumulado += `
-            <button onclick="seleccionarDepartamento('${claveDep}', this)" 
-                class="area-btn border-stone-200 flex flex-col items-center justify-center p-4 rounded-xl border hover:border-[#249444] hover:bg-emerald-50/50 transition-all text-center cursor-pointer group">
-                <span class="uppercase text-xs font-bold text-stone-700 group-hover:text-[#249444] mb-2">${nombreDepReal}</span>
-                <div class="w-10 h-10 rounded-lg bg-emerald-50 text-[#249444] flex items-center justify-center group-hover:bg-[#249444] group-hover:text-white transition-all">
-                    ${iconoSvg}
-                </div>
-            </button>`;
+            // Regla 2 y 3: Validar permisos por submódulo o módulo para mostrar las tarjetas activas
+            submodulosDelModulo.forEach(sub => {
+                const subModId = String(sub.SRISubMId || sub.id || '').trim();
+                const subModNom = String(sub.SRISubMDes || sub.SModNom || sub.nombre || 'Submódulo');
+                const subModIcon = sub.SRISubMIco || sub.SModIcon || iconoSvg;
+
+                // Validar si el usuario tiene permiso en este módulo/submódulo (o es admin)
+                let tienePermiso = esAdminGeneral;
+                if (!tienePermiso) {
+                    // Verificamos si existe configuración de permiso para este modId y subModId en los permisos del usuario
+                    const permisosMod = permisosUsuario[modId] || permisosUsuario[claveDep] || permisosUsuario[Number(modId)];
+                    if (permisosMod) {
+                        if (typeof permisosMod === 'object') {
+                            const permisoSub = permisosMod[subModId] || permisosMod[Number(subModId)] || permisosMod.general;
+                            tienePermiso = permisoSub !== undefined && permisoSub !== null;
+                        } else {
+                            tienePermiso = Number(permisosMod) > 0;
+                        }
+                    }
+                }
+
+                if (tienePermiso) {
+                    htmlAcumulado += `
+                    <button onclick="seleccionarSubModulo('${claveDep}', '${subModId}', this)" 
+                        class="area-btn border-stone-200 flex flex-col items-center justify-center p-4 rounded-xl border hover:border-[#249444] hover:bg-emerald-50/50 transition-all text-center cursor-pointer group">
+                        <span class="uppercase text-xs font-bold text-stone-700 group-hover:text-[#249444] mb-2">${subModNom}</span>
+                        <div class="w-10 h-10 rounded-lg bg-emerald-50 text-[#249444] flex items-center justify-center group-hover:bg-[#249444] group-hover:text-white transition-all">
+                            ${subModIcon}
+                        </div>
+                    </button>`;
+                }
+            });
         });
+
+        if (!htmlAcumulado) {
+            contenedorMenu.innerHTML = '<p class="text-xs text-stone-400 col-span-full text-center py-8">No tienes módulos o submódulos con permisos de acceso asignados.</p>';
+            return;
+        }
 
         contenedorMenu.innerHTML = htmlAcumulado;
     },
