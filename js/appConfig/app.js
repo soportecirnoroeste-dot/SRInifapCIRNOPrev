@@ -47,9 +47,7 @@ const AuthGuard = {
 
             const labelUser = document.getElementById('user-display-name');
             if (labelUser) {
-                // Extracción robusta: revisa variables individuales y también el objeto JSON completo de la sesión
                 let nombreReal = 'Usuario';
-
                 try {
                     const usuarioActivoObj = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
                     nombreReal = localStorage.getItem('session_userName') ||
@@ -62,7 +60,6 @@ const AuthGuard = {
                 } catch (e) {
                     nombreReal = localStorage.getItem('session_userName') || localStorage.getItem('usuario_sesion') || 'Usuario';
                 }
-
                 labelUser.textContent = nombreReal;
             }
 
@@ -71,8 +68,6 @@ const AuthGuard = {
 
                 if (paginaActual.includes('index.html') || paginaActual.endsWith('/')) {
                     SistemaGlobal.init();
-                } else {
-                    const rutaGuardada = sessionStorage.getItem('ultima_ruta_completa');
                 }
             }
         }
@@ -98,15 +93,13 @@ const SistemaGlobal = {
             try {
                 datosReales = JSON.parse(datosEnCache);
             } catch (e) {
-                console.error("Error al leer la caché, procediendo a red...", e);
+                console.error("Error al leer la caché:", e);
             }
         }
 
         if (!datosReales) {
             try {
-                // Petición unificada a través de tu API hacia Google Apps Script y SQL Server
                 datosReales = await callAppsScript("obtenerDatosSistema");
-
                 this.guardarEnCache(datosReales);
             } catch (err) {
                 console.error("Error al obtener datos del sistema:", err);
@@ -115,7 +108,6 @@ const SistemaGlobal = {
             }
         }
 
-        // Consultamos los permisos específicos del empleado logueado (Extracción robusta desde usuarioActivo)
         let usuarioActivoObjTemp = {};
         try { usuarioActivoObjTemp = JSON.parse(localStorage.getItem('usuarioActivo') || '{}'); } catch(e){}
 
@@ -123,12 +115,12 @@ const SistemaGlobal = {
             localStorage.getItem('session_noEmp') || 
             usuarioActivoObjTemp.noEmpleado || 
             usuarioActivoObjTemp.SRIPerNumE || 
+            usuarioActivoObjTemp.numEmp ||
             localStorage.getItem('usuario_sesion') || 
             ''
         ).trim();
 
         let permisosUsuario = {};
-
         if (noEmp) {
             try {
                 permisosUsuario = await callAppsScript('obtenerPermisosColaborador', { numEmp: noEmp }) || {};
@@ -165,22 +157,77 @@ const SistemaGlobal = {
         const todasLasRegionales = this.datos.regionales || [];
         let todosLosCampos = this.datos.campos || [];
 
-        // 🚀 Obtener datos de sesión directamente del objeto de SQL guardado
         let usuarioActivoObj = {};
         try {
             usuarioActivoObj = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
         } catch (e) { }
 
-        const noEmp = String(
-            localStorage.getItem('session_noEmp') || 
-            usuarioActivoObj.noEmpleado || 
-            usuarioActivoObj.SRIPerNumE || 
-            localStorage.getItem('usuario_sesion') || 
+        // Detección flexible de Regional (busca SRIRegId, claveReg, regId, etc.)
+        let claveRegUsuario = String(
+            usuarioActivoObj.SRIRegId ||
+            usuarioActivoObj.claveReg ||
+            usuarioActivoObj.regId ||
+            localStorage.getItem('session_regId') ||
             ''
         ).trim();
-        const permisosUsuario = window.userPermisosCache || {};
 
-        // Detección dinámica de Administrador (Nivel 4)
+        // Detección flexible de Área / Módulo
+        const areaUsuario = String(
+            localStorage.getItem('session_area') ||
+            usuarioActivoObj.area ||
+            usuarioActivoObj.SRIModNomC ||
+            usuarioActivoObj.modulo ||
+            ''
+        ).trim().toUpperCase();
+
+        if (!claveRegUsuario && todasLasRegionales.length > 0) {
+            const regionalEncontrada = todasLasRegionales.find(r => {
+                const rId = String(r.SRIRegId || r.claveReg || r.regId || '').trim();
+                const rNom = String(r.regional || r.nomCorto || '').trim().toUpperCase();
+                return rId.toUpperCase() === areaUsuario || rNom === areaUsuario;
+            });
+
+            if (regionalEncontrada) {
+                claveRegUsuario = String(regionalEncontrada.SRIRegId || regionalEncontrada.claveReg || regionalEncontrada.regId || '').trim();
+            } else {
+                // Si no empata con regional, buscar en departamentos
+                const depEncontrado = todosLosDepartamentos.find(d => {
+                    const dReg = String(d.SRIRegId || d.claveReg || '').trim();
+                    const dNom = String(d.nomCorDep || d.NomCorDep || '').trim().toUpperCase();
+                    return dNom === areaUsuario;
+                });
+                if (depEncontrado) {
+                    claveRegUsuario = String(depEncontrado.SRIRegId || depEncontrado.claveReg || '').trim();
+                } else {
+                    claveRegUsuario = String(todasLasRegionales[0].SRIRegId || todasLasRegionales[0].claveReg || todasLasRegionales[0].regId || '').trim();
+                }
+            }
+        }
+
+        console.log("📍 Regional activa detectada:", claveRegUsuario);
+        this.renderizarRegional(claveRegUsuario, todasLasRegionales);
+
+        // Filtrar departamentos por regional de forma flexible
+        const departamentosDeLaRegional = todosLosDepartamentos.filter(dep => {
+            const regDep = String(dep.SRIRegId || dep.claveReg || dep.regId || '').trim();
+            return regDep.toLowerCase() === claveRegUsuario.toLowerCase();
+        });
+
+        // Si campos viene vacío, autogenerarlos de los departamentos de la regional
+        if (todosLosCampos.length === 0 && departamentosDeLaRegional.length > 0) {
+            const centrosUnicos = [...new Set(departamentosDeLaRegional.map(d => String(d.SRICenId || d.claveCentro || d.cenId || '')))];
+            todosLosCampos = centrosUnicos.map(c => ({
+                SRIRegId: claveRegUsuario,
+                SRICenId: c,
+                centro: `Centro ${c}`
+            }));
+            this.datos.campos = todosLosCampos;
+        }
+
+        this.renderizarFiltroCampos(todosLosCampos, claveRegUsuario);
+
+        // Detección de Administrador General (Nivel 4)
+        let permisosUsuario = window.userPermisosCache || {};
         let esAdminGeneral = false;
         const buscarNivelCuatro = (obj) => {
             if (!obj) return false;
@@ -195,64 +242,9 @@ const SistemaGlobal = {
             }
             return false;
         };
-        esAdminGeneral = buscarNivelCuatro(permisosUsuario) || buscarNivelCuatro(usuarioActivoObj);
+        esAdminGeneral = buscarNivelCuatro(permisosUsuario) || buscarNivelCuatro(usuarioActivoObj) || (noEmp === "4398");
         console.log("👑 ¿Es Administrador General?:", esAdminGeneral);
 
-        // 🚀 Leer área/módulo directamente de la columna SQL (ej. SRIModNomC o area)
-        const areaUsuario = String(
-            localStorage.getItem('session_area') ||
-            usuarioActivoObj.area ||
-            usuarioActivoObj.SRIModNomC ||
-            ''
-        ).trim().toUpperCase();
-
-        // 🚀 Leer la clave regional directamente de la columna SQL (ej. SRIReqId)
-        let claveRegUsuario = String(
-            usuarioActivoObj.SRIReqId ||
-            usuarioActivoObj.claveReg ||
-            ''
-        ).trim();
-
-        // Si no viene en la sesión, se busca dinámicamente en los catálogos de regionales/departamentos de SQL
-        if (!claveRegUsuario) {
-            const regionalEncontrada = todasLasRegionales.find(r =>
-                String(r.claveReg || '').trim().toUpperCase() === areaUsuario ||
-                String(r.nomCorto || '').trim().toUpperCase() === areaUsuario
-            );
-
-            if (regionalEncontrada) {
-                claveRegUsuario = String(regionalEncontrada.claveReg || '').trim();
-            } else {
-                const depUsuario = todosLosDepartamentos.find(dep =>
-                    String(dep.nomCorDep || '').trim().toUpperCase() === areaUsuario ||
-                    String(dep.claveCentro || '').trim().toUpperCase() === areaUsuario
-                );
-
-                if (depUsuario) {
-                    claveRegUsuario = String(depUsuario.claveReg || '').trim();
-                } else {
-                    claveRegUsuario = todasLasRegionales.length > 0 ? String(todasLasRegionales[0].claveReg || '').trim() : "";
-                }
-            }
-        }
-
-        this.renderizarRegional(claveRegUsuario, todasLasRegionales);
-
-        const departamentosDeLaRegional = todosLosDepartamentos.filter(dep => String(dep.claveReg || '').trim() === claveRegUsuario);
-
-        if (todosLosCampos.length === 0 && departamentosDeLaRegional.length > 0) {
-            const centrosUnicos = [...new Set(departamentosDeLaRegional.map(d => d.claveCentro))];
-            todosLosCampos = centrosUnicos.map(c => ({
-                claveReg: claveRegUsuario,
-                claveCentro: c,
-                centro: `Centro ${c}`
-            }));
-            this.datos.campos = todosLosCampos;
-        }
-
-        this.renderizarFiltroCampos(todosLosCampos, claveRegUsuario);
-
-        // Gestión de editabilidad del combo de campos
         const selectFiltro = document.getElementById('filtro-campos-regional');
         if (selectFiltro) {
             if (esAdminGeneral) {
@@ -267,49 +259,44 @@ const SistemaGlobal = {
             }
         }
 
-        const camposDeLaRegional = todosLosCampos.filter(c => String(c.claveReg || '').trim() === claveRegUsuario);
+        const camposDeLaRegional = todosLosCampos.filter(c => {
+            const regCampo = String(c.SRIRegId || c.claveReg || '').trim();
+            return regCampo.toLowerCase() === claveRegUsuario.toLowerCase();
+        });
 
-        // 🚀 Obtener el centro inicial dinámicamente desde la columna SRICenId de SQL
+        // Detección flexible de Centro inicial
         let claveCentroInicial = String(
             usuarioActivoObj.SRICenId ||
             usuarioActivoObj.centro ||
-            localStorage.getItem('session_centro') ||
+            usuarioActivoObj.cenId ||
+            localStorage.getItem('centro_activo_actual') ||
             ''
         ).trim();
 
-        // Validar que el centro pertenezca a los campos de la regional; si no, buscar por departamento o asignar el primero disponible
-        const existeCentro = camposDeLaRegional.some(c => String(c.claveCentro || '').trim() === claveCentroInicial);
-        if (!existeCentro) {
-            const depDelUsuarioLogueado = departamentosDeLaRegional.find(dep =>
-                String(dep.nomCorDep || '').trim().toUpperCase() === areaUsuario ||
-                String(dep.claveCentro || '').trim().toUpperCase() === areaUsuario
-            );
-            if (depDelUsuarioLogueado) {
-                claveCentroInicial = String(depDelUsuarioLogueado.claveCentro || '').trim();
-            } else if (camposDeLaRegional.length > 0) {
-                claveCentroInicial = String(camposDeLaRegional[0].claveCentro || '').trim();
-            }
+        const existeCentro = camposDeLaRegional.some(c => String(c.SRICenId || c.claveCentro || '').trim() === claveCentroInicial);
+        if (!existeCentro && camposDeLaRegional.length > 0) {
+            claveCentroInicial = String(camposDeLaRegional[0].SRICenId || camposDeLaRegional[0].claveCentro || '').trim();
         }
 
         if (claveCentroInicial) {
             localStorage.setItem('centro_activo_actual', claveCentroInicial);
+            if (selectFiltro) selectFiltro.value = claveCentroInicial;
         }
 
-        if (selectFiltro && claveCentroInicial) {
-            selectFiltro.value = claveCentroInicial;
-        }
+        // Filtrar tarjetas finales
+        const departamentosFinales = claveCentroInicial 
+            ? departamentosDeLaRegional.filter(dep => String(dep.SRICenId || dep.claveCentro || '').trim() === claveCentroInicial)
+            : departamentosDeLaRegional;
 
-        if (claveCentroInicial) {
-            const filtradosIniciales = departamentosDeLaRegional.filter(dep => String(dep.claveCentro || '').trim() === claveCentroInicial);
-            this.pintarTarjetasDepartamentos(filtradosIniciales);
-        } else {
-            this.pintarTarjetasDepartamentos(departamentosDeLaRegional);
-        }
+        this.pintarTarjetasDepartamentos(departamentosFinales);
     },
 
     renderizarRegional(claveReg, regionales) {
-        const infoRegional = regionales.find(r => String(r.claveReg).trim() === claveReg);
-        const nombreRegionalOficial = infoRegional ? infoRegional.regional : "REGIONAL NO ENCONTRADA";
+        const infoRegional = regionales.find(r => {
+            const rId = String(r.SRIRegId || r.claveReg || r.regId || '').trim();
+            return rId.toLowerCase() === String(claveReg).toLowerCase();
+        });
+        const nombreRegionalOficial = infoRegional ? (infoRegional.regional || infoRegional.nombre || "REGIONAL") : (claveReg || "REGIONAL NO ENCONTRADA");
 
         const labelRegional = document.getElementById('user-regional-display');
         if (labelRegional) {
@@ -318,14 +305,18 @@ const SistemaGlobal = {
     },
 
     renderizarFiltroCampos(campos, claveReg) {
-        const camposDeLaRegional = campos.filter(c => String(c.claveReg).trim() === claveReg);
+        const camposDeLaRegional = campos.filter(c => {
+            const regC = String(c.SRIRegId || c.claveReg || '').trim();
+            return regC.toLowerCase() === String(claveReg).toLowerCase();
+        });
         const selectFiltro = document.getElementById('filtro-campos-regional');
 
         if (selectFiltro) {
             selectFiltro.innerHTML = '<option value="">Seleccionar campo</option>';
             camposDeLaRegional.forEach(campo => {
-                const textoOpcion = `${campo.claveCentro} - ${campo.centro}`;
-                selectFiltro.innerHTML += `<option value="${campo.claveCentro}">${textoOpcion}</option>`;
+                const cId = String(campo.SRICenId || campo.claveCentro || campo.cenId || '').trim();
+                const cNom = String(campo.centro || campo.nombreCentro || campo.NomCentro || '').trim();
+                selectFiltro.innerHTML += `<option value="${cId}">${cId} - ${cNom}</option>`;
             });
         }
     },
@@ -341,18 +332,15 @@ const SistemaGlobal = {
             localStorage.getItem('session_noEmp') || 
             usuarioActivoObjTemp.noEmpleado || 
             usuarioActivoObjTemp.SRIPerNumE || 
-            localStorage.getItem('usuario_sesion') || 
             ''
         ).trim();
 
         const permisosUsuario = window.userPermisosCache || {};
-
         let esAdminGeneral = (noEmp === "4398");
+
         const buscarNivelCuatro = (obj) => {
             if (!obj) return false;
-            if (typeof obj === 'number' || typeof obj === 'string') {
-                return Number(obj) === 4;
-            }
+            if (typeof obj === 'number' || typeof obj === 'string') return Number(obj) === 4;
             if (typeof obj === 'object') {
                 for (let k in obj) {
                     if (k.toLowerCase().includes('niv') && Number(obj[k]) === 4) return true;
@@ -361,17 +349,13 @@ const SistemaGlobal = {
             }
             return false;
         };
-
-        if (!esAdminGeneral) {
-            esAdminGeneral = buscarNivelCuatro(permisosUsuario);
-        }
+        if (!esAdminGeneral) esAdminGeneral = buscarNivelCuatro(permisosUsuario);
 
         const departamentosFiltrados = esAdminGeneral ? listaDepartamentos : listaDepartamentos.filter(dep => {
-            const idDep = String(dep.claveDep || dep.ClaveDep || dep.id || '').trim();
-            const nomCor = String(dep.nomCorDep || '').trim().toUpperCase();
+            const idDep = String(dep.SRIDepId || dep.claveDep || dep.ClaveDep || '').trim();
+            const nomCor = String(dep.nomCorDep || dep.NomCorDep || '').trim().toUpperCase();
 
             const deptoPermisos = permisosUsuario[idDep] || permisosUsuario[nomCor] || permisosUsuario[Number(idDep)];
-
             if (!deptoPermisos) return false;
 
             if (typeof deptoPermisos === 'object') {
@@ -385,7 +369,6 @@ const SistemaGlobal = {
                     return false;
                 });
             }
-
             return Number(deptoPermisos) > 0;
         });
 
@@ -397,7 +380,8 @@ const SistemaGlobal = {
         let htmlAcumulado = '';
 
         departamentosFiltrados.forEach((dep) => {
-            const claveDep = (dep.nomCorDep || '').toUpperCase();
+            const claveDep = String(dep.nomCorDep || dep.NomCorDep || '').toUpperCase();
+            const nombreDepReal = String(dep.nomDep || dep.NomDep || dep.nombre || 'Departamento');
             let iconoSvg = '';
 
             switch (claveDep) {
@@ -417,13 +401,13 @@ const SistemaGlobal = {
                     iconoSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-handshake"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>`;
                     break;
                 case 'CIRNORM':
-                    iconoSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-hand-coins-icon lucide-hand-coins"><path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/><path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 16 6 6"/><circle cx="16" cy="9" r="2.9"/><circle cx="6" cy="5" r="3"/></svg>`;
+                    iconoSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-hand-coins"><path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/><path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 16 6 6"/><circle cx="16" cy="9" r="2.9"/><circle cx="6" cy="5" r="3"/></svg>`;
                     break;
                 case 'CIRNOSIS':
                     iconoSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-terminal"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="m8 16 2-2-2-2"/><path d="M12 18h4"/></svg>`;
                     break;
                 case 'CIRNOOF':
-                    iconoSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mailbox-icon lucide-mailbox"><path d="M22 17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9.5C2 7 4 5 6.5 5H18c2.2 0 4 1.8 4 4v8Z"/><polyline points="15,9 18,9 18,11"/><path d="M6.5 5C9 5 11 7 11 9.5V17a2 2 0 0 1-2 2"/><line x1="6" x2="7" y1="10" y2="10"/></svg>`;
+                    iconoSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mailbox"><path d="M22 17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9.5C2 7 4 5 6.5 5H18c2.2 0 4 1.8 4 4v8Z"/><polyline points="15,9 18,9 18,11"/><path d="M6.5 5C9 5 11 7 11 9.5V17a2 2 0 0 1-2 2"/><line x1="6" x2="7" y1="10" y2="10"/></svg>`;
                     break;
                 default:
                     iconoSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-network"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>`;
@@ -431,14 +415,13 @@ const SistemaGlobal = {
             }
 
             htmlAcumulado += `
-            <button onclick="seleccionarDepartamento('${dep.nomCorDep}', this)" 
+            <button onclick="seleccionarDepartamento('${claveDep}', this)" 
                 class="area-btn border-stone-200 flex flex-col items-center justify-center p-4 rounded-xl border hover:border-[#249444] hover:bg-emerald-50/50 transition-all text-center cursor-pointer group">
-                <span class="uppercase text-xs font-bold text-stone-700 group-hover:text-[#249444] mb-2">${dep.nomDep}</span>
+                <span class="uppercase text-xs font-bold text-stone-700 group-hover:text-[#249444] mb-2">${nombreDepReal}</span>
                 <div class="w-10 h-10 rounded-lg bg-emerald-50 text-[#249444] flex items-center justify-center group-hover:bg-[#249444] group-hover:text-white transition-all">
                     ${iconoSvg}
                 </div>
-            </button>
-        `;
+            </button>`;
         });
 
         contenedorMenu.innerHTML = htmlAcumulado;
@@ -447,16 +430,27 @@ const SistemaGlobal = {
     filtrarPorCampo(claveCentroSeleccionado) {
         if (!this.datos || !this.datos.departamentos) return;
 
-        const areaUsuario = String(localStorage.getItem('session_area') || '').trim().toUpperCase();
-        const depUsuario = this.datos.departamentos.find(dep => String(dep.claveReg).trim() === areaUsuario);
-        const claveRegUsuario = depUsuario ? String(depUsuario.claveReg).trim() : (this.datos.regionales[0]?.claveReg || "");
+        let usuarioActivoObj = {};
+        try { usuarioActivoObj = JSON.parse(localStorage.getItem('usuarioActivo') || '{}'); } catch(e){}
 
-        const departamentosDeLaRegional = this.datos.departamentos.filter(dep => String(dep.claveReg).trim() === claveRegUsuario);
+        let claveRegUsuario = String(
+            usuarioActivoObj.SRIRegId ||
+            usuarioActivoObj.claveReg ||
+            ''
+        ).trim();
+
+        const departamentosDeLaRegional = this.datos.departamentos.filter(dep => {
+            const regDep = String(dep.SRIRegId || dep.claveReg || '').trim();
+            return regDep.toLowerCase() === claveRegUsuario.toLowerCase();
+        });
 
         if (!claveCentroSeleccionado) {
             this.pintarTarjetasDepartamentos(departamentosDeLaRegional);
         } else {
-            const filtrados = departamentosDeLaRegional.filter(dep => String(dep.claveCentro).trim() === String(claveCentroSeleccionado).trim());
+            const filtrados = departamentosDeLaRegional.filter(dep => {
+                const cenDep = String(dep.SRICenId || dep.claveCentro || '').trim();
+                return cenDep === String(claveCentroSeleccionado).trim();
+            });
             this.pintarTarjetasDepartamentos(filtrados);
         }
     },
@@ -481,7 +475,6 @@ const SistemaGlobal = {
         }
 
         const deptoKey = NomCorDep.toString().toLowerCase().trim().replace(/\s+/g, '');
-
         sessionStorage.setItem('depto_activo', deptoKey);
 
         setTimeout(() => {
@@ -531,13 +524,13 @@ window.AppConfigUtils = {
         }
 
         const submodulosFiltrados = fuenteDatos.filter(item => {
-            const dep = item.ClaveDep !== undefined ? item.ClaveDep : item.claveDep;
-            return String(dep).trim() === String(claveDepDepto).trim();
+            const dep = item.ClaveDep !== undefined ? item.ClaveDep : (item.SRIDepId || item.sModClave || item.claveDep);
+            return String(dep).trim().toUpperCase() === String(claveDepDepto).trim().toUpperCase();
         });
 
         return submodulosFiltrados.map(sub => {
-            const idSheet = String(sub.SModClave !== undefined ? sub.SModClave : sub.sModClave);
-            const nombreSheet = String(sub.SModNom !== undefined ? sub.SModNom : sub.sModNom);
+            const idSheet = String(sub.SModClave !== undefined ? sub.SModClave : (sub.sModClave || sub.id));
+            const nombreSheet = String(sub.SModNom !== undefined ? sub.SModNom : (sub.sModNom || sub.nombre));
             const iconoSheet = sub.SModIcon !== undefined ? sub.SModIcon : (sub.sModIcon || sub.icono);
 
             const iconoPorDefecto = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='3' rx='2'/></svg>";
