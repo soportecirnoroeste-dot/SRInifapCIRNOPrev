@@ -292,7 +292,11 @@ const SistemaGlobal = {
             const rId = String(r.SRIRegId || r.claveReg || r.regId || '').trim();
             return rId.toLowerCase() === String(claveReg).toLowerCase();
         });
-        const nombreRegionalOficial = infoRegional ? (infoRegional.regional || infoRegional.nombre || "REGIONAL") : (claveReg || "REGIONAL NO ENCONTRADA");
+        
+        // Buscamos el nombre de la regional en varias posibles propiedades
+        const nombreRegionalOficial = infoRegional ? 
+            (infoRegional.regional || infoRegional.nombre || infoRegional.NomReg || infoRegional.nombreRegional || "REGIONAL") : 
+            (claveReg || "REGIONAL NO ENCONTRADA");
 
         const labelRegional = document.getElementById('user-regional-display');
         if (labelRegional) {
@@ -311,8 +315,18 @@ const SistemaGlobal = {
             selectFiltro.innerHTML = '<option value="">Seleccionar campo</option>';
             camposDeLaRegional.forEach(campo => {
                 const cId = String(campo.SRICenId || campo.claveCentro || campo.cenId || '').trim();
-                const cNom = String(campo.centro || campo.nombreCentro || campo.NomCentro || '').trim();
-                selectFiltro.innerHTML += `<option value="${cId}">${cId} - ${cNom}</option>`;
+                
+                // Buscamos el nombre del centro en varias posibles propiedades para que nunca salga vacío
+                const cNom = String(
+                    campo.centro || 
+                    campo.nombreCentro || 
+                    campo.NomCentro || 
+                    campo.nomCentro || 
+                    campo.nombre || 
+                    ''
+                ).trim();
+
+                selectFiltro.innerHTML += `<option value="${cId}">${cId}${cNom ? ' - ' + cNom : ''}</option>`;
             });
         }
     },
