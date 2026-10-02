@@ -108,6 +108,9 @@ const SistemaGlobal = {
             }
         }
 
+        // Guardamos en la propiedad global del objeto para uso interno
+        this.datos = datosReales;
+
         let usuarioActivoObjTemp = {};
         try { usuarioActivoObjTemp = JSON.parse(localStorage.getItem('usuarioActivo') || '{}'); } catch (e) { }
 
@@ -129,10 +132,41 @@ const SistemaGlobal = {
             }
         }
         window.userPermisosCache = permisosUsuario;
-        window.userNoEmpCache = noEmp; // Guardamos globalmente para evitar errores
+        window.userNoEmpCache = noEmp;
         console.log("🔍 PERMISOS RECIBIDOS PARA NOEMP [" + noEmp + "]:", permisosUsuario);
 
-        this.procesarRespuestaServidor(datosReales);
+        const respuestaProcesada = this.procesarRespuestaServidor(datosReales);
+        
+        // ==========================================
+        // RENDERIZADO INICIAL AUTOMÁTICO
+        // ==========================================
+        if (respuestaProcesada) {
+            const claveRegUser = String(
+                usuarioActivoObjTemp.SRIRegId ||
+                usuarioActivoObjTemp.claveReg ||
+                (respuestaProcesada.regionales && respuestaProcesada.regionales[0] ? respuestaProcesada.regionales[0].SRIRegId : '')
+            ).trim();
+
+            if (claveRegUser && typeof this.renderizarRegional === 'function') {
+                this.renderizarRegional(claveRegUser, respuestaProcesada.regionales || []);
+            }
+
+            if (claveRegUser && typeof this.renderizarFiltroCampos === 'function') {
+                this.renderizarFiltroCampos(respuestaProcesada.campos || [], claveRegUser);
+            }
+
+            // Filtramos los departamentos correspondientes a la regional del usuario y los pintamos
+            const departamentosDeLaRegional = (respuestaProcesada.departamentos || []).filter(dep => {
+                const regDep = String(dep.SRIRegId || dep.claveReg || '').trim();
+                return regDep.toLowerCase() === claveRegUser.toLowerCase();
+            });
+
+            // Si por alguna razón la regional está vacía, pasamos todos los departamentos disponibles
+            const listaA_Pintar = departamentosDeLaRegional.length > 0 ? departamentosDeLaRegional : (respuestaProcesada.departamentos || []);
+            
+            this.pintarTarjetasDepartamentos(listaA_Pintar);
+        }
+
         ocultarCarga();
     },
 
@@ -180,7 +214,7 @@ const SistemaGlobal = {
 
         const permisosUsuario = window.userPermisosCache || {};
 
-        // 🛡️ BÚSQUEDA DINÁMICA DE ADMINISTRACIÓN: 100% basada en propiedades de sesión o niveles altos en permisos
+        // 🛡️ BÚSQUEDA DINÁMICA DE ADMINISTRACIÓN (100% basada en propiedades o niveles altos)
         const verificarNivelAdministrativo = (obj) => {
             if (!obj) return false;
             if (typeof obj === 'number' || typeof obj === 'string') return Number(obj) >= 5;
@@ -205,7 +239,6 @@ const SistemaGlobal = {
             verificarNivelAdministrativo(permisosUsuario)
         );
 
-        // Submódulos totales leídos de la caché / base de datos
         const submodulosCrudos = window.allSubModulosData || (this.datos && this.datos.submodulos) || [];
         const submodulosTotales = submodulosCrudos.map(sub => ({
             SRIModId: String(sub.SRIModId || sub.srimodid || '').trim(),
@@ -226,7 +259,6 @@ const SistemaGlobal = {
             const claveDep = String(dep.SRIModNomC || dep.srimodnomc || dep.nomCorDep || '').toUpperCase();
             const nombreDepReal = String(dep.SRIModNom || dep.srimodnom || dep.nombre || 'Módulo');
             
-            // Extracción del icono SVG oficial desde la base de datos
             let iconoSvgCrudo = dep.SRIModIcon || dep.srimodicon || dep.icono || '';
             let iconoSvgHtml = '';
 
@@ -242,7 +274,6 @@ const SistemaGlobal = {
                 return sub.SRIModId === modId || (claveDep && sub.SRIModId.toUpperCase() === claveDep);
             });
 
-            // Validación estricta y dinámica de permisos por cada módulo/submódulo
             let tieneAccesoModulo = esAdminGeneral;
 
             if (!tieneAccesoModulo) {
@@ -292,7 +323,6 @@ const SistemaGlobal = {
             return rId.toLowerCase() === String(claveReg).toLowerCase();
         });
 
-        // Apuntamos directamente a SRIRegNom y sus variantes de respaldo
         const nombreRegionalOficial = infoRegional ?
             (infoRegional.SRIRegNom || infoRegional.regional || infoRegional.nombre || infoRegional.NomReg || "REGIONAL") :
             (claveReg || "REGIONAL NO ENCONTRADA");
@@ -314,8 +344,6 @@ const SistemaGlobal = {
             selectFiltro.innerHTML = '<option value="">Seleccionar campo</option>';
             camposDeLaRegional.forEach(campo => {
                 const cId = String(campo.SRICenId || campo.claveCentro || campo.cenId || '').trim();
-
-                // Apuntamos directamente a SRICenNom y sus variantes de respaldo
                 const cNom = String(
                     campo.SRICenNom ||
                     campo.centro ||
