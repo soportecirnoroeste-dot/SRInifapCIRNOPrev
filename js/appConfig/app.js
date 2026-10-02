@@ -27,7 +27,7 @@ function convertirObjetoAMayusculas(datos) {
 }
 
 // ==========================================
-// 1. CONTROLADOR CON DEPURACIÓN EN CONSOLA
+// 1. CONTROLADOR DE ACCESO (AUTH GUARD)
 // ==========================================
 const AuthGuard = {
     verificarAcceso: () => {
@@ -37,10 +37,8 @@ const AuthGuard = {
         const rutaCompletaActual = paginaActual + queryActual;
 
         if (!usuarioSesion && !paginaActual.includes('login.html')) {
-            console.warn("Redirigiendo a login: No hay sesión activa.");
             window.location.href = 'login.html';
         } else if (usuarioSesion && paginaActual.includes('login.html')) {
-            console.warn("Redirigiendo a index: Ya hay sesión activa.");
             window.location.href = 'index.html';
         } else {
             document.body.classList.add('auth-checked');
@@ -75,7 +73,7 @@ const AuthGuard = {
 };
 
 // ==========================================
-// 2. NÚCLEO CENTRAL DEL SISTEMA (CON CACHÉ Y FILTRO DE PERMISOS)
+// 2. NÚCLEO CENTRAL DEL SISTEMA
 // ==========================================
 const SistemaGlobal = {
     datos: null,
@@ -93,7 +91,7 @@ const SistemaGlobal = {
             try {
                 datosReales = JSON.parse(datosEnCache);
             } catch (e) {
-                console.error("Error al leer la caché:", e);
+                // Error silencioso de caché
             }
         }
 
@@ -102,13 +100,11 @@ const SistemaGlobal = {
                 datosReales = await callAppsScript("obtenerDatosSistema");
                 this.guardarEnCache(datosReales);
             } catch (err) {
-                console.error("Error al obtener datos del sistema:", err);
                 ocultarCarga();
                 return;
             }
         }
 
-        // Guardamos en la propiedad global del objeto para uso interno
         this.datos = datosReales;
 
         let usuarioActivoObjTemp = {};
@@ -128,28 +124,20 @@ const SistemaGlobal = {
             try {
                 permisosUsuario = await callAppsScript('obtenerPermisosColaborador', { numEmp: noEmp }) || {};
             } catch (e) {
-                console.warn("No se pudieron cargar los permisos del empleado:", e);
+                // Error silencioso de permisos
             }
         }
         
-        // 🛡️ RESPALDO DE EMERGENCIA: Si el objeto de permisos viene vacío de la BD, 
-        // le permitimos ver los módulos de su regional para que no se bloquee la interfaz.
         if (!permisosUsuario || Object.keys(permisosUsuario).length === 0) {
-            console.warn("⚠️ [DEBUG] Los permisos llegaron vacíos. Activando vista estándar para el usuario.");
             permisosUsuario = { accesoTotalPermitido: true };
         }
 
         window.userPermisosCache = permisosUsuario;
         window.userNoEmpCache = noEmp;
-        console.log("🔍 PERMISOS RECIBIDOS PARA NOEMP [" + noEmp + "]:", permisosUsuario);
 
         const respuestaProcesada = this.procesarRespuestaServidor(datosReales);
         
-        // ==========================================
-        // RENDERIZADO INICIAL AUTOMÁTICO CORREGIDO
-        // ==========================================
         if (respuestaProcesada) {
-            // Buscamos la regional en la sesión o tomamos la primera disponible del sistema por defecto
             let claveRegUser = String(
                 usuarioActivoObjTemp.SRIRegId ||
                 usuarioActivoObjTemp.claveReg ||
@@ -158,7 +146,6 @@ const SistemaGlobal = {
             ).trim();
 
             if (!claveRegUser && respuestaProcesada.regionales && respuestaProcesada.regionales.length > 0) {
-                // Si la sesión no la trae, tomamos la de la primera regional del listado general
                 claveRegUser = String(
                     respuestaProcesada.regionales[0].SRIRegId || 
                     respuestaProcesada.regionales[0].claveReg || 
@@ -174,13 +161,11 @@ const SistemaGlobal = {
                 this.renderizarFiltroCampos(respuestaProcesada.campos || [], claveRegUser);
             }
 
-            // Filtramos los departamentos correspondientes a esa regional
             const departamentosDeLaRegional = (respuestaProcesada.departamentos || []).filter(dep => {
                 const regDep = String(dep.SRIRegId || dep.claveReg || '').trim();
                 return regDep.toLowerCase() === claveRegUser.toLowerCase();
             });
 
-            // Si el filtro por regional da vacío, usamos todos los departamentos disponibles para no dejar el panel en blanco
             const listaA_Pintar = departamentosDeLaRegional.length > 0 ? departamentosDeLaRegional : (respuestaProcesada.departamentos || []);
             
             this.pintarTarjetasDepartamentos(listaA_Pintar);
@@ -204,13 +189,11 @@ const SistemaGlobal = {
     },
 
     procesarRespuestaServidor(respuesta) {
-        console.log("🔍 [DEBUG] Procesando respuesta del servidor:", respuesta);
         if (!respuesta) return null;
         if (typeof respuesta === 'string') {
             try {
                 return JSON.parse(respuesta);
             } catch (e) {
-                console.warn("⚠️ [DEBUG] No se pudo parsear la respuesta como JSON:", e);
                 return respuesta;
             }
         }
@@ -218,13 +201,8 @@ const SistemaGlobal = {
     },
 
     pintarTarjetasDepartamentos(listaDepartamentos) {
-        console.log("🔍 [DEBUG] Renderizando módulos dinámicos basados estrictamente en sesión y base de datos...");
-
         const contenedorMenu = document.getElementById('menu-dinamico-departamentos');
-        if (!contenedorMenu) {
-            console.error("❌ [DEBUG] Error: No se encontró el elemento con id 'menu-dinamico-departamentos' en el DOM.");
-            return;
-        }
+        if (!contenedorMenu) return;
 
         let usuarioActivoObjTemp = {};
         try { 
@@ -233,7 +211,6 @@ const SistemaGlobal = {
 
         const permisosUsuario = window.userPermisosCache || {};
 
-        // 🛡️ BÚSQUEDA DINÁMICA DE ADMINISTRACIÓN (100% basada en propiedades o niveles altos)
         const verificarNivelAdministrativo = (obj) => {
             if (!obj) return false;
             if (typeof obj === 'number' || typeof obj === 'string') return Number(obj) >= 5;
@@ -253,7 +230,7 @@ const SistemaGlobal = {
         const esAdminGeneral = Boolean(
             usuarioActivoObjTemp.esAdmin || 
             usuarioActivoObjTemp.isAdmin || 
-            permisosUsuario.accesoTotalPermitido || // <-- Agregamos esta validación temporal
+            permisosUsuario.accesoTotalPermitido || 
             String(usuarioActivoObjTemp.rol || '').toLowerCase().includes('admin') ||
             String(usuarioActivoObjTemp.tipo || '').toLowerCase().includes('admin') ||
             verificarNivelAdministrativo(permisosUsuario)
