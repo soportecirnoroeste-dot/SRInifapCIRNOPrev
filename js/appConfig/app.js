@@ -150,6 +150,20 @@ const SistemaGlobal = {
         window.allSubModulosData = datosReales.submodulos;
     },
 
+    procesarRespuestaServidor(respuesta) {
+        console.log("🔍 [DEBUG] Procesando respuesta del servidor:", respuesta);
+        if (!respuesta) return null;
+        if (typeof respuesta === 'string') {
+            try {
+                return JSON.parse(respuesta);
+            } catch (e) {
+                console.warn("⚠️ [DEBUG] No se pudo parsear la respuesta como JSON:", e);
+                return respuesta;
+            }
+        }
+        return respuesta;
+    },
+
     pintarTarjetasDepartamentos(listaDepartamentos) {
         console.log("🔍 [DEBUG] Renderizando módulos dinámicos basados estrictamente en base de datos...");
 
@@ -307,117 +321,6 @@ const SistemaGlobal = {
                 selectFiltro.innerHTML += `<option value="${cId}">${cId}${cNom ? ' - ' + cNom : ''}</option>`;
             });
         }
-    },
-
-    pintarTarjetasDepartamentos(listaDepartamentos) {
-        console.log("🔍 [DEBUG] Evaluando módulos y permisos según la lógica de negocio oficial...");
-
-        const contenedorMenu = document.getElementById('menu-dinamico-departamentos');
-        if (!contenedorMenu) {
-            console.error("❌ [DEBUG] Error: No se encontró el elemento con id 'menu-dinamico-departamentos' en el DOM.");
-            return;
-        }
-
-        let usuarioActivoObjTemp = {};
-        try { 
-            usuarioActivoObjTemp = JSON.parse(localStorage.getItem('usuarioActivo') || '{}'); 
-        } catch(e) {}
-
-        const noEmp = String(window.userNoEmpCache || usuarioActivoObjTemp.noEmpleado || usuarioActivoObjTemp.SRIPerNumE || '').trim();
-        const permisosUsuario = window.userPermisosCache || {};
-        let esAdminGeneral = (noEmp === "4398");
-
-        // Submódulos totales cacheados
-        const submodulosCrudos = window.allSubModulosData || (this.datos && this.datos.submodulos) || [];
-        const submodulosTotales = submodulosCrudos.map(sub => ({
-            SRIModId: String(sub.SRIModId || sub.srimodid || '').trim(),
-            SRISubMId: String(sub.SRISubMId || sub.srisubmid || '').trim(),
-            SRISubMDes: String(sub.SRIModNom || sub.SRISubMDes || sub.srisubmdes || 'Submódulo').trim(),
-            SRISubMIco: sub.SRISubMIco || sub.srisubmico || ''
-        }));
-
-        // Obtener la fuente de módulos o usar los catálogos oficiales por defecto si viene vacía
-        let modulosFuente = listaDepartamentos;
-        if (!modulosFuente || modulosFuente.length === 0) {
-            modulosFuente = window.allModulosData || (this.datos && this.datos.modulos) || [];
-        }
-
-        // 🛡️ RESPALDO INFALIBLE: Catálogo oficial de módulos de tu BD (dbo.SRIModulo)
-        if (!modulosFuente || modulosFuente.length === 0) {
-            console.warn("⚠️ [DEBUG] Usando catálogo de respaldo de módulos oficiales...");
-            modulosFuente = [
-                { SRIModId: "1", SRIModNom: "Dirección Regional", SRIModNomC: "CIRNODIR" },
-                { SRIModId: "2", SRIModNom: "Dirección de Investigación", SRIModNomC: "CIRNODIRIN" },
-                { SRIModId: "3", SRIModNom: "Dirección de Administración", SRIModNomC: "CIRNODIRAD" },
-                { SRIModId: "4", SRIModNom: "Recursos Financieros", SRIModNomC: "CIRNORF" },
-                { SRIModId: "5", SRIModNom: "Recursos Humanos", SRIModNomC: "CIRNORH" },
-                { SRIModId: "6", SRIModNom: "Recursos Materiales", SRIModNomC: "CIRNORM" },
-                { SRIModId: "7", SRIModNom: "Sistemas", SRIModNomC: "CIRNOSIS" },
-                { SRIModId: "8", SRIModNom: "Oficialia", SRIModNomC: "CIRNOOF" },
-                { SRIModId: "9", SRIModNom: "Investigación", SRIModNomC: "CIRNOINV" }
-            ];
-        }
-
-        let htmlAcumulado = '';
-
-        modulosFuente.forEach((dep) => {
-            const modId = String(dep.SRIModId || dep.srimodid || dep.id || '').trim();
-            const claveDep = String(dep.SRIModNomC || dep.srimodnomc || dep.nomCorDep || '').toUpperCase();
-            const nombreDepReal = String(dep.SRIModNom || dep.srimodnom || dep.nombre || 'Módulo');
-            
-            // Recuperar el icono SVG real de la base de datos o usar una carpeta por defecto
-            let iconoSvgCrudo = dep.SRIModIcon || dep.srimodicon || dep.icono || '';
-            let iconoSvgHtml = iconoSvgCrudo.trim() !== '' ? iconoSvgCrudo : `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folder"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>`;
-
-            // Submódulos pertenecientes a este módulo
-            const submodulosDelModulo = submodulosTotales.filter(sub => {
-                return sub.SRIModId === modId || (claveDep && sub.SRIModId.toUpperCase() === claveDep);
-            });
-
-            // Lógica de permisos solicitada: Si es Admin (4398) o tiene registros en SRIPerEmp con nivel >= 1
-            let tieneAccesoModulo = esAdminGeneral;
-
-            if (!tieneAccesoModulo) {
-                const permisosMod = permisosUsuario[modId] || permisosUsuario[Number(modId)] || permisosUsuario[claveDep] || permisosUsuario[String(modId).toLowerCase()];
-                if (permisosMod) {
-                    if (typeof permisosMod === 'object') {
-                        tieneAccesoModulo = submodulosDelModulo.some(sub => {
-                            const permisoSub = permisosMod[sub.SRISubMId] || permisosMod[Number(sub.SRISubMId)] || permisosMod[String(sub.SRISubMId)];
-                            if (permisoSub !== undefined && permisoSub !== null) {
-                                const nivelPermiso = typeof permisoSub === 'object' ? Number(permisoSub.SRIPermEm || permisoSub.ver || 0) : Number(permisoSub);
-                                return nivelPermiso >= 1;
-                            }
-                            return false;
-                        });
-                    } else {
-                        tieneAccesoModulo = Number(permisosMod) >= 1;
-                    }
-                }
-            } else {
-                // Si es admin general, le permitimos ver los módulos que tengan submódulos listados
-                tieneAccesoModulo = (submodulosDelModulo.length > 0);
-            }
-
-            // Renderizar la tarjeta del módulo
-            if (tieneAccesoModulo) {
-                htmlAcumulado += `
-                <button onclick="seleccionarModulo('${claveDep || modId}', '${modId}', this)" 
-                    class="area-btn border-stone-200 flex flex-col items-center justify-center p-6 rounded-xl border hover:border-[#249444] hover:bg-emerald-50/50 transition-all text-center cursor-pointer group shadow-sm bg-white">
-                    <div class="w-12 h-12 rounded-xl bg-emerald-50 text-[#249444] flex items-center justify-center group-hover:bg-[#249444] group-hover:text-white transition-all mb-3 shadow-inner [&>svg]:w-6 [&>svg]:h-6">
-                        ${iconoSvgHtml}
-                    </div>
-                    <span class="uppercase text-xs font-bold text-stone-700 group-hover:text-[#249444] tracking-wide">${nombreDepReal}</span>
-                    <span class="text-[10px] text-stone-400 mt-1">${submodulosDelModulo.length} submódulos disponibles</span>
-                </button>`;
-            }
-        });
-
-        if (!htmlAcumulado) {
-            contenedorMenu.innerHTML = '<p class="text-xs text-stone-400 col-span-full text-center py-8">No hay módulos disponibles con permisos asignados para este usuario.</p>';
-            return;
-        }
-
-        contenedorMenu.innerHTML = htmlAcumulado;
     },
 
     filtrarPorCampo(claveCentroSeleccionado) {
