@@ -49,16 +49,16 @@ const AuthGuard = {
             if (labelUser) {
                 // Extracción robusta: revisa variables individuales y también el objeto JSON completo de la sesión
                 let nombreReal = 'Usuario';
-                
+
                 try {
                     const usuarioActivoObj = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
-                    nombreReal = localStorage.getItem('session_userName') || 
-                                 usuarioActivoObj.userName || 
-                                 usuarioActivoObj.nombre || 
-                                 usuarioActivoObj.usuario || 
-                                 localStorage.getItem('nombre_usuario') || 
-                                 localStorage.getItem('usuario_sesion') || 
-                                 'Usuario';
+                    nombreReal = localStorage.getItem('session_userName') ||
+                        usuarioActivoObj.userName ||
+                        usuarioActivoObj.nombre ||
+                        usuarioActivoObj.usuario ||
+                        localStorage.getItem('nombre_usuario') ||
+                        localStorage.getItem('usuario_sesion') ||
+                        'Usuario';
                 } catch (e) {
                     nombreReal = localStorage.getItem('session_userName') || localStorage.getItem('usuario_sesion') || 'Usuario';
                 }
@@ -179,8 +179,16 @@ const SistemaGlobal = {
         }
         console.log("👑 ¿Es Administrador General?:", esAdminGeneral);
 
-        const areaUsuario = String(localStorage.getItem('session_area') || '').trim().toUpperCase();
-        let claveRegUsuario = "";
+        let usuarioActivoObj = {};
+        try {
+            usuarioActivoObj = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
+        } catch (e) { }
+
+        const areaUsuario = String(
+            localStorage.getItem('session_area') ||
+            usuarioActivoObj.area ||
+            ''
+        ).trim().toUpperCase(); let claveRegUsuario = "";
 
         const regionalEncontrada = todasLasRegionales.find(r =>
             String(r.claveReg || '').trim().toUpperCase() === areaUsuario ||
