@@ -138,14 +138,25 @@ const SistemaGlobal = {
         const respuestaProcesada = this.procesarRespuestaServidor(datosReales);
         
         // ==========================================
-        // RENDERIZADO INICIAL AUTOMÁTICO
+        // RENDERIZADO INICIAL AUTOMÁTICO CORREGIDO
         // ==========================================
         if (respuestaProcesada) {
-            const claveRegUser = String(
+            // Buscamos la regional en la sesión o tomamos la primera disponible del sistema por defecto
+            let claveRegUser = String(
                 usuarioActivoObjTemp.SRIRegId ||
                 usuarioActivoObjTemp.claveReg ||
-                (respuestaProcesada.regionales && respuestaProcesada.regionales[0] ? respuestaProcesada.regionales[0].SRIRegId : '')
+                usuarioActivoObjTemp.regId ||
+                ''
             ).trim();
+
+            if (!claveRegUser && respuestaProcesada.regionales && respuestaProcesada.regionales.length > 0) {
+                // Si la sesión no la trae, tomamos la de la primera regional del listado general
+                claveRegUser = String(
+                    respuestaProcesada.regionales[0].SRIRegId || 
+                    respuestaProcesada.regionales[0].claveReg || 
+                    respuestaProcesada.regionales[0].regId || ''
+                ).trim();
+            }
 
             if (claveRegUser && typeof this.renderizarRegional === 'function') {
                 this.renderizarRegional(claveRegUser, respuestaProcesada.regionales || []);
@@ -155,13 +166,13 @@ const SistemaGlobal = {
                 this.renderizarFiltroCampos(respuestaProcesada.campos || [], claveRegUser);
             }
 
-            // Filtramos los departamentos correspondientes a la regional del usuario y los pintamos
+            // Filtramos los departamentos correspondientes a esa regional
             const departamentosDeLaRegional = (respuestaProcesada.departamentos || []).filter(dep => {
                 const regDep = String(dep.SRIRegId || dep.claveReg || '').trim();
                 return regDep.toLowerCase() === claveRegUser.toLowerCase();
             });
 
-            // Si por alguna razón la regional está vacía, pasamos todos los departamentos disponibles
+            // Si el filtro por regional da vacío, usamos todos los departamentos disponibles para no dejar el panel en blanco
             const listaA_Pintar = departamentosDeLaRegional.length > 0 ? departamentosDeLaRegional : (respuestaProcesada.departamentos || []);
             
             this.pintarTarjetasDepartamentos(listaA_Pintar);
