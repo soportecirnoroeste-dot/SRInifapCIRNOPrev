@@ -331,14 +331,25 @@ const SistemaGlobal = {
     },
 
     pintarTarjetasDepartamentos(listaDepartamentos) {
+        console.log("🔍 [DEBUG] Entrando a pintarTarjetasDepartamentos");
+        console.log("🔍 [DEBUG] listaDepartamentos recibida:", listaDepartamentos);
+
         const contenedorMenu = document.getElementById('menu-dinamico-departamentos');
-        if (!contenedorMenu) return;
+        if (!contenedorMenu) {
+            console.error("❌ [DEBUG] Error: No se encontró el elemento con id 'menu-dinamico-departamentos' en el DOM.");
+            return;
+        }
 
         let usuarioActivoObjTemp = {};
-        try { usuarioActivoObjTemp = JSON.parse(localStorage.getItem('usuarioActivo') || '{}'); } catch(e){}
+        try { 
+            usuarioActivoObjTemp = JSON.parse(localStorage.getItem('usuarioActivo') || '{}'); 
+        } catch(e) {
+            console.warn("⚠️ [DEBUG] No se pudo parsear el usuarioActivo del localStorage:", e);
+        }
 
         const noEmp = String(window.userNoEmpCache || usuarioActivoObjTemp.noEmpleado || usuarioActivoObjTemp.SRIPerNumE || '').trim();
         const permisosUsuario = window.userPermisosCache || {};
+        
         let esAdminGeneral = (noEmp === "4398");
 
         const buscarNivelAdmin = (obj) => {
@@ -356,9 +367,14 @@ const SistemaGlobal = {
             }
             return false;
         };
-        if (!esAdminGeneral) esAdminGeneral = buscarNivelAdmin(permisosUsuario);
 
-        const submodulosCrudos = window.allSubModulosData || this.datos.submodulos || [];
+        if (!esAdminGeneral) {
+            esAdminGeneral = buscarNivelAdmin(permisosUsuario);
+        }
+
+        const submodulosCrudos = window.allSubModulosData || (this.datos && this.datos.submodulos) || [];
+        console.log("🔍 [DEBUG] submodulosCrudos totales encontrados:", submodulosCrudos);
+
         const submodulosTotales = submodulosCrudos.map(sub => ({
             SRIModId: String(sub.SRIModId || sub.srimodid || sub.ClaveDep || '').trim(),
             SRISubMId: String(sub.SRISubMId || sub.srisubmid || sub.id || '').trim(),
@@ -367,13 +383,14 @@ const SistemaGlobal = {
         }));
 
         if (!listaDepartamentos || listaDepartamentos.length === 0) {
+            console.warn("⚠️ [DEBUG] listaDepartamentos está vacía.");
             contenedorMenu.innerHTML = '<p class="text-xs text-stone-400 col-span-full text-center py-8">No hay módulos disponibles para esta selección.</p>';
             return;
         }
 
         let htmlAcumulado = '';
 
-        listaDepartamentos.forEach((dep) => {
+        listaDepartamentos.forEach((dep, index) => {
             const modId = String(dep.SRIModId || dep.srimodid || dep.id || '').trim();
             const claveDep = String(dep.SRIModNomC || dep.srimodnomc || dep.nomCorDep || dep.NomCorDep || '').toUpperCase();
             const nombreDepReal = String(dep.SRIModNom || dep.srimodnom || dep.nomDep || dep.NomDep || dep.nombre || 'Módulo');
@@ -409,7 +426,6 @@ const SistemaGlobal = {
                             const permisoSub = permisosMod[subModId] || permisosMod[Number(subModId)] || permisosMod[String(subModId)];
                             if (permisoSub !== undefined && permisoSub !== null) {
                                 if (typeof permisoSub === 'object') {
-                                    // Se requiere al menos nivel 1 (ver) para mostrar la tarjeta activa
                                     tienePermiso = Number(permisoSub.ver || 0) >= 1;
                                 } else {
                                     tienePermiso = Number(permisoSub) >= 1;
@@ -435,6 +451,7 @@ const SistemaGlobal = {
         });
 
         if (!htmlAcumulado) {
+            console.warn("⚠️ [DEBUG] Al finalizar el ciclo, htmlAcumulado está vacío. Ningún módulo/submódulo cumplió las condiciones para pintarse.");
             contenedorMenu.innerHTML = '<p class="text-xs text-stone-400 col-span-full text-center py-8">No tienes módulos o submódulos con permisos de acceso asignados.</p>';
             return;
         }
