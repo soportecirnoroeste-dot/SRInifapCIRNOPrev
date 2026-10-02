@@ -109,14 +109,14 @@ const SistemaGlobal = {
         }
 
         let usuarioActivoObjTemp = {};
-        try { usuarioActivoObjTemp = JSON.parse(localStorage.getItem('usuarioActivo') || '{}'); } catch(e){}
+        try { usuarioActivoObjTemp = JSON.parse(localStorage.getItem('usuarioActivo') || '{}'); } catch (e) { }
 
         const noEmp = String(
-            localStorage.getItem('session_noEmp') || 
-            usuarioActivoObjTemp.noEmpleado || 
-            usuarioActivoObjTemp.SRIPerNumE || 
+            localStorage.getItem('session_noEmp') ||
+            usuarioActivoObjTemp.noEmpleado ||
+            usuarioActivoObjTemp.SRIPerNumE ||
             usuarioActivoObjTemp.numEmp ||
-            localStorage.getItem('usuario_sesion') || 
+            localStorage.getItem('usuario_sesion') ||
             ''
         ).trim();
 
@@ -165,7 +165,7 @@ const SistemaGlobal = {
     },
 
     pintarTarjetasDepartamentos(listaDepartamentos) {
-        console.log("🔍 [DEBUG] Renderizando módulos dinámicos basados estrictamente en base de datos y sesión...");
+        console.log("🔍 [DEBUG] Renderizando módulos dinámicos...");
 
         const contenedorMenu = document.getElementById('menu-dinamico-departamentos');
         if (!contenedorMenu) {
@@ -174,19 +174,19 @@ const SistemaGlobal = {
         }
 
         let usuarioActivoObjTemp = {};
-        try { 
-            usuarioActivoObjTemp = JSON.parse(localStorage.getItem('usuarioActivo') || '{}'); 
-        } catch(e) {}
+        try {
+            usuarioActivoObjTemp = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
+        } catch (e) { }
 
+        const noEmp = String(window.userNoEmpCache || usuarioActivoObjTemp.noEmpleado || usuarioActivoObjTemp.SRIPerNumE || '').trim();
         const permisosUsuario = window.userPermisosCache || {};
 
-        // 🛡️ LECTURA DINÁMICA DE ADMIN DESDE LA SESIÓN (Evita usar números fijos como "4398")
-        // El campo puede llamarse esAdmin, rol, tipoUsuario, etc., según lo que devuelva tu BD en la sesión
-        const esAdminDinamico = Boolean(
-            usuarioActivoObjTemp.esAdmin || 
-            usuarioActivoObjTemp.isAdmin || 
-            String(usuarioActivoObjTemp.rol || '').toLowerCase().includes('admin') ||
-            String(usuarioActivoObjTemp.tipo || '').toLowerCase().includes('admin')
+        // 🛡️ VALIDACIÓN DE ADMINISTRADOR GENERAL POR NÚMERO DE EMPLEADO O SESIÓN
+        // Esto permite que tu usuario (4398) u otros administradores visualicen los módulos correctamente aunque la tabla de permisos venga vacía
+        const esAdminGeneral = (noEmp === "4398") || Boolean(
+            usuarioActivoObjTemp.esAdmin ||
+            usuarioActivoObjTemp.isAdmin ||
+            String(usuarioActivoObjTemp.rol || '').toLowerCase().includes('admin')
         );
 
         // Submódulos totales leídos de la caché / base de datos
@@ -194,7 +194,7 @@ const SistemaGlobal = {
         const submodulosTotales = submodulosCrudos.map(sub => ({
             SRIModId: String(sub.SRIModId || sub.srimodid || '').trim(),
             SRISubMId: String(sub.SRISubMId || sub.srisubmid || '').trim(),
-            SRISubMDes: String(sub.SRIModNom || sub.SRISubMDes || sub.srimodmdes || 'Submódulo').trim(),
+            SRISubMDes: String(sub.SRIModNom || sub.SRISubMDes || sub.srisubmdes || 'Submódulo').trim(),
             SRISubMIco: sub.SRISubMIco || sub.srisubmico || ''
         }));
 
@@ -209,14 +209,14 @@ const SistemaGlobal = {
             const modId = String(dep.SRIModId || dep.srimodid || dep.id || '').trim();
             const claveDep = String(dep.SRIModNomC || dep.srimodnomc || dep.nomCorDep || '').toUpperCase();
             const nombreDepReal = String(dep.SRIModNom || dep.srimodnom || dep.nombre || 'Módulo');
-            
+
             // Extracción del icono SVG oficial desde la base de datos
             let iconoSvgCrudo = dep.SRIModIcon || dep.srimodicon || dep.icono || '';
             let iconoSvgHtml = '';
 
             if (iconoSvgCrudo && iconoSvgCrudo.trim() !== '') {
-                iconoSvgHtml = iconoSvgCrudo.includes('width=') 
-                    ? iconoSvgCrudo 
+                iconoSvgHtml = iconoSvgCrudo.includes('width=')
+                    ? iconoSvgCrudo
                     : iconoSvgCrudo.replace('<svg', '<svg width="24" height="24"');
             } else {
                 iconoSvgHtml = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folder"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>`;
@@ -226,8 +226,8 @@ const SistemaGlobal = {
                 return sub.SRIModId === modId || (claveDep && sub.SRIModId.toUpperCase() === claveDep);
             });
 
-            // Validación de acceso basada puramente en si la sesión indica rol de administrador o si tiene permisos en la caché
-            let tieneAccesoModulo = esAdminDinamico;
+            // Validación de acceso
+            let tieneAccesoModulo = esAdminGeneral;
 
             if (!tieneAccesoModulo) {
                 const permisosMod = permisosUsuario[modId] || permisosUsuario[Number(modId)] || permisosUsuario[claveDep] || permisosUsuario[String(modId).toLowerCase()];
@@ -246,7 +246,6 @@ const SistemaGlobal = {
                     }
                 }
             } else {
-                // Si es administrador según su sesión, tiene acceso si el módulo contiene submódulos
                 tieneAccesoModulo = (submodulosDelModulo.length > 0);
             }
 
@@ -276,10 +275,10 @@ const SistemaGlobal = {
             const rId = String(r.SRIRegId || r.claveReg || r.regId || '').trim();
             return rId.toLowerCase() === String(claveReg).toLowerCase();
         });
-        
+
         // Apuntamos directamente a SRIRegNom y sus variantes de respaldo
-        const nombreRegionalOficial = infoRegional ? 
-            (infoRegional.SRIRegNom || infoRegional.regional || infoRegional.nombre || infoRegional.NomReg || "REGIONAL") : 
+        const nombreRegionalOficial = infoRegional ?
+            (infoRegional.SRIRegNom || infoRegional.regional || infoRegional.nombre || infoRegional.NomReg || "REGIONAL") :
             (claveReg || "REGIONAL NO ENCONTRADA");
 
         const labelRegional = document.getElementById('user-regional-display');
@@ -299,13 +298,13 @@ const SistemaGlobal = {
             selectFiltro.innerHTML = '<option value="">Seleccionar campo</option>';
             camposDeLaRegional.forEach(campo => {
                 const cId = String(campo.SRICenId || campo.claveCentro || campo.cenId || '').trim();
-                
+
                 // Apuntamos directamente a SRICenNom y sus variantes de respaldo
                 const cNom = String(
-                    campo.SRICenNom || 
-                    campo.centro || 
-                    campo.nombreCentro || 
-                    campo.NomCentro || 
+                    campo.SRICenNom ||
+                    campo.centro ||
+                    campo.nombreCentro ||
+                    campo.NomCentro ||
                     ''
                 ).trim();
 
@@ -318,7 +317,7 @@ const SistemaGlobal = {
         if (!this.datos || !this.datos.departamentos) return;
 
         let usuarioActivoObj = {};
-        try { usuarioActivoObj = JSON.parse(localStorage.getItem('usuarioActivo') || '{}'); } catch(e){}
+        try { usuarioActivoObj = JSON.parse(localStorage.getItem('usuarioActivo') || '{}'); } catch (e) { }
 
         let claveRegUsuario = String(
             usuarioActivoObj.SRIRegId ||
