@@ -58,7 +58,7 @@ function cancelarEdicionPersonal() {
 async function seleccionarEmpleadoParaEditar(numEmpParam) {
     if (!window._empleadosCache || window._empleadosCache.length === 0) {
         try {
-            const data = await FetchAPI('obtenerPersonal');
+            const data = await FetchAPI('obtenerPersonalSQL');
             window._empleadosCache = data || [];
         } catch (error) {
             console.error("❌ Error al recuperar empleados:", error);
@@ -67,8 +67,8 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
 
     const busqueda = String(numEmpParam || '').trim();
 
-    // Buscamos de forma segura por número de empleado
-    let emp = window._empleadosCache.find(e => String(e.numEmp || e.noEmp || '').trim() === busqueda);
+    // Búsqueda usando el campo SQL correcto: SRIPerNumE
+    let emp = window._empleadosCache.find(e => String(e.SRIPerNumE || '').trim() === busqueda);
 
     if (!emp) {
         alert("No se pudieron cargar los datos del empleado.");
@@ -82,43 +82,37 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
     const gestionContainer = document.getElementById('contenedor-gestion-personal');
     const listadoContainer = document.getElementById('contenedor-listado-personal');
     const titulo = document.getElementById('titulo-formulario');
-    const inputNumEmp = document.getElementById('input-numEmp');
+    const inputNumEmp = document.getElementById('input-SRIPerNumE');
 
     if (formContainer && form) {
-        const regVal = extraerClave(emp.claveReg || emp.textoReg);
-        const centroVal = extraerClave(emp.claveCentro || emp.textoCentro);
-        let rawSit = extraerClave(emp.claveSit || emp.textoSit);
+        const regVal = extraerClave(emp.SRIRegId);
+        const centroVal = extraerClave(emp.SRICenId);
+        let rawSit = extraerClave(emp.SRISitId);
         const sitVal = (!rawSit || rawSit === 0 || rawSit === '0' || String(rawSit).trim().toUpperCase() === 'N/A') ? 'N/A' : rawSit;
 
         if (typeof poblarSelectoresCascada === 'function') {
             poblarSelectoresCascada(regVal, centroVal, sitVal);
         }
 
-        form.elements['numEmp'].value = limpiarValor(emp.numEmp || emp.noEmp);
-        inputNumEmp.setAttribute('readonly', true);
-        form.elements['nombre'].value = limpiarValor(emp.nombre);
-        form.elements['ext'].value = limpiarValor(emp.ext);
-        form.elements['numPers'].value = limpiarValor(emp.numPers);
-        form.elements['escolaridad'].value = limpiarValor(emp.escolaridad);
-        form.elements['direccion'].value = limpiarValor(emp.direccion);
-        form.elements['cp'].value = limpiarValor(emp.cp);
-        form.elements['email'].value = limpiarValor(emp.email);
-        form.elements['rfc'].value = limpiarValor(emp.rfc);
+        // Mapeo directo con los nombres de columnas SQL
+        form.elements['SRIPerNumE'].value = limpiarValor(emp.SRIPerNumE);
+        if (inputNumEmp) inputNumEmp.setAttribute('readonly', true);
+        
+        form.elements['SRIPerNomE'].value = limpiarValor(emp.SRIPerNomE);
+        form.elements['SRIPerNExt'].value = limpiarValor(emp.SRIPerNExt);
+        form.elements['SRIPerNCel'].value = limpiarValor(emp.SRIPerNCel);
+        form.elements['SRIPerEsco'].value = limpiarValor(emp.SRIPerEsco);
+        form.elements['SRIPerDir'].value = limpiarValor(emp.SRIPerDir);
+        form.elements['SRIPerCP'].value = limpiarValor(emp.SRIPerCP);
+        form.elements['SRIPerEml'].value = limpiarValor(emp.SRIPerEml);
+        form.elements['SRIPerRFC'].value = limpiarValor(emp.SRIPerRFC);
+        form.elements['SRIPtoId'].value = limpiarValor(emp.SRIPtoId);
+        form.elements['SRIModNomC'].value = limpiarValor(emp.SRIModNomC);
+        form.elements['SRIPerCd'].value = limpiarValor(emp.SRIPerCd);
+        form.elements['SRIPerEdo'].value = limpiarValor(emp.SRIPerEdo);
 
-        // Mapeo a las nuevas columnas
-        form.elements['NumPto'].value = limpiarValor(emp.NumPto || emp.numPto || emp.puesto);
-        form.elements['NomCorDep'].value = limpiarValor(emp.NomCorDep || emp.nomCorDep || emp.departamento);
-
-        form.elements['ciudad'].value = limpiarValor(emp.ciudad);
-        form.elements['estado'].value = limpiarValor(emp.estado);
-
-        // Título estilizado adaptado exactamente como lo pediste
         if (titulo) {
-            titulo.innerHTML = `<div class="p-4 border-stone-100 flex flex-wrap justify-between items-center gap-4 bg-white">
-                        <div class="font-bold text-xs text-stone-700 uppercase tracking-wider"> 
-                            <p class="text-xs text-stone-500">Editando permisos para: <span class="font-bold text-stone-800">${limpiarValor(emp.nombre)}</span> (No. Empleado: ${limpiarValor(emp.numEmp)})</p>
-                        </div>
-                    </div>`;
+            titulo.innerHTML = `Editando empleado: <span class="text-[#249444]">${limpiarValor(emp.SRIPerNomE)}</span> (No. Empleado: ${limpiarValor(emp.SRIPerNumE)})`;
         }
 
         formContainer.classList.remove('hidden');
@@ -136,35 +130,8 @@ async function guardarOActualizarPersonal(event) {
     const formData = new FormData(form);
     let datosEmpleado = Object.fromEntries(formData.entries());
 
-    const selectReg = form.querySelector('#select-claveReg');
-    if (selectReg && selectReg.selectedIndex >= 0) {
-        const optionText = selectReg.options[selectReg.selectedIndex].text;
-        datosEmpleado.textoReg = optionText !== 'Seleccione una región...' ? optionText : datosEmpleado.claveReg;
-    }
-
-    const selectCentro = form.querySelector('#select-claveCentro');
-    if (selectCentro && selectCentro.selectedIndex >= 0) {
-        const optionText = selectCentro.options[selectCentro.selectedIndex].text;
-        datosEmpleado.textoCentro = optionText !== 'Seleccione un centro...' ? optionText : datosEmpleado.claveCentro;
-    }
-
-    // Asegurar valores desde los selects actualizados de Puesto y Departamento
-    const selectPuesto = form.querySelector('#select-NumPto');
-    if (selectPuesto) {
-        datosEmpleado.NumPto = selectPuesto.value || '';
-    }
-
-    const selectDepto = form.querySelector('#select-NomCorDep');
-    if (selectDepto) {
-        datosEmpleado.NomCorDep = selectDepto.value || '';
-    }
-
-    if (!datosEmpleado.claveSit || String(datosEmpleado.claveSit).trim() === '') {
-        datosEmpleado.claveSit = 'N/A';
-    }
-
-    if (typeof convertirObjetoAMayusculas === 'function') {
-        datosEmpleado = convertirObjetoAMayusculas(datosEmpleado);
+    if (!datosEmpleado.SRISitId || String(datosEmpleado.SRISitId).trim() === '') {
+        datosEmpleado.SRISitId = '0';
     }
 
     const formDataFinal = new FormData();
@@ -172,7 +139,9 @@ async function guardarOActualizarPersonal(event) {
         formDataFinal.append(key, datosEmpleado[key]);
     }
 
-    const actionName = window._empleadosCache.some(e => String(e.numEmp || e.noEmp).trim() === String(datosEmpleado.numEmp).trim()) ? 'actualizarPersonal' : 'guardarPersonal';
+    // Determinar si existe para usar guardarPersonalSQL o actualizarPersonalSQL
+    const existe = window._empleadosCache.some(e => String(e.SRIPerNumE).trim() === String(datosEmpleado.SRIPerNumE).trim());
+    const actionName = existe ? 'actualizarPersonalSQL' : 'guardarPersonalSQL';
 
     const btnSubmit = form.querySelector('button[type="submit"]');
     if (btnSubmit) btnSubmit.disabled = true;
