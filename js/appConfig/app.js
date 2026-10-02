@@ -331,8 +331,7 @@ const SistemaGlobal = {
     },
 
     pintarTarjetasDepartamentos(listaDepartamentos) {
-        console.log("🔍 [DEBUG] Entrando a pintarTarjetasDepartamentos");
-        console.log("🔍 [DEBUG] listaDepartamentos recibida:", listaDepartamentos);
+        console.log("🔍 [DEBUG] Entrando a pintarTarjetasDepartamentos (Vista de Módulos)");
 
         const contenedorMenu = document.getElementById('menu-dinamico-departamentos');
         if (!contenedorMenu) {
@@ -373,8 +372,6 @@ const SistemaGlobal = {
         }
 
         const submodulosCrudos = window.allSubModulosData || (this.datos && this.datos.submodulos) || [];
-        console.log("🔍 [DEBUG] submodulosCrudos totales encontrados:", submodulosCrudos);
-
         const submodulosTotales = submodulosCrudos.map(sub => ({
             SRIModId: String(sub.SRIModId || sub.srimodid || sub.ClaveDep || '').trim(),
             SRISubMId: String(sub.SRISubMId || sub.srisubmid || sub.id || '').trim(),
@@ -382,81 +379,45 @@ const SistemaGlobal = {
             SRISubMIco: sub.SRIModIcon || sub.srimodicon || sub.SRISubMIco || sub.srisubmico || sub.SModIcon || ''
         }));
 
-        // 🛡️ RESPALDO AUTOMÁTICO: Si listaDepartamentos llega vacía, la construimos de los submódulos
+        // Respaldo automático: Si listaDepartamentos llega vacía, extraemos los módulos únicos de los submódulos
         if (!listaDepartamentos || listaDepartamentos.length === 0) {
-            console.warn("⚠️ [DEBUG] listaDepartamentos llegó vacía. Generando módulos dinámicamente desde los submódulos...");
             const modulosUnicos = [...new Set(submodulosTotales.map(s => s.SRIModId))];
             listaDepartamentos = modulosUnicos.map(modId => ({
                 SRIModId: modId,
-                SRIModNom: `Módulo ${modId}`,
+                SRIModNom: modId === '5' ? 'Personal' : modId === '7' ? 'Configuración y Sistemas' : `Módulo ${modId}`,
                 SRIModNomC: `MOD_${modId}`
             }));
         }
 
         let htmlAcumulado = '';
 
-        listaDepartamentos.forEach((dep, index) => {
+        // Iterar EXCLUSIVAMENTE sobre los módulos principales
+        listaDepartamentos.forEach((dep) => {
             const modId = String(dep.SRIModId || dep.srimodid || dep.id || '').trim();
             const claveDep = String(dep.SRIModNomC || dep.srimodnomc || dep.nomCorDep || dep.NomCorDep || '').toUpperCase();
             const nombreDepReal = String(dep.SRIModNom || dep.srimodnom || dep.nomDep || dep.NomDep || dep.nombre || 'Módulo');
             
-            let iconoSvg = dep.SRIModIcon || dep.srimodicon || dep.icono || `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-network"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>`;
+            let iconoSvg = dep.SRIModIcon || dep.srimodicon || dep.icono || `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folder"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>`;
 
+            // Comprobar si el módulo tiene submódulos asociados
             const submodulosDelModulo = submodulosTotales.filter(sub => {
                 return sub.SRIModId === modId || (claveDep && sub.SRIModId.toUpperCase() === claveDep);
             });
 
-            if (submodulosDelModulo.length === 0) {
-                htmlAcumulado += `
-                <div class="border-red-200 bg-red-50/30 flex flex-col items-center justify-center p-4 rounded-xl border text-center cursor-not-allowed opacity-90">
-                    <span class="uppercase text-xs font-bold text-red-600 mb-1">En construcción</span>
-                    <span class="text-xs font-semibold text-stone-600 mb-2">${nombreDepReal}</span>
-                    <div class="w-10 h-10 rounded-lg bg-red-100 text-red-500 flex items-center justify-center">
-                        ${iconoSvg}
-                    </div>
-                </div>`;
-                return;
-            }
-
-            submodulosDelModulo.forEach(sub => {
-                const subModId = sub.SRISubMId;
-                const subModNom = sub.SRISubMDes;
-                const subModIcon = sub.SRISubMIco || iconoSvg;
-
-                let tienePermiso = esAdminGeneral;
-                if (!tienePermiso) {
-                    const permisosMod = permisosUsuario[modId] || permisosUsuario[Number(modId)] || permisosUsuario[claveDep] || permisosUsuario[String(modId).toLowerCase()];
-                    if (permisosMod) {
-                        if (typeof permisosMod === 'object') {
-                            const permisoSub = permisosMod[subModId] || permisosMod[Number(subModId)] || permisosMod[String(subModId)];
-                            if (permisoSub !== undefined && permisoSub !== null) {
-                                if (typeof permisoSub === 'object') {
-                                    tienePermiso = Number(permisoSub.ver || 0) >= 1;
-                                } else {
-                                    tienePermiso = Number(permisoSub) >= 1;
-                                }
-                            }
-                        } else {
-                            tienePermiso = Number(permisosMod) >= 1;
-                        }
-                    }
-                }
-
-                if (tienePermiso) {
-                    htmlAcumulado += `
-                    <button onclick="seleccionarSubModulo('${claveDep || modId}', '${subModId}', this)" 
-                        class="area-btn border-stone-200 flex flex-col items-center justify-center p-4 rounded-xl border hover:border-[#249444] hover:bg-emerald-50/50 transition-all text-center cursor-pointer group">
-                        <span class="uppercase text-xs font-bold text-stone-700 group-hover:text-[#249444] mb-2">${subModNom}</span>
-                        <div class="w-10 h-10 rounded-lg bg-emerald-50 text-[#249444] flex items-center justify-center group-hover:bg-[#249444] group-hover:text-white transition-all">
-                            ${subModIcon}
-                        </div>
-                    </button>`;
-                }
-            });
+            // Pintar la tarjeta del MÓDULO principal (no sus submódulos sueltos)
+            htmlAcumulado += `
+            <button onclick="seleccionarModulo('${claveDep || modId}', '${modId}', this)" 
+                class="area-btn border-stone-200 flex flex-col items-center justify-center p-6 rounded-xl border hover:border-[#249444] hover:bg-emerald-50/50 transition-all text-center cursor-pointer group shadow-sm bg-white">
+                <div class="w-12 h-12 rounded-xl bg-emerald-50 text-[#249444] flex items-center justify-center group-hover:bg-[#249444] group-hover:text-white transition-all mb-3 shadow-inner">
+                    ${iconoSvg}
+                </div>
+                <span class="uppercase text-xs font-bold text-stone-700 group-hover:text-[#249444] tracking-wide">${nombreDepReal}</span>
+                <span class="text-[10px] text-stone-400 mt-1">${submodulosDelModulo.length} submódulos disponibles</span>
+            </button>`;
         });
 
         if (!htmlAcumulado) {
-            contenedorMenu.innerHTML = '<p class="text-xs text-stone-400 col-span-full text-center py-8">No tienes módulos o submódulos con permisos de acceso asignados.</p>';
+            contenedorMenu.innerHTML = '<p class="text-xs text-stone-400 col-span-full text-center py-8">No hay módulos disponibles en este momento.</p>';
             return;
         }
 
