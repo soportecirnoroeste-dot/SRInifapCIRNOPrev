@@ -351,6 +351,24 @@ const SistemaGlobal = {
 
                 selectFiltro.innerHTML += `<option value="${cId}">${cId}${cNom ? ' - ' + cNom : ''}</option>`;
             });
+
+            // ==========================================
+            // AUTO-SELECCIÓN DEL CAMPO DEL USUARIO
+            // ==========================================
+            let usuarioActivoObjTemp = {};
+            try { usuarioActivoObjTemp = JSON.parse(localStorage.getItem('usuarioActivo') || '{}'); } catch (e) { }
+
+            const claveCentroUser = String(
+                localStorage.getItem('centro_activo_actual') ||
+                usuarioActivoObjTemp.SRICenId ||
+                usuarioActivoObjTemp.claveCentro ||
+                usuarioActivoObjTemp.cenId ||
+                ''
+            ).trim();
+
+            if (claveCentroUser) {
+                selectFiltro.value = claveCentroUser;
+            }
         }
     },
 
