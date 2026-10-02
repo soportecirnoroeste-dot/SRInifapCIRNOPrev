@@ -115,8 +115,18 @@ const SistemaGlobal = {
             }
         }
 
-        // Consultamos los permisos específicos del empleado logueado
-        const noEmp = String(localStorage.getItem('session_noEmp') || localStorage.getItem('usuario_sesion') || '').trim();
+        // Consultamos los permisos específicos del empleado logueado (Extracción robusta desde usuarioActivo)
+        let usuarioActivoObjTemp = {};
+        try { usuarioActivoObjTemp = JSON.parse(localStorage.getItem('usuarioActivo') || '{}'); } catch(e){}
+
+        const noEmp = String(
+            localStorage.getItem('session_noEmp') || 
+            usuarioActivoObjTemp.noEmpleado || 
+            usuarioActivoObjTemp.SRIPerNumE || 
+            localStorage.getItem('usuario_sesion') || 
+            ''
+        ).trim();
+
         let permisosUsuario = {};
 
         if (noEmp) {
@@ -161,7 +171,13 @@ const SistemaGlobal = {
             usuarioActivoObj = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
         } catch (e) { }
 
-        const noEmp = String(localStorage.getItem('session_noEmp') || usuarioActivoObj.SRIPerNumE || localStorage.getItem('usuario_sesion') || '').trim();
+        const noEmp = String(
+            localStorage.getItem('session_noEmp') || 
+            usuarioActivoObj.noEmpleado || 
+            usuarioActivoObj.SRIPerNumE || 
+            localStorage.getItem('usuario_sesion') || 
+            ''
+        ).trim();
         const permisosUsuario = window.userPermisosCache || {};
 
         // Detección dinámica de Administrador (Nivel 4)
@@ -318,7 +334,17 @@ const SistemaGlobal = {
         const contenedorMenu = document.getElementById('menu-dinamico-departamentos');
         if (!contenedorMenu) return;
 
-        const noEmp = String(localStorage.getItem('session_noEmp') || localStorage.getItem('usuario_sesion') || '').trim();
+        let usuarioActivoObjTemp = {};
+        try { usuarioActivoObjTemp = JSON.parse(localStorage.getItem('usuarioActivo') || '{}'); } catch(e){}
+
+        const noEmp = String(
+            localStorage.getItem('session_noEmp') || 
+            usuarioActivoObjTemp.noEmpleado || 
+            usuarioActivoObjTemp.SRIPerNumE || 
+            localStorage.getItem('usuario_sesion') || 
+            ''
+        ).trim();
+
         const permisosUsuario = window.userPermisosCache || {};
 
         let esAdminGeneral = (noEmp === "4398");
