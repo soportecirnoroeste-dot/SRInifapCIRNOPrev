@@ -257,8 +257,17 @@ const SistemaGlobal = {
         modulosFuente.forEach((dep) => {
             const modId = String(dep.SRIModId || dep.srimodid || dep.id || '').trim();
             const claveDep = String(dep.SRIModNomC || dep.srimodnomc || dep.nomCorDep || '').toUpperCase();
-            const nombreDepReal = String(dep.SRIModNom || dep.srimodnom || dep.nombre || 'Módulo');
-
+            const nombreDepReal = String(
+                dep.SRIModNom ||
+                dep.srimodnom ||
+                dep.SRIModDesc ||
+                dep.srimoddesc ||
+                dep.nombre ||
+                dep.descripcion ||
+                dep.ModNom ||
+                dep.Nombre ||
+                'Módulo'
+            );
             let iconoSvgCrudo = dep.SRIModIcon || dep.srimodicon || dep.icono || '';
             let iconoSvgHtml = '';
 
