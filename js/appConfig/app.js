@@ -331,7 +331,7 @@ const SistemaGlobal = {
     },
 
     pintarTarjetasDepartamentos(listaDepartamentos) {
-        console.log("🔍 [DEBUG] Entrando a pintarTarjetasDepartamentos (Vista de Módulos)");
+        console.log("🔍 [DEBUG] Entrando a pintarTarjetasDepartamentos (Vista de Módulos Autorizados)");
 
         const contenedorMenu = document.getElementById('menu-dinamico-departamentos');
         if (!contenedorMenu) {
@@ -343,7 +343,7 @@ const SistemaGlobal = {
         try { 
             usuarioActivoObjTemp = JSON.parse(localStorage.getItem('usuarioActivo') || '{}'); 
         } catch(e) {
-            console.warn("⚠️ [DEBUG] No se pudo parsear el usuarioActivo del localStorage:", e);
+            console.warn("⚠️️ [DEBUG] No se pudo parsear el usuarioActivo del localStorage:", e);
         }
 
         const noEmp = String(window.userNoEmpCache || usuarioActivoObjTemp.noEmpleado || usuarioActivoObjTemp.SRIPerNumE || '').trim();
@@ -371,53 +371,71 @@ const SistemaGlobal = {
             esAdminGeneral = buscarNivelAdmin(permisosUsuario);
         }
 
+        // Obtener submódulos totales desde la caché global o datos del servidor
         const submodulosCrudos = window.allSubModulosData || (this.datos && this.datos.submodulos) || [];
         const submodulosTotales = submodulosCrudos.map(sub => ({
-            SRIModId: String(sub.SRIModId || sub.srimodid || sub.ClaveDep || '').trim(),
-            SRISubMId: String(sub.SRISubMId || sub.srisubmid || sub.id || '').trim(),
-            SRISubMDes: String(sub.SRISubMDes || sub.srisubmdes || sub.SModNom || sub.nombre || 'Submódulo').trim(),
-            SRISubMIco: sub.SRIModIcon || sub.srimodicon || sub.SRISubMIco || sub.srisubmico || sub.SModIcon || ''
+            SRIModId: String(sub.SRIModId || sub.srimodid || '').trim(),
+            SRISubMId: String(sub.SRISubMId || sub.srisubmid || '').trim(),
+            SRISubMDes: String(sub.SRISubMDes || sub.srisubmdes || 'Submódulo').trim(),
+            SRISubMIco: sub.SRISubMIco || sub.srisubmico || ''
         }));
 
-        // Respaldo automático: Si listaDepartamentos llega vacía, extraemos los módulos únicos de los submódulos
-        if (!listaDepartamentos || listaDepartamentos.length === 0) {
-            const modulosUnicos = [...new Set(submodulosTotales.map(s => s.SRIModId))];
-            listaDepartamentos = modulosUnicos.map(modId => ({
-                SRIModId: modId,
-                SRIModNom: modId === '5' ? 'Personal' : modId === '7' ? 'Configuración y Sistemas' : `Módulo ${modId}`,
-                SRIModNomC: `MOD_${modId}`
-            }));
-        }
+        // Tomar la lista de departamentos/módulos provista o respaldar con los datos globales de la BD
+        const modulosFuente = (listaDepartamentos && listaDepartamentos.length > 0) 
+            ? listaDepartamentos 
+            : (window.allModulosData || (this.datos && this.datos.modulos) || []);
 
         let htmlAcumulado = '';
 
-        // Iterar EXCLUSIVAMENTE sobre los módulos principales
-        listaDepartamentos.forEach((dep) => {
+        modulosFuente.forEach((dep) => {
             const modId = String(dep.SRIModId || dep.srimodid || dep.id || '').trim();
-            const claveDep = String(dep.SRIModNomC || dep.srimodnomc || dep.nomCorDep || dep.NomCorDep || '').toUpperCase();
-            const nombreDepReal = String(dep.SRIModNom || dep.srimodnom || dep.nomDep || dep.NomDep || dep.nombre || 'Módulo');
+            const claveDep = String(dep.SRIModNomC || dep.srimodnomc || dep.nomCorDep || '').toUpperCase();
+            const nombreDepReal = String(dep.SRIModNom || dep.srimodnom || dep.nombre || 'Módulo');
             
+            // Icono SVG oficial proveniente del campo SRIModIcon de la base de datos
             let iconoSvg = dep.SRIModIcon || dep.srimodicon || dep.icono || `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folder"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>`;
 
-            // Comprobar si el módulo tiene submódulos asociados
+            // Filtrar los submódulos que pertenecen exactamente a este SRIModId
             const submodulosDelModulo = submodulosTotales.filter(sub => {
                 return sub.SRIModId === modId || (claveDep && sub.SRIModId.toUpperCase() === claveDep);
             });
 
-            // Pintar la tarjeta del MÓDULO principal (no sus submódulos sueltos)
-            htmlAcumulado += `
-            <button onclick="seleccionarModulo('${claveDep || modId}', '${modId}', this)" 
-                class="area-btn border-stone-200 flex flex-col items-center justify-center p-6 rounded-xl border hover:border-[#249444] hover:bg-emerald-50/50 transition-all text-center cursor-pointer group shadow-sm bg-white">
-                <div class="w-12 h-12 rounded-xl bg-emerald-50 text-[#249444] flex items-center justify-center group-hover:bg-[#249444] group-hover:text-white transition-all mb-3 shadow-inner">
-                    ${iconoSvg}
-                </div>
-                <span class="uppercase text-xs font-bold text-stone-700 group-hover:text-[#249444] tracking-wide">${nombreDepReal}</span>
-                <span class="text-[10px] text-stone-400 mt-1">${submodulosDelModulo.length} submódulos disponibles</span>
-            </button>`;
+            // Validar si el usuario tiene permiso para ver este módulo
+            let tieneAccesoModulo = esAdminGeneral;
+            
+            if (!tieneAccesoModulo) {
+                const permisosMod = permisosUsuario[modId] || permisosUsuario[Number(modId)] || permisosUsuario[claveDep] || permisosUsuario[String(modId).toLowerCase()];
+                if (permisosMod) {
+                    if (typeof permisosMod === 'object') {
+                        tieneAccesoModulo = submodulosDelModulo.some(sub => {
+                            const permisoSub = permisosMod[sub.SRISubMId] || permisosMod[Number(sub.SRISubMId)] || permisosMod[String(sub.SRISubMId)];
+                            if (permisoSub !== undefined && permisoSub !== null) {
+                                return typeof permisoSub === 'object' ? Number(permisoSub.ver || 0) >= 1 : Number(permisoSub) >= 1;
+                            }
+                            return false;
+                        });
+                    } else {
+                        tieneAccesoModulo = Number(permisosMod) >= 1;
+                    }
+                }
+            }
+
+            // Renderizar la tarjeta principal del Módulo solo si tiene submódulos configurados y el usuario tiene acceso
+            if (submodulosDelModulo.length > 0 && tieneAccesoModulo) {
+                htmlAcumulado += `
+                <button onclick="seleccionarModulo('${claveDep || modId}', '${modId}', this)" 
+                    class="area-btn border-stone-200 flex flex-col items-center justify-center p-6 rounded-xl border hover:border-[#249444] hover:bg-emerald-50/50 transition-all text-center cursor-pointer group shadow-sm bg-white">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-50 text-[#249444] flex items-center justify-center group-hover:bg-[#249444] group-hover:text-white transition-all mb-3 shadow-inner">
+                        ${iconoSvg}
+                    </div>
+                    <span class="uppercase text-xs font-bold text-stone-700 group-hover:text-[#249444] tracking-wide">${nombreDepReal}</span>
+                    <span class="text-[10px] text-stone-400 mt-1">${submodulosDelModulo.length} submódulos disponibles</span>
+                </button>`;
+            }
         });
 
         if (!htmlAcumulado) {
-            contenedorMenu.innerHTML = '<p class="text-xs text-stone-400 col-span-full text-center py-8">No hay módulos disponibles en este momento.</p>';
+            contenedorMenu.innerHTML = '<p class="text-xs text-stone-400 col-span-full text-center py-8">No hay módulos disponibles con permisos asignados para esta regional.</p>';
             return;
         }
 
