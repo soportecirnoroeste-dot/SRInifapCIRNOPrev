@@ -165,7 +165,7 @@ const SistemaGlobal = {
     },
 
     pintarTarjetasDepartamentos(listaDepartamentos) {
-        console.log("🔍 [DEBUG] Renderizando módulos dinámicos...");
+        console.log("🔍 [DEBUG] Renderizando módulos dinámicos basados estrictamente en sesión y base de datos...");
 
         const contenedorMenu = document.getElementById('menu-dinamico-departamentos');
         if (!contenedorMenu) {
@@ -174,19 +174,35 @@ const SistemaGlobal = {
         }
 
         let usuarioActivoObjTemp = {};
-        try {
-            usuarioActivoObjTemp = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
-        } catch (e) { }
+        try { 
+            usuarioActivoObjTemp = JSON.parse(localStorage.getItem('usuarioActivo') || '{}'); 
+        } catch(e) {}
 
-        const noEmp = String(window.userNoEmpCache || usuarioActivoObjTemp.noEmpleado || usuarioActivoObjTemp.SRIPerNumE || '').trim();
         const permisosUsuario = window.userPermisosCache || {};
 
-        // 🛡️ VALIDACIÓN DE ADMINISTRADOR GENERAL POR NÚMERO DE EMPLEADO O SESIÓN
-        // Esto permite que tu usuario (4398) u otros administradores visualicen los módulos correctamente aunque la tabla de permisos venga vacía
-        const esAdminGeneral = (noEmp === "4398") || Boolean(
-            usuarioActivoObjTemp.esAdmin ||
-            usuarioActivoObjTemp.isAdmin ||
-            String(usuarioActivoObjTemp.rol || '').toLowerCase().includes('admin')
+        // 🛡️ BÚSQUEDA DINÁMICA DE ADMINISTRACIÓN: 100% basada en propiedades de sesión o niveles altos en permisos
+        const verificarNivelAdministrativo = (obj) => {
+            if (!obj) return false;
+            if (typeof obj === 'number' || typeof obj === 'string') return Number(obj) >= 5;
+            if (typeof obj === 'object') {
+                for (let k in obj) {
+                    if (k.toLowerCase().includes('niv') && Number(obj[k]) >= 5) return true;
+                    if (typeof obj[k] === 'object' && obj[k] !== null) {
+                        const val = Number(obj[k].SRIPermEm || obj[k].ver || obj[k].nivel || 0);
+                        if (val >= 5) return true;
+                    }
+                    if (verificarNivelAdministrativo(obj[k])) return true;
+                }
+            }
+            return false;
+        };
+
+        const esAdminGeneral = Boolean(
+            usuarioActivoObjTemp.esAdmin || 
+            usuarioActivoObjTemp.isAdmin || 
+            String(usuarioActivoObjTemp.rol || '').toLowerCase().includes('admin') ||
+            String(usuarioActivoObjTemp.tipo || '').toLowerCase().includes('admin') ||
+            verificarNivelAdministrativo(permisosUsuario)
         );
 
         // Submódulos totales leídos de la caché / base de datos
@@ -194,7 +210,7 @@ const SistemaGlobal = {
         const submodulosTotales = submodulosCrudos.map(sub => ({
             SRIModId: String(sub.SRIModId || sub.srimodid || '').trim(),
             SRISubMId: String(sub.SRISubMId || sub.srisubmid || '').trim(),
-            SRISubMDes: String(sub.SRIModNom || sub.SRISubMDes || sub.srisubmdes || 'Submódulo').trim(),
+            SRISubMDes: String(sub.SRIModNom || sub.SRISubMDes || sub.srimodmdes || 'Submódulo').trim(),
             SRISubMIco: sub.SRISubMIco || sub.srisubmico || ''
         }));
 
@@ -209,14 +225,14 @@ const SistemaGlobal = {
             const modId = String(dep.SRIModId || dep.srimodid || dep.id || '').trim();
             const claveDep = String(dep.SRIModNomC || dep.srimodnomc || dep.nomCorDep || '').toUpperCase();
             const nombreDepReal = String(dep.SRIModNom || dep.srimodnom || dep.nombre || 'Módulo');
-
+            
             // Extracción del icono SVG oficial desde la base de datos
             let iconoSvgCrudo = dep.SRIModIcon || dep.srimodicon || dep.icono || '';
             let iconoSvgHtml = '';
 
             if (iconoSvgCrudo && iconoSvgCrudo.trim() !== '') {
-                iconoSvgHtml = iconoSvgCrudo.includes('width=')
-                    ? iconoSvgCrudo
+                iconoSvgHtml = iconoSvgCrudo.includes('width=') 
+                    ? iconoSvgCrudo 
                     : iconoSvgCrudo.replace('<svg', '<svg width="24" height="24"');
             } else {
                 iconoSvgHtml = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folder"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>`;
@@ -226,7 +242,7 @@ const SistemaGlobal = {
                 return sub.SRIModId === modId || (claveDep && sub.SRIModId.toUpperCase() === claveDep);
             });
 
-            // Validación de acceso
+            // Validación estricta y dinámica de permisos por cada módulo/submódulo
             let tieneAccesoModulo = esAdminGeneral;
 
             if (!tieneAccesoModulo) {
