@@ -293,9 +293,9 @@ const SistemaGlobal = {
             return rId.toLowerCase() === String(claveReg).toLowerCase();
         });
         
-        // Buscamos el nombre de la regional en varias posibles propiedades
+        // Apuntamos directamente a SRIRegNom y sus variantes de respaldo
         const nombreRegionalOficial = infoRegional ? 
-            (infoRegional.regional || infoRegional.nombre || infoRegional.NomReg || infoRegional.nombreRegional || "REGIONAL") : 
+            (infoRegional.SRIRegNom || infoRegional.regional || infoRegional.nombre || infoRegional.NomReg || "REGIONAL") : 
             (claveReg || "REGIONAL NO ENCONTRADA");
 
         const labelRegional = document.getElementById('user-regional-display');
@@ -316,13 +316,12 @@ const SistemaGlobal = {
             camposDeLaRegional.forEach(campo => {
                 const cId = String(campo.SRICenId || campo.claveCentro || campo.cenId || '').trim();
                 
-                // Buscamos el nombre del centro en varias posibles propiedades para que nunca salga vacío
+                // Apuntamos directamente a SRICenNom y sus variantes de respaldo
                 const cNom = String(
+                    campo.SRICenNom || 
                     campo.centro || 
                     campo.nombreCentro || 
                     campo.NomCentro || 
-                    campo.nomCentro || 
-                    campo.nombre || 
                     ''
                 ).trim();
 
