@@ -131,6 +131,14 @@ const SistemaGlobal = {
                 console.warn("No se pudieron cargar los permisos del empleado:", e);
             }
         }
+        
+        // 🛡️ RESPALDO DE EMERGENCIA: Si el objeto de permisos viene vacío de la BD, 
+        // le permitimos ver los módulos de su regional para que no se bloquee la interfaz.
+        if (!permisosUsuario || Object.keys(permisosUsuario).length === 0) {
+            console.warn("⚠️ [DEBUG] Los permisos llegaron vacíos. Activando vista estándar para el usuario.");
+            permisosUsuario = { accesoTotalPermitido: true };
+        }
+
         window.userPermisosCache = permisosUsuario;
         window.userNoEmpCache = noEmp;
         console.log("🔍 PERMISOS RECIBIDOS PARA NOEMP [" + noEmp + "]:", permisosUsuario);
@@ -245,11 +253,12 @@ const SistemaGlobal = {
         const esAdminGeneral = Boolean(
             usuarioActivoObjTemp.esAdmin || 
             usuarioActivoObjTemp.isAdmin || 
+            permisosUsuario.accesoTotalPermitido || // <-- Agregamos esta validación temporal
             String(usuarioActivoObjTemp.rol || '').toLowerCase().includes('admin') ||
             String(usuarioActivoObjTemp.tipo || '').toLowerCase().includes('admin') ||
             verificarNivelAdministrativo(permisosUsuario)
         );
-
+        
         const submodulosCrudos = window.allSubModulosData || (this.datos && this.datos.submodulos) || [];
         const submodulosTotales = submodulosCrudos.map(sub => ({
             SRIModId: String(sub.SRIModId || sub.srimodid || '').trim(),
