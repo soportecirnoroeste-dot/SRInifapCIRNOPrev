@@ -165,7 +165,7 @@ const SistemaGlobal = {
     },
 
     pintarTarjetasDepartamentos(listaDepartamentos) {
-        console.log("🔍 [DEBUG] Renderizando módulos dinámicos basados estrictamente en base de datos...");
+        console.log("🔍 [DEBUG] Renderizando módulos dinámicos basados estrictamente en base de datos y sesión...");
 
         const contenedorMenu = document.getElementById('menu-dinamico-departamentos');
         if (!contenedorMenu) {
@@ -180,24 +180,14 @@ const SistemaGlobal = {
 
         const permisosUsuario = window.userPermisosCache || {};
 
-        // 🛡️ BÚSQUEDA DINÁMICA DE ADMINISTRACIÓN: Comprueba si en cualquier rama de los permisos el usuario posee nivel >= 5
-        const verificarNivelAdministrativo = (obj) => {
-            if (!obj) return false;
-            if (typeof obj === 'number' || typeof obj === 'string') return Number(obj) >= 5;
-            if (typeof obj === 'object') {
-                for (let k in obj) {
-                    if (k.toLowerCase().includes('niv') && Number(obj[k]) >= 5) return true;
-                    if (typeof obj[k] === 'object' && obj[k] !== null) {
-                        const val = Number(obj[k].SRIPermEm || obj[k].ver || obj[k].nivel || 0);
-                        if (val >= 5) return true;
-                    }
-                    if (verificarNivelAdministrativo(obj[k])) return true;
-                }
-            }
-            return false;
-        };
-
-        const esAdministradorDinamico = verificarNivelAdministrativo(permisosUsuario);
+        // 🛡️ LECTURA DINÁMICA DE ADMIN DESDE LA SESIÓN (Evita usar números fijos como "4398")
+        // El campo puede llamarse esAdmin, rol, tipoUsuario, etc., según lo que devuelva tu BD en la sesión
+        const esAdminDinamico = Boolean(
+            usuarioActivoObjTemp.esAdmin || 
+            usuarioActivoObjTemp.isAdmin || 
+            String(usuarioActivoObjTemp.rol || '').toLowerCase().includes('admin') ||
+            String(usuarioActivoObjTemp.tipo || '').toLowerCase().includes('admin')
+        );
 
         // Submódulos totales leídos de la caché / base de datos
         const submodulosCrudos = window.allSubModulosData || (this.datos && this.datos.submodulos) || [];
@@ -236,8 +226,8 @@ const SistemaGlobal = {
                 return sub.SRIModId === modId || (claveDep && sub.SRIModId.toUpperCase() === claveDep);
             });
 
-            // Validación estricta y dinámica de permisos por cada módulo/submódulo
-            let tieneAccesoModulo = esAdministradorDinamico;
+            // Validación de acceso basada puramente en si la sesión indica rol de administrador o si tiene permisos en la caché
+            let tieneAccesoModulo = esAdminDinamico;
 
             if (!tieneAccesoModulo) {
                 const permisosMod = permisosUsuario[modId] || permisosUsuario[Number(modId)] || permisosUsuario[claveDep] || permisosUsuario[String(modId).toLowerCase()];
@@ -256,6 +246,7 @@ const SistemaGlobal = {
                     }
                 }
             } else {
+                // Si es administrador según su sesión, tiene acceso si el módulo contiene submódulos
                 tieneAccesoModulo = (submodulosDelModulo.length > 0);
             }
 
