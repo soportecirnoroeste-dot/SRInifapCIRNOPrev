@@ -379,13 +379,18 @@ const SistemaGlobal = {
             SRIModId: String(sub.SRIModId || sub.srimodid || sub.ClaveDep || '').trim(),
             SRISubMId: String(sub.SRISubMId || sub.srisubmid || sub.id || '').trim(),
             SRISubMDes: String(sub.SRISubMDes || sub.srisubmdes || sub.SModNom || sub.nombre || 'Submódulo').trim(),
-            SRISubMIco: sub.SRISubMIco || sub.srisubmico || sub.SModIcon || ''
+            SRISubMIco: sub.SRIModIcon || sub.srimodicon || sub.SRISubMIco || sub.srisubmico || sub.SModIcon || ''
         }));
 
+        // 🛡️ RESPALDO AUTOMÁTICO: Si listaDepartamentos llega vacía, la construimos de los submódulos
         if (!listaDepartamentos || listaDepartamentos.length === 0) {
-            console.warn("⚠️ [DEBUG] listaDepartamentos está vacía.");
-            contenedorMenu.innerHTML = '<p class="text-xs text-stone-400 col-span-full text-center py-8">No hay módulos disponibles para esta selección.</p>';
-            return;
+            console.warn("⚠️ [DEBUG] listaDepartamentos llegó vacía. Generando módulos dinámicamente desde los submódulos...");
+            const modulosUnicos = [...new Set(submodulosTotales.map(s => s.SRIModId))];
+            listaDepartamentos = modulosUnicos.map(modId => ({
+                SRIModId: modId,
+                SRIModNom: `Módulo ${modId}`,
+                SRIModNomC: `MOD_${modId}`
+            }));
         }
 
         let htmlAcumulado = '';
@@ -398,7 +403,7 @@ const SistemaGlobal = {
             let iconoSvg = dep.SRIModIcon || dep.srimodicon || dep.icono || `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-network"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>`;
 
             const submodulosDelModulo = submodulosTotales.filter(sub => {
-                return sub.SRIModId === modId || sub.SRIModId.toUpperCase() === claveDep.toUpperCase();
+                return sub.SRIModId === modId || (claveDep && sub.SRIModId.toUpperCase() === claveDep);
             });
 
             if (submodulosDelModulo.length === 0) {
@@ -451,7 +456,6 @@ const SistemaGlobal = {
         });
 
         if (!htmlAcumulado) {
-            console.warn("⚠️ [DEBUG] Al finalizar el ciclo, htmlAcumulado está vacío. Ningún módulo/submódulo cumplió las condiciones para pintarse.");
             contenedorMenu.innerHTML = '<p class="text-xs text-stone-400 col-span-full text-center py-8">No tienes módulos o submódulos con permisos de acceso asignados.</p>';
             return;
         }
