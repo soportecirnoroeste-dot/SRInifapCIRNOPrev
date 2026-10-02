@@ -188,14 +188,21 @@ const SistemaGlobal = {
             localStorage.getItem('session_area') ||
             usuarioActivoObj.area ||
             ''
-        ).trim().toUpperCase(); 
-        
+        ).trim().toUpperCase();
+
         let claveRegUsuario = "";
 
-        // 🚀 FORZAR CLAVE DE REGIONAL CORRECTA SEGÚN EL ÁREA O CENTRO ACTIVO
-        let centroActivoActual = localStorage.getItem('centro_activo_actual') || "102";
-        
-        if (areaUsuario.includes("CIRNO") || centroActivoActual === "102") {
+        // 🚀 OBTENER EL CENTRO REAL DEL USUARIO (Prioriza 108 desde la BD/Sesión)
+        let centroUsuarioReal = String(
+            localStorage.getItem('session_centro') ||
+            usuarioActivoObj.SRICenId ||
+            usuarioActivoObj.centro ||
+            usuarioActivoObj.idCentro ||
+            "108"
+        ).trim();
+
+        // Forzar Regional 100 para la zona Noroeste
+        if (areaUsuario.includes("CIRNO") || areaUsuario.includes("CIRNODIR") || centroUsuarioReal === "108" || centroUsuarioReal === "102") {
             claveRegUsuario = "100";
         } else {
             const regionalEncontrada = todasLasRegionales.find(r =>
@@ -206,16 +213,7 @@ const SistemaGlobal = {
             if (regionalEncontrada) {
                 claveRegUsuario = String(regionalEncontrada.claveReg || '').trim();
             } else {
-                const depUsuario = todosLosDepartamentos.find(dep =>
-                    String(dep.nomCorDep || '').trim().toUpperCase() === areaUsuario ||
-                    String(dep.claveCentro || '').trim().toUpperCase() === areaUsuario
-                );
-
-                if (depUsuario) {
-                    claveRegUsuario = String(depUsuario.claveReg || '').trim();
-                } else {
-                    claveRegUsuario = todasLasRegionales.length > 0 ? String(todasLasRegionales[0].claveReg || '').trim() : "100";
-                }
+                claveRegUsuario = todasLasRegionales.length > 0 ? String(todasLasRegionales[0].claveReg || '').trim() : "100";
             }
         }
 
@@ -235,7 +233,7 @@ const SistemaGlobal = {
 
         this.renderizarFiltroCampos(todosLosCampos, claveRegUsuario);
 
-        // 🚀 GESTIÓN DE EDITABILIDAD DEL COMBO DE CAMPOS (Forzar desbloqueo si es admin)
+        // 🚀 GESTIÓN DE EDITABILIDAD DEL COMBO DE CAMPOS
         const selectFiltro = document.getElementById('filtro-campos-regional');
         if (selectFiltro) {
             if (esAdminGeneral) {
@@ -251,15 +249,13 @@ const SistemaGlobal = {
         }
 
         const camposDeLaRegional = todosLosCampos.filter(c => String(c.claveReg || '').trim() === claveRegUsuario);
-        const depDelUsuarioLogueado = departamentosDeLaRegional.find(dep =>
-            String(dep.nomCorDep || '').trim().toUpperCase() === areaUsuario ||
-            String(dep.claveCentro || '').trim().toUpperCase() === areaUsuario
-        );
 
-        let claveCentroInicial = "";
-        if (depDelUsuarioLogueado) {
-            claveCentroInicial = String(depDelUsuarioLogueado.claveCentro || '').trim();
-        } else if (camposDeLaRegional.length > 0) {
+        // Asignar estrictamente el centro real del usuario (108) en lugar del primero que encuentre
+        let claveCentroInicial = centroUsuarioReal;
+
+        // Validar que el centro exista en los campos de la regional, si no, usar el primero disponible
+        const existeCentro = camposDeLaRegional.some(c => String(c.claveCentro || '').trim() === claveCentroInicial);
+        if (!existeCentro && camposDeLaRegional.length > 0) {
             claveCentroInicial = String(camposDeLaRegional[0].claveCentro || '').trim();
         }
 
