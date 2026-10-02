@@ -188,25 +188,34 @@ const SistemaGlobal = {
             localStorage.getItem('session_area') ||
             usuarioActivoObj.area ||
             ''
-        ).trim().toUpperCase(); let claveRegUsuario = "";
+        ).trim().toUpperCase(); 
+        
+        let claveRegUsuario = "";
 
-        const regionalEncontrada = todasLasRegionales.find(r =>
-            String(r.claveReg || '').trim().toUpperCase() === areaUsuario ||
-            String(r.nomCorto || '').trim().toUpperCase() === areaUsuario
-        );
-
-        if (regionalEncontrada) {
-            claveRegUsuario = String(regionalEncontrada.claveReg || '').trim();
+        // 🚀 FORZAR CLAVE DE REGIONAL CORRECTA SEGÚN EL ÁREA O CENTRO ACTIVO
+        let centroActivoActual = localStorage.getItem('centro_activo_actual') || "102";
+        
+        if (areaUsuario.includes("CIRNO") || centroActivoActual === "102") {
+            claveRegUsuario = "100";
         } else {
-            const depUsuario = todosLosDepartamentos.find(dep =>
-                String(dep.nomCorDep || '').trim().toUpperCase() === areaUsuario ||
-                String(dep.claveCentro || '').trim().toUpperCase() === areaUsuario
+            const regionalEncontrada = todasLasRegionales.find(r =>
+                String(r.claveReg || '').trim().toUpperCase() === areaUsuario ||
+                String(r.nomCorto || '').trim().toUpperCase() === areaUsuario
             );
 
-            if (depUsuario) {
-                claveRegUsuario = String(depUsuario.claveReg || '').trim();
+            if (regionalEncontrada) {
+                claveRegUsuario = String(regionalEncontrada.claveReg || '').trim();
             } else {
-                claveRegUsuario = todasLasRegionales.length > 0 ? String(todasLasRegionales[0].claveReg || '').trim() : "";
+                const depUsuario = todosLosDepartamentos.find(dep =>
+                    String(dep.nomCorDep || '').trim().toUpperCase() === areaUsuario ||
+                    String(dep.claveCentro || '').trim().toUpperCase() === areaUsuario
+                );
+
+                if (depUsuario) {
+                    claveRegUsuario = String(depUsuario.claveReg || '').trim();
+                } else {
+                    claveRegUsuario = todasLasRegionales.length > 0 ? String(todasLasRegionales[0].claveReg || '').trim() : "100";
+                }
             }
         }
 
