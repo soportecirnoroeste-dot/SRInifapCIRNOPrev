@@ -341,22 +341,32 @@ const SistemaGlobal = {
         const permisosUsuario = window.userPermisosCache || {};
         let esAdminGeneral = (noEmp === "4398");
 
-        const buscarNivelCuatro = (obj) => {
+        const buscarNivelAdmin = (obj) => {
             if (!obj) return false;
-            if (typeof obj === 'number' || typeof obj === 'string') return Number(obj) === 4;
+            if (typeof obj === 'number' || typeof obj === 'string') return Number(obj) >= 5;
             if (typeof obj === 'object') {
                 for (let k in obj) {
-                    if (k.toLowerCase().includes('niv') && Number(obj[k]) === 4) return true;
-                    if (buscarNivelCuatro(obj[k])) return true;
+                    if (k.toLowerCase().includes('niv') && Number(obj[k]) >= 5) return true;
+                    if (typeof obj[k] === 'object' && obj[k] !== null) {
+                        const val = Number(obj[k].SRIPermEm || obj[k].ver || obj[k].nivel || 0);
+                        if (val >= 5) return true;
+                    }
+                    if (buscarNivelAdmin(obj[k])) return true;
                 }
             }
             return false;
         };
-        if (!esAdminGeneral) esAdminGeneral = buscarNivelCuatro(permisosUsuario);
+        if (!esAdminGeneral) esAdminGeneral = buscarNivelAdmin(permisosUsuario);
 
-        const submodulosTotales = window.allSubModulosData || this.datos.submodulos || [];
+        const submodulosCrudos = window.allSubModulosData || this.datos.submodulos || [];
+        const submodulosTotales = submodulosCrudos.map(sub => ({
+            SRIModId: String(sub.SRIModId || sub.srimodid || sub.ClaveDep || '').trim(),
+            SRISubMId: String(sub.SRISubMId || sub.srisubmid || sub.id || '').trim(),
+            SRISubMDes: String(sub.SRISubMDes || sub.srisubmdes || sub.SModNom || sub.nombre || 'Submódulo').trim(),
+            SRISubMIco: sub.SRISubMIco || sub.srisubmico || sub.SModIcon || ''
+        }));
 
-        if (listaDepartamentos.length === 0) {
+        if (!listaDepartamentos || listaDepartamentos.length === 0) {
             contenedorMenu.innerHTML = '<p class="text-xs text-stone-400 col-span-full text-center py-8">No hay módulos disponibles para esta selección.</p>';
             return;
         }
@@ -364,21 +374,17 @@ const SistemaGlobal = {
         let htmlAcumulado = '';
 
         listaDepartamentos.forEach((dep) => {
-            const modId = String(dep.SRIModId || dep.id || '').trim();
-            const claveDep = String(dep.SRIModNomC || dep.nomCorDep || dep.NomCorDep || '').toUpperCase();
-            const nombreDepReal = String(dep.SRIModNom || dep.nomDep || dep.NomDep || dep.nombre || 'Módulo');
+            const modId = String(dep.SRIModId || dep.srimodid || dep.id || '').trim();
+            const claveDep = String(dep.SRIModNomC || dep.srimodnomc || dep.nomCorDep || dep.NomCorDep || '').toUpperCase();
+            const nombreDepReal = String(dep.SRIModNom || dep.srimodnom || dep.nomDep || dep.NomDep || dep.nombre || 'Módulo');
             
-            // Icono del módulo principal
-            let iconoSvg = dep.SRIModIcon || dep.icono || `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-network"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>`;
+            let iconoSvg = dep.SRIModIcon || dep.srimodicon || dep.icono || `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-network"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>`;
 
-            // Regla 1: Verificar si el módulo tiene submódulos dados de alta
             const submodulosDelModulo = submodulosTotales.filter(sub => {
-                const sModId = String(sub.SRIModId || sub.ClaveDep || '').trim();
-                return sModId === modId || sModId.toUpperCase() === claveDep.toUpperCase();
+                return sub.SRIModId === modId || sub.SRIModId.toUpperCase() === claveDep.toUpperCase();
             });
 
             if (submodulosDelModulo.length === 0) {
-                // Tarjeta de Módulo en Construcción (Sin submódulos)
                 htmlAcumulado += `
                 <div class="border-red-200 bg-red-50/30 flex flex-col items-center justify-center p-4 rounded-xl border text-center cursor-not-allowed opacity-90">
                     <span class="uppercase text-xs font-bold text-red-600 mb-1">En construcción</span>
@@ -390,30 +396,34 @@ const SistemaGlobal = {
                 return;
             }
 
-            // Regla 2 y 3: Validar permisos por submódulo o módulo para mostrar las tarjetas activas
             submodulosDelModulo.forEach(sub => {
-                const subModId = String(sub.SRISubMId || sub.id || '').trim();
-                const subModNom = String(sub.SRISubMDes || sub.SModNom || sub.nombre || 'Submódulo');
-                const subModIcon = sub.SRISubMIco || sub.SModIcon || iconoSvg;
+                const subModId = sub.SRISubMId;
+                const subModNom = sub.SRISubMDes;
+                const subModIcon = sub.SRISubMIco || iconoSvg;
 
-                // Validar si el usuario tiene permiso en este módulo/submódulo (o es admin)
                 let tienePermiso = esAdminGeneral;
                 if (!tienePermiso) {
-                    // Verificamos si existe configuración de permiso para este modId y subModId en los permisos del usuario
-                    const permisosMod = permisosUsuario[modId] || permisosUsuario[claveDep] || permisosUsuario[Number(modId)];
+                    const permisosMod = permisosUsuario[modId] || permisosUsuario[Number(modId)] || permisosUsuario[claveDep] || permisosUsuario[String(modId).toLowerCase()];
                     if (permisosMod) {
                         if (typeof permisosMod === 'object') {
-                            const permisoSub = permisosMod[subModId] || permisosMod[Number(subModId)] || permisosMod.general;
-                            tienePermiso = permisoSub !== undefined && permisoSub !== null;
+                            const permisoSub = permisosMod[subModId] || permisosMod[Number(subModId)] || permisosMod[String(subModId)];
+                            if (permisoSub !== undefined && permisoSub !== null) {
+                                if (typeof permisoSub === 'object') {
+                                    // Se requiere al menos nivel 1 (ver) para mostrar la tarjeta activa
+                                    tienePermiso = Number(permisoSub.ver || 0) >= 1;
+                                } else {
+                                    tienePermiso = Number(permisoSub) >= 1;
+                                }
+                            }
                         } else {
-                            tienePermiso = Number(permisosMod) > 0;
+                            tienePermiso = Number(permisosMod) >= 1;
                         }
                     }
                 }
 
                 if (tienePermiso) {
                     htmlAcumulado += `
-                    <button onclick="seleccionarSubModulo('${claveDep}', '${subModId}', this)" 
+                    <button onclick="seleccionarSubModulo('${claveDep || modId}', '${subModId}', this)" 
                         class="area-btn border-stone-200 flex flex-col items-center justify-center p-4 rounded-xl border hover:border-[#249444] hover:bg-emerald-50/50 transition-all text-center cursor-pointer group">
                         <span class="uppercase text-xs font-bold text-stone-700 group-hover:text-[#249444] mb-2">${subModNom}</span>
                         <div class="w-10 h-10 rounded-lg bg-emerald-50 text-[#249444] flex items-center justify-center group-hover:bg-[#249444] group-hover:text-white transition-all">
