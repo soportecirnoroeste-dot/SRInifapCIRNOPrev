@@ -240,8 +240,6 @@ const SistemaGlobal = {
             }
             return false;
         };
-        esAdminGeneral = buscarNivelCuatro(permisosUsuario) || buscarNivelCuatro(usuarioActivoObj) || (noEmp === "4398");
-        console.log("👑 ¿Es Administrador General?:", esAdminGeneral);
 
         const selectFiltro = document.getElementById('filtro-campos-regional');
         if (selectFiltro) {
@@ -348,18 +346,36 @@ const SistemaGlobal = {
         const permisosUsuario = window.userPermisosCache || {};
         let esAdminGeneral = (noEmp === "4398");
 
-        // Submódulos y datos globales cacheados
+        // Submódulos totales cacheados
         const submodulosCrudos = window.allSubModulosData || (this.datos && this.datos.submodulos) || [];
         const submodulosTotales = submodulosCrudos.map(sub => ({
             SRIModId: String(sub.SRIModId || sub.srimodid || '').trim(),
             SRISubMId: String(sub.SRISubMId || sub.srisubmid || '').trim(),
-            SRISubMDes: String(sub.SRISubMDes || sub.srisubmdes || 'Submódulo').trim(),
+            SRISubMDes: String(sub.SRIModNom || sub.SRISubMDes || sub.srisubmdes || 'Submódulo').trim(),
             SRISubMIco: sub.SRISubMIco || sub.srisubmico || ''
         }));
 
-        const modulosFuente = (listaDepartamentos && listaDepartamentos.length > 0) 
-            ? listaDepartamentos 
-            : (window.allModulosData || (this.datos && this.datos.modulos) || []);
+        // Obtener la fuente de módulos o usar los catálogos oficiales por defecto si viene vacía
+        let modulosFuente = listaDepartamentos;
+        if (!modulosFuente || modulosFuente.length === 0) {
+            modulosFuente = window.allModulosData || (this.datos && this.datos.modulos) || [];
+        }
+
+        // 🛡️ RESPALDO INFALIBLE: Catálogo oficial de módulos de tu BD (dbo.SRIModulo)
+        if (!modulosFuente || modulosFuente.length === 0) {
+            console.warn("⚠️ [DEBUG] Usando catálogo de respaldo de módulos oficiales...");
+            modulosFuente = [
+                { SRIModId: "1", SRIModNom: "Dirección Regional", SRIModNomC: "CIRNODIR" },
+                { SRIModId: "2", SRIModNom: "Dirección de Investigación", SRIModNomC: "CIRNODIRIN" },
+                { SRIModId: "3", SRIModNom: "Dirección de Administración", SRIModNomC: "CIRNODIRAD" },
+                { SRIModId: "4", SRIModNom: "Recursos Financieros", SRIModNomC: "CIRNORF" },
+                { SRIModId: "5", SRIModNom: "Recursos Humanos", SRIModNomC: "CIRNORH" },
+                { SRIModId: "6", SRIModNom: "Recursos Materiales", SRIModNomC: "CIRNORM" },
+                { SRIModId: "7", SRIModNom: "Sistemas", SRIModNomC: "CIRNOSIS" },
+                { SRIModId: "8", SRIModNom: "Oficialia", SRIModNomC: "CIRNOOF" },
+                { SRIModId: "9", SRIModNom: "Investigación", SRIModNomC: "CIRNOINV" }
+            ];
+        }
 
         let htmlAcumulado = '';
 
@@ -368,27 +384,22 @@ const SistemaGlobal = {
             const claveDep = String(dep.SRIModNomC || dep.srimodnomc || dep.nomCorDep || '').toUpperCase();
             const nombreDepReal = String(dep.SRIModNom || dep.srimodnom || dep.nombre || 'Módulo');
             
-            // 🛠️ RECUPERAR EL ICONO SVG REAL DE LA BASE DE DATOS (SRIModIcon)
+            // Recuperar el icono SVG real de la base de datos o usar una carpeta por defecto
             let iconoSvgCrudo = dep.SRIModIcon || dep.srimodicon || dep.icono || '';
-            
-            // Si el icono viene como texto HTML/SVG, lo respetamos; de lo contrario, ponemos uno por defecto
             let iconoSvgHtml = iconoSvgCrudo.trim() !== '' ? iconoSvgCrudo : `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folder"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>`;
 
-            // Obtener los submódulos que pertenecen a este módulo
+            // Submódulos pertenecientes a este módulo
             const submodulosDelModulo = submodulosTotales.filter(sub => {
                 return sub.SRIModId === modId || (claveDep && sub.SRIModId.toUpperCase() === claveDep);
             });
 
-            // Validar permisos del empleado (SRIPerNumE / permisosUsuario)
+            // Lógica de permisos solicitada: Si es Admin (4398) o tiene registros en SRIPerEmp con nivel >= 1
             let tieneAccesoModulo = esAdminGeneral;
 
             if (!tieneAccesoModulo) {
-                // Buscamos si el usuario tiene registros en los permisos del módulo o sus submódulos (SRIPerEmp)
                 const permisosMod = permisosUsuario[modId] || permisosUsuario[Number(modId)] || permisosUsuario[claveDep] || permisosUsuario[String(modId).toLowerCase()];
-                
                 if (permisosMod) {
                     if (typeof permisosMod === 'object') {
-                        // Validar si al menos un submódulo tiene SRIPerEm >= 1 (permiso de ver)
                         tieneAccesoModulo = submodulosDelModulo.some(sub => {
                             const permisoSub = permisosMod[sub.SRISubMId] || permisosMod[Number(sub.SRISubMId)] || permisosMod[String(sub.SRISubMId)];
                             if (permisoSub !== undefined && permisoSub !== null) {
@@ -401,10 +412,13 @@ const SistemaGlobal = {
                         tieneAccesoModulo = Number(permisosMod) >= 1;
                     }
                 }
+            } else {
+                // Si es admin general, le permitimos ver los módulos que tengan submódulos listados
+                tieneAccesoModulo = (submodulosDelModulo.length > 0);
             }
 
-            // Si pasa la validación de permisos y tiene submódulos asignados, se pinta la tarjeta del módulo
-            if (submodulosDelModulo.length > 0 && tieneAccesoModulo) {
+            // Renderizar la tarjeta del módulo
+            if (tieneAccesoModulo) {
                 htmlAcumulado += `
                 <button onclick="seleccionarModulo('${claveDep || modId}', '${modId}', this)" 
                     class="area-btn border-stone-200 flex flex-col items-center justify-center p-6 rounded-xl border hover:border-[#249444] hover:bg-emerald-50/50 transition-all text-center cursor-pointer group shadow-sm bg-white">
