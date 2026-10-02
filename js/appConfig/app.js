@@ -155,11 +155,17 @@ const SistemaGlobal = {
         const todasLasRegionales = this.datos.regionales || [];
         let todosLosCampos = this.datos.campos || [];
 
-        // 🚀 Detección infalible de Administrador General (Nivel 4 o Empleado 4398)
-        const noEmp = String(localStorage.getItem('session_noEmp') || localStorage.getItem('usuario_sesion') || '').trim();
-        const permisosUsuario = window.userPermisosCache || {};
-        let esAdminGeneral = (noEmp === "4398"); // Comodín directo para administrador principal
+        // 🚀 Obtener datos de sesión directamente del objeto de SQL guardado
+        let usuarioActivoObj = {};
+        try {
+            usuarioActivoObj = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
+        } catch (e) { }
 
+        const noEmp = String(localStorage.getItem('session_noEmp') || usuarioActivoObj.SRIPerNumE || localStorage.getItem('usuario_sesion') || '').trim();
+        const permisosUsuario = window.userPermisosCache || {};
+
+        // Detección dinámica de Administrador (Nivel 4)
+        let esAdminGeneral = false;
         const buscarNivelCuatro = (obj) => {
             if (!obj) return false;
             if (typeof obj === 'number' || typeof obj === 'string') {
@@ -173,38 +179,26 @@ const SistemaGlobal = {
             }
             return false;
         };
-
-        if (!esAdminGeneral) {
-            esAdminGeneral = buscarNivelCuatro(permisosUsuario);
-        }
+        esAdminGeneral = buscarNivelCuatro(permisosUsuario) || buscarNivelCuatro(usuarioActivoObj);
         console.log("👑 ¿Es Administrador General?:", esAdminGeneral);
 
-        let usuarioActivoObj = {};
-        try {
-            usuarioActivoObj = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
-        } catch (e) { }
-
+        // 🚀 Leer área/módulo directamente de la columna SQL (ej. SRIModNomC o area)
         const areaUsuario = String(
             localStorage.getItem('session_area') ||
             usuarioActivoObj.area ||
+            usuarioActivoObj.SRIModNomC ||
             ''
         ).trim().toUpperCase();
 
-        let claveRegUsuario = "";
-
-        // 🚀 OBTENER EL CENTRO REAL DEL USUARIO (Prioriza 108 desde la BD/Sesión)
-        let centroUsuarioReal = String(
-            localStorage.getItem('session_centro') ||
-            usuarioActivoObj.SRICenId ||
-            usuarioActivoObj.centro ||
-            usuarioActivoObj.idCentro ||
-            "108"
+        // 🚀 Leer la clave regional directamente de la columna SQL (ej. SRIReqId)
+        let claveRegUsuario = String(
+            usuarioActivoObj.SRIReqId ||
+            usuarioActivoObj.claveReg ||
+            ''
         ).trim();
 
-        // Forzar Regional 100 para la zona Noroeste
-        if (areaUsuario.includes("CIRNO") || areaUsuario.includes("CIRNODIR") || centroUsuarioReal === "108" || centroUsuarioReal === "102") {
-            claveRegUsuario = "100";
-        } else {
+        // Si no viene en la sesión, se busca dinámicamente en los catálogos de regionales/departamentos de SQL
+        if (!claveRegUsuario) {
             const regionalEncontrada = todasLasRegionales.find(r =>
                 String(r.claveReg || '').trim().toUpperCase() === areaUsuario ||
                 String(r.nomCorto || '').trim().toUpperCase() === areaUsuario
@@ -213,7 +207,16 @@ const SistemaGlobal = {
             if (regionalEncontrada) {
                 claveRegUsuario = String(regionalEncontrada.claveReg || '').trim();
             } else {
-                claveRegUsuario = todasLasRegionales.length > 0 ? String(todasLasRegionales[0].claveReg || '').trim() : "100";
+                const depUsuario = todosLosDepartamentos.find(dep =>
+                    String(dep.nomCorDep || '').trim().toUpperCase() === areaUsuario ||
+                    String(dep.claveCentro || '').trim().toUpperCase() === areaUsuario
+                );
+
+                if (depUsuario) {
+                    claveRegUsuario = String(depUsuario.claveReg || '').trim();
+                } else {
+                    claveRegUsuario = todasLasRegionales.length > 0 ? String(todasLasRegionales[0].claveReg || '').trim() : "";
+                }
             }
         }
 
@@ -233,7 +236,7 @@ const SistemaGlobal = {
 
         this.renderizarFiltroCampos(todosLosCampos, claveRegUsuario);
 
-        // 🚀 GESTIÓN DE EDITABILIDAD DEL COMBO DE CAMPOS
+        // Gestión de editabilidad del combo de campos
         const selectFiltro = document.getElementById('filtro-campos-regional');
         if (selectFiltro) {
             if (esAdminGeneral) {
@@ -250,13 +253,26 @@ const SistemaGlobal = {
 
         const camposDeLaRegional = todosLosCampos.filter(c => String(c.claveReg || '').trim() === claveRegUsuario);
 
-        // Asignar estrictamente el centro real del usuario (108) en lugar del primero que encuentre
-        let claveCentroInicial = centroUsuarioReal;
+        // 🚀 Obtener el centro inicial dinámicamente desde la columna SRICenId de SQL
+        let claveCentroInicial = String(
+            usuarioActivoObj.SRICenId ||
+            usuarioActivoObj.centro ||
+            localStorage.getItem('session_centro') ||
+            ''
+        ).trim();
 
-        // Validar que el centro exista en los campos de la regional, si no, usar el primero disponible
+        // Validar que el centro pertenezca a los campos de la regional; si no, buscar por departamento o asignar el primero disponible
         const existeCentro = camposDeLaRegional.some(c => String(c.claveCentro || '').trim() === claveCentroInicial);
-        if (!existeCentro && camposDeLaRegional.length > 0) {
-            claveCentroInicial = String(camposDeLaRegional[0].claveCentro || '').trim();
+        if (!existeCentro) {
+            const depDelUsuarioLogueado = departamentosDeLaRegional.find(dep =>
+                String(dep.nomCorDep || '').trim().toUpperCase() === areaUsuario ||
+                String(dep.claveCentro || '').trim().toUpperCase() === areaUsuario
+            );
+            if (depDelUsuarioLogueado) {
+                claveCentroInicial = String(depDelUsuarioLogueado.claveCentro || '').trim();
+            } else if (camposDeLaRegional.length > 0) {
+                claveCentroInicial = String(camposDeLaRegional[0].claveCentro || '').trim();
+            }
         }
 
         if (claveCentroInicial) {
