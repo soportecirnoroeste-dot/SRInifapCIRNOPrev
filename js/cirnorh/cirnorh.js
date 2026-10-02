@@ -14,7 +14,6 @@ window.manejarAccionSeccionCirnorh = function(idOpt) {
 // ==========================================
 function cargarDatosDelSistema() {
     return new Promise((resolve) => {
-        // 1. CARGA INMEDIATA DESDE CACHÉ (Velocidad de 0 milisegundos)
         let datosCacheados = { success: true, submodulos: [] };
         try {
             const cacheGuardada = localStorage.getItem('sistema_cache_datos');
@@ -26,14 +25,12 @@ function cargarDatosDelSistema() {
         window.allSubModulosData = datosCacheados.submodulos || [];
         window.datosSistema = datosCacheados;
 
-        // Pintar el menú al instante con los datos guardados
         if (typeof window.cargarMenuDepartamento === 'function') {
             window.cargarMenuDepartamento();
         }
 
         resolve(datosCacheados);
 
-        // 2. SINCRONIZACIÓN EN SEGUNDO PLANO (No bloquea la pantalla al usuario)
         setTimeout(async () => {
             try {
                 let respuesta = null;
@@ -54,68 +51,32 @@ function cargarDatosDelSistema() {
                     window.datosSistema = respuesta;
                     localStorage.setItem('sistema_cache_datos', JSON.stringify(respuesta));
                     
-                    // Si hubo cambios en Sheets, actualiza el menú visualmente de forma imperceptible
                     if (typeof window.cargarMenuDepartamento === 'function') {
                         window.cargarMenuDepartamento();
                     }
                 }
-            } catch (e) {
-                // Silencioso si no hay internet o falla la red, la caché sigue respondiendo
-            }
+            } catch (e) {}
         }, 100);
     });
 }
 
-
 // ==========================================
-// CONFIGURACIÓN OFICIAL (DETECTADA POR EL ROUTER)
+// CONFIGURACIÓN OFICIAL (LECTURA DIRECTA DE SQL / APPS SCRIPT)
 // ==========================================
 window.cirnorhConfig = {
     deptoKey: "cirnorh",
-    claveDep: "5", // Clave numérica exacta en Sheets para Recursos Humanos (CIRNORH)
+    claveDep: "5", // Clave numércia o corta exacta mapeada en la BD para Recursos Humanos
     subtitle: "Gestión de personal, incidencias, nómina y desarrollo humano.",
     icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-handshake"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>`,
 
     get options() {
-
+        // Consulta directamente la utilidad centralizada alimentada por la base de datos
         if (window.AppConfigUtils && typeof window.AppConfigUtils.crearOpcionesDinamicas === 'function') {
-            const dinamicas = window.AppConfigUtils.crearOpcionesDinamicas(this.claveDep, this.deptoKey);
-            if (dinamicas && dinamicas.length > 0) return dinamicas;
+            return window.AppConfigUtils.crearOpcionesDinamicas(this.claveDep, this.deptoKey);
         }
-
-        const fuenteDatos = window.allSubModulosData || (window.datosSistema && window.datosSistema.submodulos);
-        
-        if (!fuenteDatos || !Array.isArray(fuenteDatos) || fuenteDatos.length === 0) {
-            return opcionesPorDefecto;
-        }
-
-        const submodulosFiltrados = fuenteDatos.filter(item => {
-            const dep = String(item.ClaveDep !== undefined ? item.ClaveDep : (item.claveDep || '')).trim();
-            return dep === String(this.claveDep) || dep.toLowerCase() === String(this.deptoKey).toLowerCase();
-        });
-
-        if (submodulosFiltrados.length === 0) {
-            return opcionesPorDefecto;
-        }
-
-        return submodulosFiltrados.map(sub => {
-            const idSheet = String(sub.SModClave !== undefined ? sub.SModClave : sub.sModClave);
-            const nombreSheet = String(sub.SModNom !== undefined ? sub.SModNom : sub.sModNom);
-            const iconoSheet = sub.SModIcon !== undefined ? sub.SModIcon : (sub.sModIcon || sub.icono);
-            const iconoPorDefecto = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='3' rx='2'/></svg>";
-
-            return {
-                id: idSheet,
-                title: nombreSheet,
-                icon: iconoSheet && iconoSheet.trim() !== "" ? iconoSheet : iconoPorDefecto,
-                action: `manejarAccionSeccion_cirnosis('${idSheet}')`
-            };
-        });
+        return [];
     }
 };
-
-// Alias oficial
-window.cirnorh = window.cirnorhConfig;
 
 // Alias oficial
 window.cirnorh = window.cirnorhConfig;
@@ -149,7 +110,6 @@ function ejecutarCargaSeccionRh(idOpt) {
 
     const idMinus = String(idOpt).toLowerCase();
 
-    // 🔗 Vínculo exacto para el submódulo de Personal
     if (idMinus.includes('personal') || idMinus === 'per' || idMinus === '1' || tituloOpt.includes('personal')) {
         if (typeof cargarPersonalRh === 'function') {
             cargarPersonalRh(true);
@@ -157,11 +117,9 @@ function ejecutarCargaSeccionRh(idOpt) {
             renderizarVistaModuloRh(idOpt, optEncontrada ? optEncontrada.title : "Personal");
         }
     } 
-    // 🔗 Vínculo exacto para el submódulo de Control de Asistencia
     else if (idMinus.includes('asistencia') || idMinus.includes('asis') || idMinus === 'biometrico' || idMinus === '2' || tituloOpt.includes('asistencia')) {
         cargarAsistenciaRh();
     } 
-    // Cualquier otro submódulo dinámico de Sheets
     else {
         renderizarVistaModuloRh(idOpt, optEncontrada ? optEncontrada.title : "Módulo de Recursos Humanos.");
     }
