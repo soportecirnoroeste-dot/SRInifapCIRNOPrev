@@ -129,6 +129,7 @@ const SistemaGlobal = {
             }
         }
         window.userPermisosCache = permisosUsuario;
+        window.userNoEmpCache = noEmp; // Guardamos globalmente para evitar errores
         console.log("🔍 PERMISOS RECIBIDOS PARA NOEMP [" + noEmp + "]:", permisosUsuario);
 
         this.procesarRespuestaServidor(datosReales);
@@ -162,7 +163,9 @@ const SistemaGlobal = {
             usuarioActivoObj = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
         } catch (e) { }
 
-        // Detección flexible de Regional (busca SRIRegId, claveReg, regId, etc.)
+        const noEmp = String(window.userNoEmpCache || usuarioActivoObj.noEmpleado || usuarioActivoObj.SRIPerNumE || '').trim();
+
+        // Detección flexible de Regional
         let claveRegUsuario = String(
             usuarioActivoObj.SRIRegId ||
             usuarioActivoObj.claveReg ||
@@ -171,7 +174,6 @@ const SistemaGlobal = {
             ''
         ).trim();
 
-        // Detección flexible de Área / Módulo
         const areaUsuario = String(
             localStorage.getItem('session_area') ||
             usuarioActivoObj.area ||
@@ -190,7 +192,6 @@ const SistemaGlobal = {
             if (regionalEncontrada) {
                 claveRegUsuario = String(regionalEncontrada.SRIRegId || regionalEncontrada.claveReg || regionalEncontrada.regId || '').trim();
             } else {
-                // Si no empata con regional, buscar en departamentos
                 const depEncontrado = todosLosDepartamentos.find(d => {
                     const dReg = String(d.SRIRegId || d.claveReg || '').trim();
                     const dNom = String(d.nomCorDep || d.NomCorDep || '').trim().toUpperCase();
@@ -207,13 +208,11 @@ const SistemaGlobal = {
         console.log("📍 Regional activa detectada:", claveRegUsuario);
         this.renderizarRegional(claveRegUsuario, todasLasRegionales);
 
-        // Filtrar departamentos por regional de forma flexible
         const departamentosDeLaRegional = todosLosDepartamentos.filter(dep => {
             const regDep = String(dep.SRIRegId || dep.claveReg || dep.regId || '').trim();
             return regDep.toLowerCase() === claveRegUsuario.toLowerCase();
         });
 
-        // Si campos viene vacío, autogenerarlos de los departamentos de la regional
         if (todosLosCampos.length === 0 && departamentosDeLaRegional.length > 0) {
             const centrosUnicos = [...new Set(departamentosDeLaRegional.map(d => String(d.SRICenId || d.claveCentro || d.cenId || '')))];
             todosLosCampos = centrosUnicos.map(c => ({
@@ -226,7 +225,6 @@ const SistemaGlobal = {
 
         this.renderizarFiltroCampos(todosLosCampos, claveRegUsuario);
 
-        // Detección de Administrador General (Nivel 4)
         let permisosUsuario = window.userPermisosCache || {};
         let esAdminGeneral = false;
         const buscarNivelCuatro = (obj) => {
@@ -264,7 +262,6 @@ const SistemaGlobal = {
             return regCampo.toLowerCase() === claveRegUsuario.toLowerCase();
         });
 
-        // Detección flexible de Centro inicial
         let claveCentroInicial = String(
             usuarioActivoObj.SRICenId ||
             usuarioActivoObj.centro ||
@@ -283,7 +280,6 @@ const SistemaGlobal = {
             if (selectFiltro) selectFiltro.value = claveCentroInicial;
         }
 
-        // Filtrar tarjetas finales
         const departamentosFinales = claveCentroInicial 
             ? departamentosDeLaRegional.filter(dep => String(dep.SRICenId || dep.claveCentro || '').trim() === claveCentroInicial)
             : departamentosDeLaRegional;
@@ -328,13 +324,7 @@ const SistemaGlobal = {
         let usuarioActivoObjTemp = {};
         try { usuarioActivoObjTemp = JSON.parse(localStorage.getItem('usuarioActivo') || '{}'); } catch(e){}
 
-        const noEmp = String(
-            localStorage.getItem('session_noEmp') || 
-            usuarioActivoObjTemp.noEmpleado || 
-            usuarioActivoObjTemp.SRIPerNumE || 
-            ''
-        ).trim();
-
+        const noEmp = String(window.userNoEmpCache || usuarioActivoObjTemp.noEmpleado || usuarioActivoObjTemp.SRIPerNumE || '').trim();
         const permisosUsuario = window.userPermisosCache || {};
         let esAdminGeneral = (noEmp === "4398");
 
