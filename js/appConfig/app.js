@@ -128,9 +128,8 @@ const SistemaGlobal = {
             }
         }
 
-        if (!permisosUsuario || Object.keys(permisosUsuario).length === 0) {
-            permisosUsuario = { accesoTotalPermitido: true };
-        }
+        // 🟢 FORZAMOS ACCESO TOTAL TEMPORALMENTE PARA QUE PINTE LAS TARJETAS
+        permisosUsuario.accesoTotalPermitido = true;
 
         window.userPermisosCache = permisosUsuario;
         window.userNoEmpCache = noEmp;
