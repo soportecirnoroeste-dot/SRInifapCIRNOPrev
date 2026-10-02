@@ -1,14 +1,14 @@
 // js/cirnorh/RhPersonal.js
 
-// Variables globales de caché (protegidas para máxima velocidad)
+// Variables globales de caché (protegidas y alineadas con los nombres SQL)
 window._catRegsCache = window._catRegsCache || null;
 window._catCentrosCache = window._catCentrosCache || null;
 window._catSitiosCache = window._catSitiosCache || null;
 window._empleadosCache = window._empleadosCache || [];
 window._mapRegsCache = window._mapRegsCache || null;
 window._mapCentrosCache = window._mapCentrosCache || null;
-window._mapPuestosCache = window._mapPuestosCache || null; // 👈 Agregado
-window._mapDeptosCache = window._mapDeptosCache || null;   // 👈 Agregado
+window._mapPuestosCache = window._mapPuestosCache || null;
+window._mapDeptosCache = window._mapDeptosCache || null;
 
 function cargarPersonalRh(cargarLista = true) {
     if (typeof renderizarVistaModuloRh === 'function') {
@@ -43,50 +43,50 @@ function cargarPersonalRh(cargarLista = true) {
             </h5>
             <form id="form-nuevo-personal" onsubmit="guardarOActualizarPersonal(event)" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
                 <div>
-                    <label class="block font-bold text-stone-700 mb-1">Clave Reg:</label>
-                    <select name="claveReg" id="select-claveReg" onchange="filtrarCentrosPorRegion()" required class="w-full p-2.5 border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-[#249444]">
+                    <label class="block font-bold text-stone-700 mb-1">SRIRegId (Región):</label>
+                    <select name="SRIRegId" id="select-SRIRegId" onchange="filtrarCentrosPorRegion()" required class="w-full p-2.5 border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-[#249444]">
                         <option value="" disabled selected>Seleccione una región...</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block font-bold text-stone-700 mb-1">Clave Centro:</label>
-                    <select name="claveCentro" id="select-claveCentro" onchange="filtrarSitiosPorCentro(this.value)" required class="w-full p-2.5 border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-[#249444]">
+                    <label class="block font-bold text-stone-700 mb-1">SRICenId (Centro):</label>
+                    <select name="SRICenId" id="select-SRICenId" onchange="filtrarSitiosPorCentro(this.value)" required class="w-full p-2.5 border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-[#249444]">
                         <option value="" disabled selected>Seleccione un centro...</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block font-bold text-stone-700 mb-1">Clave Sitio:</label>
-                    <select name="claveSit" id="select-claveSit" required class="w-full p-2.5 border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-[#249444]">
+                    <label class="block font-bold text-stone-700 mb-1">SRISitId (Sitio):</label>
+                    <select name="SRISitId" id="select-SRISitId" required class="w-full p-2.5 border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-[#249444]">
                         <option value="" disabled selected>Seleccione un sitio...</option>
                     </select>
                 </div>
                 
-                <div><label class="block font-bold text-stone-700 mb-1">Núm. Empleado:</label><input type="text" name="numEmp" id="input-numEmp" required class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
-                <div><label class="block font-bold text-stone-700 mb-1">Nombre Completo:</label><input type="text" name="nombre" required class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">SRIPerNumE (Núm. Empleado):</label><input type="text" name="SRIPerNumE" id="input-SRIPerNumE" required class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">SRIPerNomE (Nombre Completo):</label><input type="text" name="SRIPerNomE" required class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
                 
-                <div><label class="block font-bold text-stone-700 mb-1">Extensión:</label><input type="text" name="ext" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
-                <div><label class="block font-bold text-stone-700 mb-1">Núm. Personal:</label><input type="text" name="numPers" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
-                <div><label class="block font-bold text-stone-700 mb-1">Escolaridad:</label><input type="text" name="escolaridad" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
-                <div><label class="block font-bold text-stone-700 mb-1">Dirección:</label><input type="text" name="direccion" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
-                <div><label class="block font-bold text-stone-700 mb-1">C.P.:</label><input type="text" name="cp" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
-                <div><label class="block font-bold text-stone-700 mb-1">Email:</label><input type="email" name="email" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
-                <div><label class="block font-bold text-stone-700 mb-1">RFC:</label><input type="text" name="rfc" required class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">SRIPerNExt (Extensión):</label><input type="text" name="SRIPerNExt" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">SRIPerNCel (Núm. Personal / Celular):</label><input type="text" name="SRIPerNCel" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">SRIPerEsco (Escolaridad):</label><input type="text" name="SRIPerEsco" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">SRIPerDir (Dirección):</label><input type="text" name="SRIPerDir" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">SRIPerCP (C.P.):</label><input type="text" name="SRIPerCP" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">SRIPerEml (Email):</label><input type="email" name="SRIPerEml" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">SRIPerRFC (RFC):</label><input type="text" name="SRIPerRFC" required class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
                 
                 <div>
-                    <label class="block font-bold text-stone-700 mb-1">Puesto:</label>
-                    <select name="NumPto" id="select-NumPto" required class="w-full p-2.5 border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-[#249444]">
+                    <label class="block font-bold text-stone-700 mb-1">SRIPtoId (Puesto):</label>
+                    <select name="SRIPtoId" id="select-SRIPtoId" required class="w-full p-2.5 border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-[#249444]">
                         <option value="" disabled selected>Seleccione un puesto...</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block font-bold text-stone-700 mb-1">Departamento:</label>
-                    <select name="NomCorDep" id="select-NomCorDep" required class="w-full p-2.5 border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-[#249444]">
+                    <label class="block font-bold text-stone-700 mb-1">SRIModNomC (Departamento):</label>
+                    <select name="SRIModNomC" id="select-SRIModNomC" required class="w-full p-2.5 border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-[#249444]">
                         <option value="" disabled selected>Seleccione un departamento...</option>
                     </select>
                 </div>
 
-                <div><label class="block font-bold text-stone-700 mb-1">Ciudad:</label><input type="text" name="ciudad" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
-                <div><label class="block font-bold text-stone-700 mb-1">Estado:</label><input type="text" name="estado" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">SRIPerCd (Ciudad):</label><input type="text" name="SRIPerCd" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">SRIPerEdo (Estado):</label><input type="text" name="SRIPerEdo" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
                 
                 <div class="sm:col-span-2 md:col-span-3 flex items-end gap-2 pt-2">
                     <button type="submit" class="py-2.5 px-6 bg-[#249444] text-white font-bold rounded-lg hover:bg-[#047857] transition flex items-center justify-center gap-1.5">
@@ -144,7 +144,7 @@ async function cargarDatosGenerales(forzarRecarga = false) {
         window._catSitiosCache = null;
         window._mapRegsCache = null;
         window._mapCentrosCache = null;
-        window._mapPuestosCache = null; // <-- Limpiamos caché de puestos también
+        window._mapPuestosCache = null;
         window._empleadosCache = [];
     }
 
@@ -153,10 +153,7 @@ async function cargarDatosGenerales(forzarRecarga = false) {
         tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-stone-400 italic">Sincronizando datos...</td></tr>`;
     }
 
-    // 1. CARGAMOS PRIMERO LOS CATÁLOGOS (Puestos, Departamentos, etc.)
     await cargarCatalogosSheets(forzarRecarga);
-
-    // 2. DESPUÉS CARGAMOS EL PERSONAL Y RENDERIZAMOS CON LOS NOMBRES YA LISTOS
     await cargarDatosPersonalSheets(forzarRecarga);
 }
 
@@ -190,29 +187,27 @@ async function cargarCatalogosSheets(forzar = false) {
         window._catDepartamentos = data.departamentos || data.deptos || [];
         window._catPuestos = data.puestos || data.catPuestos || [];
 
-        // Poblar select de puestos
-        const selPuesto = document.getElementById('select-NumPto');
+        const selPuesto = document.getElementById('select-SRIPtoId');
         if (selPuesto && window._catPuestos) {
             selPuesto.innerHTML = '<option value="" disabled selected>Seleccione un puesto...</option>' +
                 window._catPuestos.map(p => {
-                    const numPto = p.NumPto || p.numPto || p.clave || '';
-                    const nomPto = p.NomPto || p.nomPto || p.nombre || '';
+                    const numPto = p.SRIPtoId || p.NumPto || p.numPto || p.clave || '';
+                    const nomPto = p.SRIPtoDesc || p.NomPto || p.nomPto || p.nombre || '';
                     return `<option value="${numPto}">${numPto} - ${nomPto}</option>`;
                 }).join('');
         }
 
-        // Poblar select de departamentos
-        const selDepto = document.getElementById('select-NomCorDep');
+        const selDepto = document.getElementById('select-SRIModNomC');
         if (selDepto && window._catDepartamentos) {
             selDepto.innerHTML = '<option value="" disabled selected>Seleccione un departamento...</option>' +
                 window._catDepartamentos.map(d => {
-                    const nomCor = d.nomCorDep || d.NomCorDep || d.claveDep || '';
-                    const nomDep = d.nomDep || d.nombre || '';
+                    const nomCor = d.SRIModNomC || d.nomCorDep || d.NomCorDep || d.claveDep || '';
+                    const nomDep = d.SRIModNom || d.nomDep || d.nombre || '';
                     return `<option value="${nomCor}">${nomCor} - ${nomDep}</option>`;
                 }).join('');
         }
 
-        const selCentro = document.getElementById('select-claveCentro');
+        const selCentro = document.getElementById('select-SRICenId');
         if (selCentro && selCentro.value && typeof filtrarSitiosPorCentro === 'function') {
             filtrarSitiosPorCentro(selCentro.value);
         }
@@ -221,29 +216,10 @@ async function cargarCatalogosSheets(forzar = false) {
     }
 }
 
-function poblarSelectoresCascada(regSeleccionada = '', centroSeleccionado = '', sitioSeleccionado = '') {
-    const selectReg = document.getElementById('select-claveReg');
-    const selectCentro = document.getElementById('select-claveCentro');
-    const selectSitio = document.getElementById('select-claveSit');
-
-    if (!selectReg || !selectCentro || !selectSitio) return;
-
-    selectReg.innerHTML = '<option value="" disabled selected>Seleccione una región...</option>' +
-        window._catRegs.map(r => `<option value="${r.claveReg}">${r.claveReg} - ${r.regional}</option>`).join('');
-
-    if (regSeleccionada) {
-        selectReg.value = regSeleccionada;
-        filtrarCentrosPorRegion(centroSeleccionado, sitioSeleccionado);
-    }
-
-    selectReg.onchange = () => filtrarCentrosPorRegion();
-    selectCentro.onchange = () => filtrarSitiosPorCentro();
-}
-
 window.filtrarCentrosPorRegion = function (centroActual = '', sitActual = '') {
-    const selReg = document.getElementById('select-claveReg') || document.querySelector('select[name="claveReg"]');
-    const selCentro = document.getElementById('select-claveCentro') || document.querySelector('select[name="claveCentro"]');
-    const selSit = document.getElementById('select-claveSit') || document.querySelector('select[name="claveSit"]');
+    const selReg = document.getElementById('select-SRIRegId') || document.querySelector('select[name="SRIRegId"]');
+    const selCentro = document.getElementById('select-SRICenId') || document.querySelector('select[name="SRICenId"]');
+    const selSit = document.getElementById('select-SRISitId') || document.querySelector('select[name="SRISitId"]');
 
     if (!selReg || !selCentro || !selSit) return;
 
@@ -254,14 +230,14 @@ window.filtrarCentrosPorRegion = function (centroActual = '', sitActual = '') {
 
     const centrosArray = Array.isArray(window._catCentros) ? window._catCentros : [];
     const centrosFiltrados = regionSeleccionada ? centrosArray.filter(c => {
-        const regEnFila = String(c.ClaveReg || c.claveReg || c.CLAVEREG || '').trim();
+        const regEnFila = String(c.SRIRegId || c.ClaveReg || c.claveReg || '').trim();
         return regEnFila === String(regionSeleccionada).trim();
     }) : [];
 
     if (centrosFiltrados.length > 0) {
         selCentro.innerHTML += centrosFiltrados.map(c => {
-            const claveC = c.ClaveCentro || c.claveCentro || c.CLAVECENTRO || c.clave || '';
-            const nombreC = c.Centro || c.centro || c.nombre || '';
+            const claveC = c.SRICenId || c.ClaveCentro || c.claveCentro || '';
+            const nombreC = c.SRICenNom || c.Centro || c.centro || c.nombre || '';
             const selected = (String(claveC) === String(centroActual)) ? 'selected' : '';
             return `<option value="${claveC}" ${selected}>${claveC} - ${nombreC}</option>`;
         }).join('');
@@ -273,27 +249,27 @@ window.filtrarCentrosPorRegion = function (centroActual = '', sitActual = '') {
 };
 
 window.filtrarSitiosPorCentro = function (claveCentro = '', sitActual = '') {
-    const selSit = document.getElementById('select-claveSit');
+    const selSit = document.getElementById('select-SRISitId');
     if (!selSit) return;
 
     selSit.innerHTML = `<option value="" disabled selected>Seleccione un sitio...</option>`;
 
-    const centroId = claveCentro || document.getElementById('select-claveCentro').value;
+    const centroId = claveCentro || document.getElementById('select-SRICenId').value;
 
     const sitiosArray = Array.isArray(window._catSitios) ? window._catSitios : [];
     const sitiosFiltrados = sitiosArray.filter(s => {
-        const cAsociado = String(s.claveCentro || s.ClaveCentro || '').trim();
+        const cAsociado = String(s.SRICenId || s.claveCentro || s.ClaveCentro || '').trim();
         return cAsociado === String(centroId).trim();
     });
 
     if (sitiosFiltrados.length > 0) {
         selSit.innerHTML += sitiosFiltrados.map(s => {
-            const claveS = s.clave || s.ClaveSitio || s.claveSit || '';
-            const nombreS = s.nombre || s.Sitio || s.sitio || '';
+            const claveS = s.SRISitId || s.clave || s.ClaveSitio || '';
+            const nombreS = s.SRISitNom || s.nombre || s.Sitio || '';
             return `<option value="${claveS}">${claveS} - ${nombreS}</option>`;
         }).join('');
     } else {
-        selSit.innerHTML += `<option value="N/A" selected>N/A - No aplica</option>`;
+        selSit.innerHTML += `<option value="0" selected>0 - No aplica</option>`;
     }
 
     if (sitActual) {
@@ -302,14 +278,14 @@ window.filtrarSitiosPorCentro = function (claveCentro = '', sitActual = '') {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-    const selReg = document.getElementById('select-claveReg') || document.querySelector('select[name="claveReg"]');
+    const selReg = document.getElementById('select-SRIRegId') || document.querySelector('select[name="SRIRegId"]');
     if (selReg) {
         selReg.addEventListener('change', () => {
             window.filtrarCentrosPorRegion();
         });
     }
 
-    const selCentro = document.getElementById('select-claveCentro');
+    const selCentro = document.getElementById('select-SRICenId');
     if (selCentro) {
         selCentro.addEventListener('change', function (e) {
             window.filtrarSitiosPorCentro(e.target.value);
@@ -327,11 +303,11 @@ async function cargarDatosPersonalSheets(forzar = false) {
     }
 
     try {
-        const data = await FetchAPI('obtenerPersonal');
+        const data = await FetchAPI('obtenerPersonalSQL');
         window._empleadosCache = data || [];
         renderizarTablaPersonal(window._empleadosCache);
     } catch (error) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500 italic">Error al conectar con Sheets.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500 italic">Error al conectar con la Base de Datos.</td></tr>`;
     }
 }
 
@@ -344,12 +320,12 @@ function filtrarTablaPersonal(textoBusqueda) {
     }
 
     const empleadosFiltrados = window._empleadosCache.filter(row => {
-        const reg = String(row.claveReg || row.textoReg || "").toLowerCase();
-        const centro = String(row.claveCentro || row.textoCentro || "").toLowerCase();
-        const numEmp = String(row.numEmp || "").toLowerCase();
-        const nombre = String(row.nombre || "").toLowerCase();
-        const puesto = String(row.NumPto || row.puesto || "").toLowerCase();
-        const depto = String(row.NomCorDep || row.departamento || "").toLowerCase();
+        const reg = String(row.SRIRegId || "").toLowerCase();
+        const centro = String(row.SRICenId || "").toLowerCase();
+        const numEmp = String(row.SRIPerNumE || "").toLowerCase();
+        const nombre = String(row.SRIPerNomE || "").toLowerCase();
+        const puesto = String(row.SRIPtoId || "").toLowerCase();
+        const depto = String(row.SRIModNomC || "").toLowerCase();
 
         return reg.includes(query) ||
             centro.includes(query) ||
@@ -374,87 +350,61 @@ function renderizarTablaPersonal(registros) {
     if (!window._mapRegsCache && window._catRegs) {
         window._mapRegsCache = {};
         window._catRegs.forEach(r => {
-            const k = String(r.claveReg || r.clave || '').trim();
-            if (k) window._mapRegsCache[k] = r.NomCorto || r.nomCorto || r.regional || r.nombre || '';
+            const k = String(r.SRIRegId || r.claveReg || '').trim();
+            if (k) window._mapRegsCache[k] = r.SRIRegNom || r.NomCorto || r.regional || '';
         });
     }
 
     if (!window._mapCentrosCache && window._catCentros) {
         window._mapCentrosCache = {};
         window._catCentros.forEach(c => {
-            const k = String(c.ClaveCentro || c.claveCentro || c.clave || '').trim();
-            if (k) window._mapCentrosCache[k] = c.NomCorto || c.nomCorto || c.Centro || c.centro || '';
+            const k = String(c.SRICenId || c.ClaveCentro || '').trim();
+            if (k) window._mapCentrosCache[k] = c.SRICenNom || c.Centro || '';
         });
     }
 
     if (window._catDepartamentos && Array.isArray(window._catDepartamentos) && window._catDepartamentos.length > 0) {
         window._mapDeptosCache = {};
         window._catDepartamentos.forEach(d => {
-            const nomCor = String(d.nomCorDep || '').trim();
-            const cDep = String(d.claveDep || '').trim();
-            const nomLargo = d.nomDep || d.nombre || '';
-
+            const nomCor = String(d.SRIModNomC || d.nomCorDep || '').trim();
+            const nomLargo = d.SRIModNom || d.nomDep || d.nombre || '';
             if (nomCor) window._mapDeptosCache[nomCor] = nomLargo;
-            if (cDep) window._mapDeptosCache[cDep] = nomLargo;
         });
     }
 
     if (!window._mapPuestosCache && window._catPuestos && Array.isArray(window._catPuestos)) {
         window._mapPuestosCache = {};
         window._catPuestos.forEach(p => {
-            const k = String(p.NumPto || p.numPto || p.clave || '').trim();
-            const v = p.NomPto || p.nomPto || p.nombre || '';
+            const k = String(p.SRIPtoId || '').trim();
+            const v = p.SRIPtoDesc || p.NomPto || '';
             if (k) window._mapPuestosCache[k] = v;
         });
     }
 
     tbody.innerHTML = registros.map((row) => {
-        const cReg = String(row.claveReg || '').trim();
-        const cCentro = String(row.claveCentro || '').trim();
-        const cNumPto = String(row.NumPto || row.numPto || row.puesto || '').trim();
-        const cNomCorDep = String(row.NomCorDep || row.nomCorDep || row.departamento || '').trim();
+        const cReg = String(row.SRIRegId || '').trim();
+        const cCentro = String(row.SRICenId || '').trim();
+        const cNumPto = String(row.SRIPtoId || '').trim();
+        const cNomCorDep = String(row.SRIModNomC || '').trim();
 
         const nomCortoReg = (window._mapRegsCache && window._mapRegsCache[cReg]) || '';
-        const reg = nomCortoReg ? `${cReg} - ${nomCortoReg}` : (row.textoReg || cReg);
+        const reg = nomCortoReg ? `${cReg} - ${nomCortoReg}` : cReg;
 
         const nomCortoCentro = (window._mapCentrosCache && window._mapCentrosCache[cCentro]) || '';
-        const centro = nomCortoCentro ? `${cCentro} - ${nomCortoCentro}` : (row.textoCentro || cCentro);
+        const centro = nomCortoCentro ? `${cCentro} - ${nomCortoCentro}` : cCentro;
 
-        let puestoVisual = cNumPto; // Por si no encuentra coincidencia, muestra el número temporalmente
-        if (cNumPto) {
-            // 1. Buscamos primero en el mapa optimizado de puestos
-            if (window._mapPuestosCache && window._mapPuestosCache[cNumPto]) {
-                puestoVisual = window._mapPuestosCache[cNumPto];
-            }
-            // 2. Si no está en el mapa, hacemos una búsqueda directa en el arreglo de catálogos
-            else if (Array.isArray(window._catPuestos) && window._catPuestos.length > 0) {
-                const encontrado = window._catPuestos.find(p =>
-                    String(p.NumPto || p.numPto || '').trim() === cNumPto
-                );
-                if (encontrado) {
-                    puestoVisual = encontrado.NomPto || encontrado.nomPto || encontrado.nombre || cNumPto;
-                }
-            }
+        let puestoVisual = cNumPto;
+        if (cNumPto && window._mapPuestosCache && window._mapPuestosCache[cNumPto]) {
+            puestoVisual = window._mapPuestosCache[cNumPto];
         }
 
         let deptoVisual = cNomCorDep;
-        if (cNomCorDep) {
-            if (window._mapDeptosCache && window._mapDeptosCache[cNomCorDep]) {
-                deptoVisual = window._mapDeptosCache[cNomCorDep];
-            } else if (Array.isArray(window._catDepartamentos)) {
-                const encontrado = window._catDepartamentos.find(d =>
-                    String(d.nomCorDep || '').trim().toUpperCase() === cNomCorDep.toUpperCase() ||
-                    String(d.claveDep || '').trim() === cNomCorDep ||
-                    String(d.nomDep || '').trim().toUpperCase() === cNomCorDep.toUpperCase()
-                );
-                if (encontrado) {
-                    deptoVisual = encontrado.nomDep || encontrado.nombre || cNomCorDep;
-                }
-            }
+        if (cNomCorDep && window._mapDeptosCache && window._mapDeptosCache[cNomCorDep]) {
+            deptoVisual = window._mapDeptosCache[cNomCorDep];
         }
 
-        const noEmp = String(row.numEmp || row.noEmp || '').trim();
-        const nombre = row.nombre;
+        const noEmp = String(row.SRIPerNumE || '').trim();
+        const nombre = row.SRIPerNomE || '';
 
         const valNa = (v) => (!v || v === 0 || v === '0' || String(v).trim() === '') ? 'N/A' : v;
 
