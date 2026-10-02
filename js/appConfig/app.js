@@ -331,9 +331,7 @@ const SistemaGlobal = {
     },
 
     pintarTarjetasDepartamentos(listaDepartamentos) {
-        console.log("🔍 [DEBUG] 1. listaDepartamentos pasada por parámetro:", listaDepartamentos);
-        console.log("🔍 [DEBUG] 2. window.allModulosData:", window.allModulosData);
-        console.log("🔍 [DEBUG] 3. window.allSubModulosData:", window.allSubModulosData);
+        console.log("🔍 [DEBUG] Evaluando módulos y permisos según la lógica de negocio oficial...");
 
         const contenedorMenu = document.getElementById('menu-dinamico-departamentos');
         if (!contenedorMenu) {
@@ -350,6 +348,7 @@ const SistemaGlobal = {
         const permisosUsuario = window.userPermisosCache || {};
         let esAdminGeneral = (noEmp === "4398");
 
+        // Submódulos y datos globales cacheados
         const submodulosCrudos = window.allSubModulosData || (this.datos && this.datos.submodulos) || [];
         const submodulosTotales = submodulosCrudos.map(sub => ({
             SRIModId: String(sub.SRIModId || sub.srimodid || '').trim(),
@@ -358,27 +357,9 @@ const SistemaGlobal = {
             SRISubMIco: sub.SRISubMIco || sub.srisubmico || ''
         }));
 
-        // Si no viene lista de departamentos, la intentamos sacar de los submódulos o de la caché global
-        let modulosFuente = listaDepartamentos;
-        if (!modulosFuente || modulosFuente.length === 0) {
-            modulosFuente = window.allModulosData || (this.datos && this.datos.modulos) || [];
-        }
-
-        // Respaldo total de emergencia si la fuente sigue vacía para que no se quede en blanco
-        if (!modulosFuente || modulosFuente.length === 0) {
-            console.warn("⚠️ [DEBUG] No hay módulos en fuentes externas. Reconstruyendo módulos base del 1 al 9...");
-            modulosFuente = [
-                { SRIModId: 1, SRIModNom: "Dirección Regional", SRIModNomC: "CIRNODIR" },
-                { SRIModId: 2, SRIModNom: "Dirección de Investigación", SRIModNomC: "CIRNODIRIN" },
-                { SRIModId: 3, SRIModNom: "Dirección de Administración", SRIModNomC: "CIRNODIRAD" },
-                { SRIModId: 4, SRIModNom: "Recursos Financieros", SRIModNomC: "CIRNORF" },
-                { SRIModId: 5, SRIModNom: "Recursos Humanos", SRIModNomC: "CIRNORH" },
-                { SRIModId: 6, SRIModNom: "Recursos Materiales", SRIModNomC: "CIRNORM" },
-                { SRIModId: 7, SRIModNom: "Sistemas", SRIModNomC: "CIRNOSIS" },
-                { SRIModId: 8, SRIModNom: "Oficialia", SRIModNomC: "CIRNOOF" },
-                { SRIModId: 9, SRIModNom: "Investigación", SRIModNomC: "CIRNOINV" }
-            ];
-        }
+        const modulosFuente = (listaDepartamentos && listaDepartamentos.length > 0) 
+            ? listaDepartamentos 
+            : (window.allModulosData || (this.datos && this.datos.modulos) || []);
 
         let htmlAcumulado = '';
 
@@ -387,21 +368,48 @@ const SistemaGlobal = {
             const claveDep = String(dep.SRIModNomC || dep.srimodnomc || dep.nomCorDep || '').toUpperCase();
             const nombreDepReal = String(dep.SRIModNom || dep.srimodnom || dep.nombre || 'Módulo');
             
-            let iconoSvg = dep.SRIModIcon || dep.srimodicon || dep.icono || `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folder"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>`;
+            // 🛠️ RECUPERAR EL ICONO SVG REAL DE LA BASE DE DATOS (SRIModIcon)
+            let iconoSvgCrudo = dep.SRIModIcon || dep.srimodicon || dep.icono || '';
+            
+            // Si el icono viene como texto HTML/SVG, lo respetamos; de lo contrario, ponemos uno por defecto
+            let iconoSvgHtml = iconoSvgCrudo.trim() !== '' ? iconoSvgCrudo : `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folder"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>`;
 
+            // Obtener los submódulos que pertenecen a este módulo
             const submodulosDelModulo = submodulosTotales.filter(sub => {
                 return sub.SRIModId === modId || (claveDep && sub.SRIModId.toUpperCase() === claveDep);
             });
 
-            // Como eres la usuaria Admin 4398, forzamos la visualización si hay submódulos para no bloquearte
-            let tieneAccesoModulo = esAdminGeneral || (submodulosDelModulo.length > 0);
+            // Validar permisos del empleado (SRIPerNumE / permisosUsuario)
+            let tieneAccesoModulo = esAdminGeneral;
 
-            if (tieneAccesoModulo) {
+            if (!tieneAccesoModulo) {
+                // Buscamos si el usuario tiene registros en los permisos del módulo o sus submódulos (SRIPerEmp)
+                const permisosMod = permisosUsuario[modId] || permisosUsuario[Number(modId)] || permisosUsuario[claveDep] || permisosUsuario[String(modId).toLowerCase()];
+                
+                if (permisosMod) {
+                    if (typeof permisosMod === 'object') {
+                        // Validar si al menos un submódulo tiene SRIPerEm >= 1 (permiso de ver)
+                        tieneAccesoModulo = submodulosDelModulo.some(sub => {
+                            const permisoSub = permisosMod[sub.SRISubMId] || permisosMod[Number(sub.SRISubMId)] || permisosMod[String(sub.SRISubMId)];
+                            if (permisoSub !== undefined && permisoSub !== null) {
+                                const nivelPermiso = typeof permisoSub === 'object' ? Number(permisoSub.SRIPermEm || permisoSub.ver || 0) : Number(permisoSub);
+                                return nivelPermiso >= 1;
+                            }
+                            return false;
+                        });
+                    } else {
+                        tieneAccesoModulo = Number(permisosMod) >= 1;
+                    }
+                }
+            }
+
+            // Si pasa la validación de permisos y tiene submódulos asignados, se pinta la tarjeta del módulo
+            if (submodulosDelModulo.length > 0 && tieneAccesoModulo) {
                 htmlAcumulado += `
                 <button onclick="seleccionarModulo('${claveDep || modId}', '${modId}', this)" 
                     class="area-btn border-stone-200 flex flex-col items-center justify-center p-6 rounded-xl border hover:border-[#249444] hover:bg-emerald-50/50 transition-all text-center cursor-pointer group shadow-sm bg-white">
-                    <div class="w-12 h-12 rounded-xl bg-emerald-50 text-[#249444] flex items-center justify-center group-hover:bg-[#249444] group-hover:text-white transition-all mb-3 shadow-inner">
-                        ${iconoSvg}
+                    <div class="w-12 h-12 rounded-xl bg-emerald-50 text-[#249444] flex items-center justify-center group-hover:bg-[#249444] group-hover:text-white transition-all mb-3 shadow-inner [&>svg]:w-6 [&>svg]:h-6">
+                        ${iconoSvgHtml}
                     </div>
                     <span class="uppercase text-xs font-bold text-stone-700 group-hover:text-[#249444] tracking-wide">${nombreDepReal}</span>
                     <span class="text-[10px] text-stone-400 mt-1">${submodulosDelModulo.length} submódulos disponibles</span>
@@ -410,7 +418,7 @@ const SistemaGlobal = {
         });
 
         if (!htmlAcumulado) {
-            contenedorMenu.innerHTML = '<p class="text-xs text-stone-400 col-span-full text-center py-8">No hay módulos disponibles para mostrar.</p>';
+            contenedorMenu.innerHTML = '<p class="text-xs text-stone-400 col-span-full text-center py-8">No hay módulos disponibles con permisos asignados para este usuario.</p>';
             return;
         }
 
