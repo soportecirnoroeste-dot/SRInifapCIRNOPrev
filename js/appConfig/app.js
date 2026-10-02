@@ -150,139 +150,120 @@ const SistemaGlobal = {
         window.allSubModulosData = datosReales.submodulos;
     },
 
-    procesarRespuestaServidor(datosReales) {
-        this.datos = datosReales || {};
-        window.allSubModulosData = this.datos.submodulos || [];
+    pintarTarjetasDepartamentos(listaDepartamentos) {
+        console.log("🔍 [DEBUG] Renderizando módulos dinámicos basados estrictamente en base de datos...");
 
-        const todosLosDepartamentos = this.datos.departamentos || [];
-        const todasLasRegionales = this.datos.regionales || [];
-        let todosLosCampos = this.datos.campos || [];
-
-        let usuarioActivoObj = {};
-        try {
-            usuarioActivoObj = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
-        } catch (e) { }
-
-        const noEmp = String(window.userNoEmpCache || usuarioActivoObj.noEmpleado || usuarioActivoObj.SRIPerNumE || '').trim();
-
-        // Detección flexible de Regional
-        let claveRegUsuario = String(
-            usuarioActivoObj.SRIRegId ||
-            usuarioActivoObj.claveReg ||
-            usuarioActivoObj.regId ||
-            localStorage.getItem('session_regId') ||
-            ''
-        ).trim();
-
-        const areaUsuario = String(
-            localStorage.getItem('session_area') ||
-            usuarioActivoObj.area ||
-            usuarioActivoObj.SRIModNomC ||
-            usuarioActivoObj.modulo ||
-            ''
-        ).trim().toUpperCase();
-
-        if (!claveRegUsuario && todasLasRegionales.length > 0) {
-            const regionalEncontrada = todasLasRegionales.find(r => {
-                const rId = String(r.SRIRegId || r.claveReg || r.regId || '').trim();
-                const rNom = String(r.regional || r.nomCorto || '').trim().toUpperCase();
-                return rId.toUpperCase() === areaUsuario || rNom === areaUsuario;
-            });
-
-            if (regionalEncontrada) {
-                claveRegUsuario = String(regionalEncontrada.SRIRegId || regionalEncontrada.claveReg || regionalEncontrada.regId || '').trim();
-            } else {
-                const depEncontrado = todosLosDepartamentos.find(d => {
-                    const dReg = String(d.SRIRegId || d.claveReg || '').trim();
-                    const dNom = String(d.nomCorDep || d.NomCorDep || '').trim().toUpperCase();
-                    return dNom === areaUsuario;
-                });
-                if (depEncontrado) {
-                    claveRegUsuario = String(depEncontrado.SRIRegId || depEncontrado.claveReg || '').trim();
-                } else {
-                    claveRegUsuario = String(todasLasRegionales[0].SRIRegId || todasLasRegionales[0].claveReg || todasLasRegionales[0].regId || '').trim();
-                }
-            }
+        const contenedorMenu = document.getElementById('menu-dinamico-departamentos');
+        if (!contenedorMenu) {
+            console.error("❌ [DEBUG] Error: No se encontró el elemento con id 'menu-dinamico-departamentos' en el DOM.");
+            return;
         }
 
-        console.log("📍 Regional activa detectada:", claveRegUsuario);
-        this.renderizarRegional(claveRegUsuario, todasLasRegionales);
+        let usuarioActivoObjTemp = {};
+        try { 
+            usuarioActivoObjTemp = JSON.parse(localStorage.getItem('usuarioActivo') || '{}'); 
+        } catch(e) {}
 
-        const departamentosDeLaRegional = todosLosDepartamentos.filter(dep => {
-            const regDep = String(dep.SRIRegId || dep.claveReg || dep.regId || '').trim();
-            return regDep.toLowerCase() === claveRegUsuario.toLowerCase();
-        });
+        const permisosUsuario = window.userPermisosCache || {};
 
-        if (todosLosCampos.length === 0 && departamentosDeLaRegional.length > 0) {
-            const centrosUnicos = [...new Set(departamentosDeLaRegional.map(d => String(d.SRICenId || d.claveCentro || d.cenId || '')))];
-            todosLosCampos = centrosUnicos.map(c => ({
-                SRIRegId: claveRegUsuario,
-                SRICenId: c,
-                centro: `Centro ${c}`
-            }));
-            this.datos.campos = todosLosCampos;
-        }
-
-        this.renderizarFiltroCampos(todosLosCampos, claveRegUsuario);
-
-        let permisosUsuario = window.userPermisosCache || {};
-        let esAdminGeneral = false;
-        const buscarNivelCuatro = (obj) => {
+        // 🛡️ BÚSQUEDA DINÁMICA DE ADMINISTRACIÓN: Comprueba si en cualquier rama de los permisos el usuario posee nivel >= 5
+        const verificarNivelAdministrativo = (obj) => {
             if (!obj) return false;
-            if (typeof obj === 'number' || typeof obj === 'string') {
-                return Number(obj) === 4;
-            }
+            if (typeof obj === 'number' || typeof obj === 'string') return Number(obj) >= 5;
             if (typeof obj === 'object') {
                 for (let k in obj) {
-                    if (k.toLowerCase().includes('niv') && Number(obj[k]) === 4) return true;
-                    if (buscarNivelCuatro(obj[k])) return true;
+                    if (k.toLowerCase().includes('niv') && Number(obj[k]) >= 5) return true;
+                    if (typeof obj[k] === 'object' && obj[k] !== null) {
+                        const val = Number(obj[k].SRIPermEm || obj[k].ver || obj[k].nivel || 0);
+                        if (val >= 5) return true;
+                    }
+                    if (verificarNivelAdministrativo(obj[k])) return true;
                 }
             }
             return false;
         };
 
-        const selectFiltro = document.getElementById('filtro-campos-regional');
-        if (selectFiltro) {
-            if (esAdminGeneral) {
-                selectFiltro.disabled = false;
-                selectFiltro.removeAttribute('disabled');
-                selectFiltro.classList.remove('bg-stone-100', 'cursor-not-allowed', 'opacity-80');
-                selectFiltro.style.pointerEvents = 'auto';
-                selectFiltro.style.backgroundColor = '#ffffff';
-            } else {
-                selectFiltro.disabled = true;
-                selectFiltro.classList.add('bg-stone-100', 'cursor-not-allowed', 'opacity-80');
-            }
+        const esAdministradorDinamico = verificarNivelAdministrativo(permisosUsuario);
+
+        // Submódulos totales leídos de la caché / base de datos
+        const submodulosCrudos = window.allSubModulosData || (this.datos && this.datos.submodulos) || [];
+        const submodulosTotales = submodulosCrudos.map(sub => ({
+            SRIModId: String(sub.SRIModId || sub.srimodid || '').trim(),
+            SRISubMId: String(sub.SRISubMId || sub.srisubmid || '').trim(),
+            SRISubMDes: String(sub.SRIModNom || sub.SRISubMDes || sub.srimodmdes || 'Submódulo').trim(),
+            SRISubMIco: sub.SRISubMIco || sub.srisubmico || ''
+        }));
+
+        let modulosFuente = listaDepartamentos;
+        if (!modulosFuente || modulosFuente.length === 0) {
+            modulosFuente = window.allModulosData || (this.datos && this.datos.modulos) || [];
         }
 
-        const camposDeLaRegional = todosLosCampos.filter(c => {
-            const regCampo = String(c.SRIRegId || c.claveReg || '').trim();
-            return regCampo.toLowerCase() === claveRegUsuario.toLowerCase();
+        let htmlAcumulado = '';
+
+        modulosFuente.forEach((dep) => {
+            const modId = String(dep.SRIModId || dep.srimodid || dep.id || '').trim();
+            const claveDep = String(dep.SRIModNomC || dep.srimodnomc || dep.nomCorDep || '').toUpperCase();
+            const nombreDepReal = String(dep.SRIModNom || dep.srimodnom || dep.nombre || 'Módulo');
+            
+            // Extracción del icono SVG oficial desde la base de datos
+            let iconoSvgCrudo = dep.SRIModIcon || dep.srimodicon || dep.icono || '';
+            let iconoSvgHtml = '';
+
+            if (iconoSvgCrudo && iconoSvgCrudo.trim() !== '') {
+                iconoSvgHtml = iconoSvgCrudo.includes('width=') 
+                    ? iconoSvgCrudo 
+                    : iconoSvgCrudo.replace('<svg', '<svg width="24" height="24"');
+            } else {
+                iconoSvgHtml = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folder"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>`;
+            }
+
+            const submodulosDelModulo = submodulosTotales.filter(sub => {
+                return sub.SRIModId === modId || (claveDep && sub.SRIModId.toUpperCase() === claveDep);
+            });
+
+            // Validación estricta y dinámica de permisos por cada módulo/submódulo
+            let tieneAccesoModulo = esAdministradorDinamico;
+
+            if (!tieneAccesoModulo) {
+                const permisosMod = permisosUsuario[modId] || permisosUsuario[Number(modId)] || permisosUsuario[claveDep] || permisosUsuario[String(modId).toLowerCase()];
+                if (permisosMod) {
+                    if (typeof permisosMod === 'object') {
+                        tieneAccesoModulo = submodulosDelModulo.some(sub => {
+                            const permisoSub = permisosMod[sub.SRISubMId] || permisosMod[Number(sub.SRISubMId)] || permisosMod[String(sub.SRISubMId)];
+                            if (permisoSub !== undefined && permisoSub !== null) {
+                                const nivelPermiso = typeof permisoSub === 'object' ? Number(permisoSub.SRIPermEm || permisoSub.ver || 0) : Number(permisoSub);
+                                return nivelPermiso >= 1;
+                            }
+                            return false;
+                        });
+                    } else {
+                        tieneAccesoModulo = Number(permisosMod) >= 1;
+                    }
+                }
+            } else {
+                tieneAccesoModulo = (submodulosDelModulo.length > 0);
+            }
+
+            if (tieneAccesoModulo) {
+                htmlAcumulado += `
+                <button onclick="seleccionarModulo('${claveDep || modId}', '${modId}', this)" 
+                    class="area-btn border-stone-200 flex flex-col items-center justify-center p-6 rounded-xl border hover:border-[#249444] hover:bg-emerald-50/50 transition-all text-center cursor-pointer group shadow-sm bg-white">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-50 text-[#249444] flex items-center justify-center group-hover:bg-[#249444] group-hover:text-white transition-all mb-3 shadow-inner [&>svg]:w-6 [&>svg]:h-6">
+                        ${iconoSvgHtml}
+                    </div>
+                    <span class="uppercase text-xs font-bold text-stone-700 group-hover:text-[#249444] tracking-wide">${nombreDepReal}</span>
+                    <span class="text-[10px] text-stone-400 mt-1">${submodulosDelModulo.length} submódulos disponibles</span>
+                </button>`;
+            }
         });
 
-        let claveCentroInicial = String(
-            usuarioActivoObj.SRICenId ||
-            usuarioActivoObj.centro ||
-            usuarioActivoObj.cenId ||
-            localStorage.getItem('centro_activo_actual') ||
-            ''
-        ).trim();
-
-        const existeCentro = camposDeLaRegional.some(c => String(c.SRICenId || c.claveCentro || '').trim() === claveCentroInicial);
-        if (!existeCentro && camposDeLaRegional.length > 0) {
-            claveCentroInicial = String(camposDeLaRegional[0].SRICenId || camposDeLaRegional[0].claveCentro || '').trim();
+        if (!htmlAcumulado) {
+            contenedorMenu.innerHTML = '<p class="text-xs text-stone-400 col-span-full text-center py-8">No hay módulos disponibles con permisos asignados para este usuario.</p>';
+            return;
         }
 
-        if (claveCentroInicial) {
-            localStorage.setItem('centro_activo_actual', claveCentroInicial);
-            if (selectFiltro) selectFiltro.value = claveCentroInicial;
-        }
-
-        const departamentosFinales = claveCentroInicial 
-            ? departamentosDeLaRegional.filter(dep => String(dep.SRICenId || dep.claveCentro || '').trim() === claveCentroInicial)
-            : departamentosDeLaRegional;
-
-        this.pintarTarjetasDepartamentos(departamentosFinales);
+        contenedorMenu.innerHTML = htmlAcumulado;
     },
 
     renderizarRegional(claveReg, regionales) {
