@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyUI1HgvBNCCmoRpe7SMCHHpjT4Fpc-IOg2-n4VJpgelVfpL4jIUmvylfv2uhAGKw-k0g/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxCHnQUUDwzdyxkzY9ZzpzGtdWlfTkfBBS0ht6UdHD-ptwiRM1cP6Ilr_ZpHbDg_RhNTw/exec";
 
 /**
  * Función genérica para enviar peticiones POST a Google Apps Script
