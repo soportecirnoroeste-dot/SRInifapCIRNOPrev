@@ -127,7 +127,7 @@ const SistemaGlobal = {
                 // Error silencioso de permisos
             }
         }
-        
+
         if (!permisosUsuario || Object.keys(permisosUsuario).length === 0) {
             permisosUsuario = { accesoTotalPermitido: true };
         }
@@ -136,7 +136,7 @@ const SistemaGlobal = {
         window.userNoEmpCache = noEmp;
 
         const respuestaProcesada = this.procesarRespuestaServidor(datosReales);
-        
+
         if (respuestaProcesada) {
             let claveRegUser = String(
                 usuarioActivoObjTemp.SRIRegId ||
@@ -147,8 +147,8 @@ const SistemaGlobal = {
 
             if (!claveRegUser && respuestaProcesada.regionales && respuestaProcesada.regionales.length > 0) {
                 claveRegUser = String(
-                    respuestaProcesada.regionales[0].SRIRegId || 
-                    respuestaProcesada.regionales[0].claveReg || 
+                    respuestaProcesada.regionales[0].SRIRegId ||
+                    respuestaProcesada.regionales[0].claveReg ||
                     respuestaProcesada.regionales[0].regId || ''
                 ).trim();
             }
@@ -167,7 +167,7 @@ const SistemaGlobal = {
             });
 
             const listaA_Pintar = departamentosDeLaRegional.length > 0 ? departamentosDeLaRegional : (respuestaProcesada.departamentos || []);
-            
+
             this.pintarTarjetasDepartamentos(listaA_Pintar);
         }
 
@@ -205,9 +205,9 @@ const SistemaGlobal = {
         if (!contenedorMenu) return;
 
         let usuarioActivoObjTemp = {};
-        try { 
-            usuarioActivoObjTemp = JSON.parse(localStorage.getItem('usuarioActivo') || '{}'); 
-        } catch(e) {}
+        try {
+            usuarioActivoObjTemp = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
+        } catch (e) { }
 
         const permisosUsuario = window.userPermisosCache || {};
 
@@ -228,14 +228,14 @@ const SistemaGlobal = {
         };
 
         const esAdminGeneral = Boolean(
-            usuarioActivoObjTemp.esAdmin || 
-            usuarioActivoObjTemp.isAdmin || 
-            permisosUsuario.accesoTotalPermitido || 
+            usuarioActivoObjTemp.esAdmin ||
+            usuarioActivoObjTemp.isAdmin ||
+            permisosUsuario.accesoTotalPermitido ||
             String(usuarioActivoObjTemp.rol || '').toLowerCase().includes('admin') ||
             String(usuarioActivoObjTemp.tipo || '').toLowerCase().includes('admin') ||
             verificarNivelAdministrativo(permisosUsuario)
         );
-        
+
         const submodulosCrudos = window.allSubModulosData || (this.datos && this.datos.submodulos) || [];
         const submodulosTotales = submodulosCrudos.map(sub => ({
             SRIModId: String(sub.SRIModId || sub.srimodid || '').trim(),
@@ -255,13 +255,13 @@ const SistemaGlobal = {
             const modId = String(dep.SRIModId || dep.srimodid || dep.id || '').trim();
             const claveDep = String(dep.SRIModNomC || dep.srimodnomc || dep.nomCorDep || '').toUpperCase();
             const nombreDepReal = String(dep.SRIModNom || dep.srimodnom || dep.nombre || 'Módulo');
-            
+
             let iconoSvgCrudo = dep.SRIModIcon || dep.srimodicon || dep.icono || '';
             let iconoSvgHtml = '';
 
             if (iconoSvgCrudo && iconoSvgCrudo.trim() !== '') {
-                iconoSvgHtml = iconoSvgCrudo.includes('width=') 
-                    ? iconoSvgCrudo 
+                iconoSvgHtml = iconoSvgCrudo.includes('width=')
+                    ? iconoSvgCrudo
                     : iconoSvgCrudo.replace('<svg', '<svg width="24" height="24"');
             } else {
                 iconoSvgHtml = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folder"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>`;
@@ -426,7 +426,7 @@ const SistemaGlobal = {
             window.location.href = `main.html?depto=${deptoKey}`;
         }, 150);
     }
-};
+} // <--- Asegúrate de que esta llave cierre correctamente el objeto "SistemaGlobal" (o elimínala si ya hay otra cerrándolo más abajo)
 
 // ==========================================
 // 3. PUENTES GLOBALES PARA EL HTML
@@ -444,6 +444,10 @@ function seleccionarDepartamento(NomCorDep, elementoBtn) {
     SistemaGlobal.seleccionarDepartamento(NomCorDep, elementoBtn);
 }
 
+// 🟢 Puente global obligatorio para que los botones de los módulos respondan al clic
+function seleccionarModulo(claveDep, modId, elementoBtn) {
+    SistemaGlobal.seleccionarDepartamento(claveDep, elementoBtn);
+}
 // ==========================================
 // 4. DISPARADOR ÚNICO DE INICIO
 // ==========================================
