@@ -160,16 +160,12 @@ const SistemaGlobal = {
                 this.renderizarFiltroCampos(respuestaProcesada.campos || [], claveRegUser);
             }
 
-            // --- PROTECCIÓN Y COMPATIBILIDAD DE DATOS ---
+           // --- PROTECCIÓN Y COMPATIBILIDAD DE DATOS ---
             const fuenteModulos = respuestaProcesada.departamentos || respuestaProcesada.modulos || [];
             window.allModulosData = fuenteModulos; // Guardamos respaldo global
 
-            const departamentosDeLaRegional = fuenteModulos.filter(dep => {
-                const regDep = String(dep.SRIRegId || dep.claveReg || '').trim();
-                return !regDep || regDep.toLowerCase() === claveRegUser.toLowerCase();
-            });
-
-            const listaA_Pintar = departamentosDeLaRegional.length > 0 ? departamentosDeLaRegional : fuenteModulos;
+            // Si deseas mostrar todos los módulos disponibles sin importar la restricción estricta de regional en pantalla:
+            const listaA_Pintar = fuenteModulos;
 
             this.pintarTarjetasDepartamentos(listaA_Pintar);
         }
