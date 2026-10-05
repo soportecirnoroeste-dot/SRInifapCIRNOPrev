@@ -18,22 +18,27 @@ function cargarDatosDelSistema() {
         try {
             const cacheGuardada = localStorage.getItem('sistema_cache_datos');
             if (cacheGuardada) {
-                datosCacheados = JSON.parse(cacheGuardada);
+                const parsed = JSON.parse(cacheGuardada);
+                // Validar que la caché tenga datos reales de submódulos
+                if (parsed && Array.isArray(parsed.submodulos) && parsed.submodulos.length > 0) {
+                    datosCacheados = parsed;
+                } else {
+                    // Si está corrupta o vacía, la eliminamos para forzar red
+                    localStorage.removeItem('sistema_cache_datos');
+                }
             }
-        } catch (err) {}
+        } catch (err) {
+            localStorage.removeItem('sistema_cache_datos');
+        }
 
         window.allSubModulosData = datosCacheados.submodulos || [];
         window.datosSistema = datosCacheados;
 
-        // Forzar renderizado inmediato si existe la función del menú
         if (typeof window.cargarMenuDepartamento === 'function') {
             window.cargarMenuDepartamento();
-        } else if (typeof window.restaurarMenuDepto === 'function') {
-            window.restaurarMenuDepto(new URLSearchParams(window.location.search).get('depto') || 'cirnorh');
         }
 
         resolve(datosCacheados);
-
         setTimeout(async () => {
             try {
                 let respuesta = null;
