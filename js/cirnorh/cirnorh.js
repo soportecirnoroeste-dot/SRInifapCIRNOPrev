@@ -253,3 +253,33 @@ document.addEventListener('DOMContentLoaded', () => {
     cargarDatosDelSistema();
     procesarCargaInicialSeccionRh();
 });
+
+// ==========================================
+// CONTROLADOR ROBUSTO PARA EL HISTORIAL (BOTÓN ATRÁS)
+// ==========================================
+window.addEventListener('popstate', function(event) {
+    // Verificar si estamos regresando al menú principal (sin submódulo activo en la URL o estado)
+    const urlParams = new URLSearchParams(window.location.search);
+    const submoduloActivo = urlParams.get('submodulo') || sessionStorage.getItem('submodulo_activo_cirnorh');
+
+    if (!submoduloActivo) {
+        // Asegurar la lectura inmediata de la caché local antes de renderizar
+        try {
+            const cacheGuardada = localStorage.getItem('sistema_cache_datos');
+            if (cacheGuardada) {
+                const parsed = JSON.parse(cacheGuardada);
+                if (parsed && Array.isArray(parsed.submodulos) && parsed.submodulos.length > 0) {
+                    window.allSubModulosData = parsed.submodulos;
+                    window.datosSistema = parsed;
+                }
+            }
+        } catch (err) {
+            console.error("Error al recuperar caché en popstate:", err);
+        }
+
+        // Redibujar el menú principal con los datos recuperados
+        if (typeof window.cargarMenuDepartamento === 'function') {
+            window.cargarMenuDepartamento();
+        }
+    }
+});
