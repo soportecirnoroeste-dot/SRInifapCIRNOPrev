@@ -160,7 +160,7 @@ const SistemaGlobal = {
                 this.renderizarFiltroCampos(respuestaProcesada.campos || [], claveRegUser);
             }
 
-           // --- PROTECCIÓN Y COMPATIBILIDAD DE DATOS ---
+            // --- PROTECCIÓN Y COMPATIBILIDAD DE DATOS ---
             const fuenteModulos = respuestaProcesada.departamentos || respuestaProcesada.modulos || [];
             window.allModulosData = fuenteModulos; // Guardamos respaldo global
 
@@ -251,9 +251,11 @@ const SistemaGlobal = {
         let htmlAcumulado = '';
 
         modulosFuente.forEach((dep) => {
-            const modId = String(dep.SRIModId || dep.srimodid || dep.id || '').trim();
-            const claveDep = String(dep.SRIModNomC || dep.srimodnomc || dep.nomCorDep || '').toUpperCase();
+            // Tomamos primero las propiedades reales que arroja tu consulta SQL
+            const modId = String(dep.claveDep || dep.SRIModId || dep.srimodid || dep.id || '').trim();
+            const claveDep = String(dep.claveDep || dep.SRIModNomC || dep.srimodnomc || dep.nomCorDep || '').toUpperCase();
             const nombreDepReal = String(
+                dep.nomDep ||
                 dep.SRIModNom ||
                 dep.srimodnom ||
                 dep.SRIModDesc ||
