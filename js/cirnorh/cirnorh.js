@@ -10,35 +10,42 @@ window.manejarAccionSeccionCirnorh = function(idOpt) {
 };
 
 // ==========================================
-// CARGA INSTÁNTANEA CON CACHÉ Y RED EN SEGUNDO PLANO
+// CARGA INSTÁNTANEA CON CACHÉ Y RED EN SEGUNDO PLANO (BLINDADA)
 // ==========================================
 function cargarDatosDelSistema() {
     return new Promise((resolve) => {
-        let datosCacheados = { success: true, submodulos: [] };
+        let datosValidos = null;
+        
         try {
             const cacheGuardada = localStorage.getItem('sistema_cache_datos');
             if (cacheGuardada) {
                 const parsed = JSON.parse(cacheGuardada);
-                // Validar que la caché tenga datos reales de submódulos
-                if (parsed && Array.isArray(parsed.submodulos) && parsed.submodulos.length > 0) {
-                    datosCacheados = parsed;
-                } else {
-                    // Si está corrupta o vacía, la eliminamos para forzar red
-                    localStorage.removeItem('sistema_cache_datos');
+                // Validar que la caché tenga la estructura completa esperada por AppConfigUtils
+                if (parsed && (parsed.submodulos || parsed.success)) {
+                    datosValidos = parsed;
                 }
             }
         } catch (err) {
             localStorage.removeItem('sistema_cache_datos');
         }
 
-        window.allSubModulosData = datosCacheados.submodulos || [];
-        window.datosSistema = datosCacheados;
+        // Asignar a las variables globales de forma segura
+        if (datosValidos) {
+            window.datosSistema = datosValidos;
+            window.allSubModulosData = datosValidos.submodulos || [];
+        } else {
+            window.datosSistema = { success: true, submodulos: [] };
+            window.allSubModulosData = [];
+        }
 
-        if (typeof window.cargarMenuDepartamento === 'function') {
+        // Si ya tenemos datos válidos en caché, pintar el menú inmediatamente
+        if (window.allSubModulosData.length > 0 && typeof window.cargarMenuDepartamento === 'function') {
             window.cargarMenuDepartamento();
         }
 
-        resolve(datosCacheados);
+        resolve(window.datosSistema);
+
+        // Actualizar en segundo plano desde la red
         setTimeout(async () => {
             try {
                 let respuesta = null;
@@ -54,19 +61,24 @@ function cargarDatosDelSistema() {
                     respuesta = await response.json();
                 }
 
-                if (respuesta && respuesta.success && respuesta.submodulos) {
-                    window.allSubModulosData = respuesta.submodulos;
+                if (respuesta && respuesta.success) {
                     window.datosSistema = respuesta;
+                    window.allSubModulosData = respuesta.submodulos || [];
                     localStorage.setItem('sistema_cache_datos', JSON.stringify(respuesta));
                     
-                    // Actualizar menú visualmente una vez que llegan los datos frescos de la red
-                    if (typeof window.cargarMenuDepartamento === 'function') {
-                        window.cargarMenuDepartamento();
-                    } else if (typeof window.restaurarMenuDepto === 'function') {
-                        window.restaurarMenuDepto(new URLSearchParams(window.location.search).get('depto') || 'cirnorh');
+                    // Si estamos en el menú principal, actualizar visualmente con los datos frescos
+                    const urlParams = new URLSearchParams(window.location.search);
+                    if (!urlParams.get('seccion')) {
+                        if (typeof window.cargarMenuDepartamento === 'function') {
+                            window.cargarMenuDepartamento();
+                        } else if (typeof window.restaurarMenuDepto === 'function') {
+                            window.restaurarMenuDepto(urlParams.get('depto') || 'cirnorh');
+                        }
                     }
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.error("Error al sincronizar datos en segundo plano:", e);
+            }
         }, 100);
     });
 }
