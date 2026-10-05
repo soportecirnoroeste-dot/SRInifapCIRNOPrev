@@ -223,13 +223,27 @@ function procesarCargaInicialSeccionRh(event) {
             window.actualizarBotonRegresar('principal', depto);
         }
 
+        // Blindaje de caché al regresar al menú principal
+        try {
+            const cacheGuardada = localStorage.getItem('sistema_cache_datos');
+            if (cacheGuardada) {
+                const parsed = JSON.parse(cacheGuardada);
+                if (parsed && Array.isArray(parsed.submodulos) && parsed.submodulos.length > 0) {
+                    window.allSubModulosData = parsed.submodulos;
+                    window.datosSistema = parsed;
+                }
+            }
+        } catch (err) {}
+
         if (contenedor) {
             contenedor.innerHTML = '';
         }
         
-        // Llamada unificada para restaurar el menú correctamente
+        // Redibujar el menú principal del departamento o del sistema
         if (typeof window.cargarMenuDepartamento === 'function') {
             window.cargarMenuDepartamento();
+        } else if (typeof window.restaurarMenuDepto === 'function') {
+            window.restaurarMenuDepto(depto);
         } else {
             cargarDatosDelSistema();
         }
@@ -241,6 +255,18 @@ function procesarCargaInicialSeccionRh(event) {
         contenedor.style.visibility = 'visible';
     }
 }
+
+// ==========================================
+// ÚNICO LISTENER DE HISTORIAL Y ARRANQUE
+// ==========================================
+window.addEventListener('popstate', (event) => {
+    procesarCargaInicialSeccionRh(event);
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    cargarDatosDelSistema();
+    procesarCargaInicialSeccionRh();
+});
 
 // ==========================================
 // LISTENERS DE HISTORIAL Y ARRANQUE ULTRA-RÁPIDO
