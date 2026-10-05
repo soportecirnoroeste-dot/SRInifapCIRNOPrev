@@ -20,7 +20,6 @@ function cargarDatosDelSistema() {
             const cacheGuardada = localStorage.getItem('sistema_cache_datos');
             if (cacheGuardada) {
                 const parsed = JSON.parse(cacheGuardada);
-                // Validar que la caché tenga la estructura completa esperada por AppConfigUtils
                 if (parsed && (parsed.submodulos || parsed.success)) {
                     datosValidos = parsed;
                 }
@@ -29,7 +28,6 @@ function cargarDatosDelSistema() {
             localStorage.removeItem('sistema_cache_datos');
         }
 
-        // Asignar a las variables globales de forma segura
         if (datosValidos) {
             window.datosSistema = datosValidos;
             window.allSubModulosData = datosValidos.submodulos || [];
@@ -38,14 +36,12 @@ function cargarDatosDelSistema() {
             window.allSubModulosData = [];
         }
 
-        // Si ya tenemos datos válidos en caché, pintar el menú inmediatamente
         if (window.allSubModulosData.length > 0 && typeof window.cargarMenuDepartamento === 'function') {
             window.cargarMenuDepartamento();
         }
 
         resolve(window.datosSistema);
 
-        // Actualizar en segundo plano desde la red
         setTimeout(async () => {
             try {
                 let respuesta = null;
@@ -66,7 +62,6 @@ function cargarDatosDelSistema() {
                     window.allSubModulosData = respuesta.submodulos || [];
                     localStorage.setItem('sistema_cache_datos', JSON.stringify(respuesta));
                     
-                    // Si estamos en el menú principal, actualizar visualmente con los datos frescos
                     const urlParams = new URLSearchParams(window.location.search);
                     if (!urlParams.get('seccion')) {
                         if (typeof window.cargarMenuDepartamento === 'function') {
@@ -84,16 +79,15 @@ function cargarDatosDelSistema() {
 }
 
 // ==========================================
-// CONFIGURACIÓN OFICIAL (LECTURA DIRECTA DE SQL / APPS SCRIPT)
+// CONFIGURACIÓN OFICIAL
 // ==========================================
 window.cirnorhConfig = {
     deptoKey: "cirnorh",
-    claveDep: "5", // Clave numércia o corta exacta mapeada en la BD para Recursos Humanos
+    claveDep: "5",
     subtitle: "Gestión de personal, incidencias, nómina y desarrollo humano.",
     icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-handshake"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>`,
 
     get options() {
-        // Consulta directamente la utilidad centralizada alimentada por la base de datos
         if (window.AppConfigUtils && typeof window.AppConfigUtils.crearOpcionesDinamicas === 'function') {
             return window.AppConfigUtils.crearOpcionesDinamicas(this.claveDep, this.deptoKey);
         }
@@ -101,7 +95,6 @@ window.cirnorhConfig = {
     }
 };
 
-// Alias oficial
 window.cirnorh = window.cirnorhConfig;
 
 // ==========================================
@@ -130,7 +123,6 @@ function ejecutarCargaSeccionRh(idOpt) {
     const opciones = configDepto.options || [];
     const optEncontrada = opciones.find(o => o.id === String(idOpt));
     const tituloOpt = optEncontrada ? optEncontrada.title.toLowerCase() : '';
-
     const idMinus = String(idOpt).toLowerCase();
 
     if (idMinus.includes('personal') || idMinus === 'per' || idMinus === '1' || tituloOpt.includes('personal')) {
@@ -145,17 +137,6 @@ function ejecutarCargaSeccionRh(idOpt) {
     } 
     else {
         renderizarVistaModuloRh(idOpt, optEncontrada ? optEncontrada.title : "Módulo de Recursos Humanos.");
-    }
-}
-
-function limpiarSeccionUrlRh() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const deptoActual = urlParams.get('depto') || 'cirnorh';
-    sessionStorage.removeItem(`submodulo_activo_${deptoActual}`);
-    
-    if (urlParams.has('seccion')) {
-        const nuevaUrl = `main.html?depto=${deptoActual}`;
-        window.history.replaceState({}, '', nuevaUrl);
     }
 }
 
@@ -196,7 +177,6 @@ function renderizarVistaModuloRh(idOpt, tituloModulo) {
                         <h3 class="font-black text-stone-800 text-lg uppercase tracking-wide">${tituloModulo}</h3>
                     </div>
                 </div>
-
                 <div id="contenido-submodulo-dinamico" class="w-full space-y-6">
                     <div class="p-6 rounded-xl border border-dashed border-stone-200 bg-stone-50 text-center">
                         <p class="text-xs text-stone-500 font-medium">Área de trabajo para: ${tituloModulo}</p>
@@ -208,34 +188,28 @@ function renderizarVistaModuloRh(idOpt, tituloModulo) {
 }
 
 // ==========================================
-// CONTROLADOR MAESTRO DE NAVEGACIÓN Y HISTORIAL
+// CONTROLADOR MAESTRO DE NAVEGACIÓN E HISTORIAL (ÚNICO)
 // ==========================================
 function procesarCargaInicialSeccionRh(event) {
     const urlParams = new URLSearchParams(window.location.search);
-
     const seccion = event && event.state && 'seccion' in event.state
         ? event.state.seccion
         : urlParams.get('seccion');
-
     const depto = urlParams.get('depto') || 'cirnorh';
     const contenedor = obtenerContenedor();
 
     if (seccion) {
         sessionStorage.setItem(`submodulo_activo_${depto}`, seccion);
-
         if (typeof window.actualizarBotonRegresar === 'function') {
             window.actualizarBotonRegresar('submodulo', depto);
         }
-
         ejecutarCargaSeccionRh(seccion);
     } else {
         sessionStorage.removeItem(`submodulo_activo_${depto}`);
-
         if (typeof window.actualizarBotonRegresar === 'function') {
             window.actualizarBotonRegresar('principal', depto);
         }
 
-        // Blindaje de caché al regresar al menú principal
         try {
             const cacheGuardada = localStorage.getItem('sistema_cache_datos');
             if (cacheGuardada) {
@@ -247,11 +221,8 @@ function procesarCargaInicialSeccionRh(event) {
             }
         } catch (err) {}
 
-        if (contenedor) {
-            contenedor.innerHTML = '';
-        }
+        if (contenedor) contenedor.innerHTML = '';
         
-        // Redibujar el menú principal del departamento o del sistema
         if (typeof window.cargarMenuDepartamento === 'function') {
             window.cargarMenuDepartamento();
         } else if (typeof window.restaurarMenuDepto === 'function') {
@@ -268,9 +239,6 @@ function procesarCargaInicialSeccionRh(event) {
     }
 }
 
-// ==========================================
-// ÚNICO LISTENER DE HISTORIAL Y ARRANQUE
-// ==========================================
 window.addEventListener('popstate', (event) => {
     procesarCargaInicialSeccionRh(event);
 });
@@ -278,46 +246,4 @@ window.addEventListener('popstate', (event) => {
 document.addEventListener('DOMContentLoaded', () => {
     cargarDatosDelSistema();
     procesarCargaInicialSeccionRh();
-});
-
-// ==========================================
-// LISTENERS DE HISTORIAL Y ARRANQUE ULTRA-RÁPIDO
-// ==========================================
-window.addEventListener('popstate', (event) => {
-    procesarCargaInicialSeccionRh(event);
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-    cargarDatosDelSistema();
-    procesarCargaInicialSeccionRh();
-});
-
-// ==========================================
-// CONTROLADOR ROBUSTO PARA EL HISTORIAL (BOTÓN ATRÁS)
-// ==========================================
-window.addEventListener('popstate', function(event) {
-    // Verificar si estamos regresando al menú principal (sin submódulo activo en la URL o estado)
-    const urlParams = new URLSearchParams(window.location.search);
-    const submoduloActivo = urlParams.get('submodulo') || sessionStorage.getItem('submodulo_activo_cirnorh');
-
-    if (!submoduloActivo) {
-        // Asegurar la lectura inmediata de la caché local antes de renderizar
-        try {
-            const cacheGuardada = localStorage.getItem('sistema_cache_datos');
-            if (cacheGuardada) {
-                const parsed = JSON.parse(cacheGuardada);
-                if (parsed && Array.isArray(parsed.submodulos) && parsed.submodulos.length > 0) {
-                    window.allSubModulosData = parsed.submodulos;
-                    window.datosSistema = parsed;
-                }
-            }
-        } catch (err) {
-            console.error("Error al recuperar caché en popstate:", err);
-        }
-
-        // Redibujar el menú principal con los datos recuperados
-        if (typeof window.cargarMenuDepartamento === 'function') {
-            window.cargarMenuDepartamento();
-        }
-    }
 });
