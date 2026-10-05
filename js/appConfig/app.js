@@ -266,6 +266,7 @@ const SistemaGlobal = {
                 dep.Nombre ||
                 'Módulo'
             );
+            
             let iconoSvgCrudo = dep.SRIModIcon || dep.srimodicon || dep.icono || '';
             let iconoSvgHtml = '';
 
