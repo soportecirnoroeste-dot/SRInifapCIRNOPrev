@@ -168,6 +168,7 @@ const SistemaGlobal = {
             const listaA_Pintar = fuenteModulos;
 
             this.pintarTarjetasDepartamentos(listaA_Pintar);
+            
         }
 
         ocultarCarga();
