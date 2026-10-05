@@ -25,8 +25,11 @@ function cargarDatosDelSistema() {
         window.allSubModulosData = datosCacheados.submodulos || [];
         window.datosSistema = datosCacheados;
 
+        // Forzar renderizado inmediato si existe la función del menú
         if (typeof window.cargarMenuDepartamento === 'function') {
             window.cargarMenuDepartamento();
+        } else if (typeof window.restaurarMenuDepto === 'function') {
+            window.restaurarMenuDepto(new URLSearchParams(window.location.search).get('depto') || 'cirnorh');
         }
 
         resolve(datosCacheados);
@@ -51,8 +54,11 @@ function cargarDatosDelSistema() {
                     window.datosSistema = respuesta;
                     localStorage.setItem('sistema_cache_datos', JSON.stringify(respuesta));
                     
+                    // Actualizar menú visualmente una vez que llegan los datos frescos de la red
                     if (typeof window.cargarMenuDepartamento === 'function') {
                         window.cargarMenuDepartamento();
+                    } else if (typeof window.restaurarMenuDepto === 'function') {
+                        window.restaurarMenuDepto(new URLSearchParams(window.location.search).get('depto') || 'cirnorh');
                     }
                 }
             } catch (e) {}
@@ -216,10 +222,11 @@ function procesarCargaInicialSeccionRh(event) {
             contenedor.innerHTML = '';
         }
         
+        // Llamada unificada para restaurar el menú correctamente
         if (typeof window.cargarMenuDepartamento === 'function') {
             window.cargarMenuDepartamento();
-        } else if (typeof window.restaurarMenuDepto === 'function') {
-            window.restaurarMenuDepto(depto);
+        } else {
+            cargarDatosDelSistema();
         }
     }
 
