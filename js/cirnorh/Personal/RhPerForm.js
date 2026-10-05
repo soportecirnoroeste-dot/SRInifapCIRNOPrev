@@ -5,8 +5,8 @@ async function mostrarFormularioNuevoPersonal() {
     const gestionContainer = document.getElementById('contenedor-gestion-personal');
     const listadoContainer = document.getElementById('contenedor-listado-personal');
     const form = document.getElementById('form-nuevo-personal');
-    const titulo = document.getElementById('formulario');
-    const inputNumEmp = document.getElementById('input-numEmp');
+    const titulo = document.getElementById('titulo-formulario'); // Corregido ID
+    const inputNumEmp = document.getElementById('input-SRIPerNumE'); // Corregido ID
 
     if (formContainer && form) {
         form.reset();
@@ -18,8 +18,9 @@ async function mostrarFormularioNuevoPersonal() {
             poblarSelectoresCascada('', '', '');
         }
 
-        inputNumEmp.removeAttribute('readonly');
-        titulo.innerHTML = `Capturar Nuevo Empleado`;
+        if (inputNumEmp) inputNumEmp.removeAttribute('readonly');
+        if (titulo) titulo.innerHTML = `Capturar Nuevo Empleado`;
+        
         formContainer.classList.remove('hidden');
         if (gestionContainer) gestionContainer.classList.add('hidden');
         if (listadoContainer) listadoContainer.classList.add('hidden');
@@ -42,17 +43,7 @@ function ocultarFormularioPersonal() {
 }
 
 function cancelarEdicionPersonal() {
-    const formContainer = document.getElementById('contenedor-formulario-personal');
-    const gestionContainer = document.getElementById('contenedor-gestion-personal');
-    const listadoContainer = document.getElementById('contenedor-listado-personal');
-
-    if (formContainer) formContainer.classList.add('hidden');
-    if (gestionContainer) gestionContainer.classList.remove('hidden');
-    if (listadoContainer) listadoContainer.classList.remove('hidden');
-
-    if (window._empleadosCache && window._empleadosCache.length > 0) {
-        renderizarTablaPersonal(window._empleadosCache);
-    }
+    ocultarFormularioPersonal();
 }
 
 async function seleccionarEmpleadoParaEditar(numEmpParam) {
@@ -66,8 +57,6 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
     }
 
     const busqueda = String(numEmpParam || '').trim();
-
-    // Búsqueda usando el campo SQL correcto: SRIPerNumE
     let emp = window._empleadosCache.find(e => String(e.SRIPerNumE || '').trim() === busqueda);
 
     if (!emp) {
@@ -94,7 +83,6 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
             poblarSelectoresCascada(regVal, centroVal, sitVal);
         }
 
-        // Mapeo directo con los nombres de columnas SQL
         form.elements['SRIPerNumE'].value = limpiarValor(emp.SRIPerNumE);
         if (inputNumEmp) inputNumEmp.setAttribute('readonly', true);
         
@@ -139,7 +127,6 @@ async function guardarOActualizarPersonal(event) {
         formDataFinal.append(key, datosEmpleado[key]);
     }
 
-    // Determinar si existe para usar guardarPersonalSQL o actualizarPersonalSQL
     const existe = window._empleadosCache.some(e => String(e.SRIPerNumE).trim() === String(datosEmpleado.SRIPerNumE).trim());
     const actionName = existe ? 'actualizarPersonalSQL' : 'guardarPersonalSQL';
 
