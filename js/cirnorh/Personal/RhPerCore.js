@@ -303,14 +303,14 @@ async function cargarDatosPersonalSheets(forzar = false) {
     }
 
     try {
-        // Objeto con los datos de sesión/permisos del usuario actual para que el backend filtre bien
+        // Obtenemos de forma dinámica el contexto del usuario actual desde cualquier variable de sesión global disponible
         const params = {
-            usuario: window.usuarioLogueado?.SRIPerNumE || window.numEmpUsuario || '',
-            SRIRegId: window.usuarioLogueado?.SRIRegId || window.regIdUsuario || '',
-            SRICenId: window.usuarioLogueado?.SRICenId || window.cenIdUsuario || ''
+            usuario: window.usuarioLogueado?.SRIPerNumE || window.usuarioLogueado?.numEmp || window.numEmpUsuario || window.numEmpleado || '',
+            SRIRegId: window.usuarioLogueado?.SRIRegId || window.usuarioLogueado?.regId || window.regIdUsuario || '',
+            SRICenId: window.usuarioLogueado?.SRICenId || window.usuarioLogueado?.cenId || window.cenIdUsuario || ''
         };
 
-        const data = await callAppsScript('obtenerPersonalSQL', params);
+        const data = await callAppsScript('obtenerPersonalSQL', params);[cite: 8]
         window._empleadosCache = data || [];
         renderizarTablaPersonal(window._empleadosCache);
     } catch (error) {
