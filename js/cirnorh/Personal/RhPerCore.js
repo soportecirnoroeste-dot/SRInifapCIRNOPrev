@@ -10,29 +10,73 @@ window._mapCentrosCache = window._mapCentrosCache || null;
 window._mapPuestosCache = window._mapPuestosCache || null;
 window._mapDeptosCache = window._mapDeptosCache || null;
 
-// Función auxiliar robusta para recuperar la sesión activa del usuario
+// Función auxiliar robusta y mejorada para recuperar la sesión activa del usuario
 function obtenerUsuarioSesion() {
-    if (window.usuarioLogueado && (window.usuarioLogueado.SRICenId || window.usuarioLogueado.cenId)) {
-        return window.usuarioLogueado;
+    // 1. Revisar objetos de sesión directos en memoria global
+    const posibleSesionGlobal = window.usuarioLogueado || window.usuarioActivo || window.sesion || window.currentUser || window.user;
+    if (posibleSesionGlobal && typeof posibleSesionGlobal === 'object') {
+        const numE = posibleSesionGlobal.SRIPerNumE || posibleSesionGlobal.numEmp || posibleSesionGlobal.usuario || posibleSesionGlobal.id || '';
+        const regId = posibleSesionGlobal.SRIRegId || posibleSesionGlobal.regId || posibleSesionGlobal.reg || '';
+        const cenId = posibleSesionGlobal.SRICenId || posibleSesionGlobal.cenId || posibleSesionGlobal.centro || '';
+        
+        if (numE || regId || cenId) {
+            return {
+                SRIPerNumE: numE,
+                SRIRegId: regId,
+                SRICenId: cenId,
+                ...posibleSesionGlobal
+            };
+        }
     }
     
+    // 2. Buscar exhaustivamente en localStorage
     try {
-        const keysPossibles = ['usuario', 'usuarioLogueado', 'user', 'sesion', 'datosUsuario'];
+        const keysPossibles = ['usuario', 'usuarioLogueado', 'usuarioActivo', 'user', 'sesion', 'datosUsuario', 'currentUser'];
         for (let key of keysPossibles) {
             const dataStr = localStorage.getItem(key);
             if (dataStr) {
-                const parsed = JSON.parse(dataStr);
-                if (parsed && (parsed.SRICenId || parsed.cenId || parsed.numEmp || parsed.SRIPerNumE)) {
-                    window.usuarioLogueado = parsed;
-                    return parsed;
+                // Intentar parsear por si es JSON
+                let parsed;
+                try {
+                    parsed = JSON.parse(dataStr);
+                } catch (errParse) {
+                    parsed = dataStr; // Por si está guardado como texto plano
+                }
+
+                if (parsed && typeof parsed === 'object') {
+                    const numE = parsed.SRIPerNumE || parsed.numEmp || parsed.usuario || parsed.id || '';
+                    const regId = parsed.SRIRegId || parsed.regId || parsed.reg || '';
+                    const cenId = parsed.SRICenId || parsed.cenId || parsed.centro || '';
+
+                    if (numE || regId || cenId) {
+                        window.usuarioLogueado = parsed; // Guardar en caché global
+                        return {
+                            SRIPerNumE: numE,
+                            SRIRegId: regId,
+                            SRICenId: cenId,
+                            ...parsed
+                        };
+                    }
+                } else if (typeof parsed === 'string' && parsed.trim() !== '') {
+                    // Si el localStorage guardaba solo el número de empleado o usuario en texto plano
+                    return {
+                        SRIPerNumE: parsed,
+                        SRIRegId: window.SRIRegId || '',
+                        SRICenId: window.SRICenId || ''
+                    };
                 }
             }
         }
     } catch (e) {
-        console.error("Error al leer la sesión del localStorage:", e);
+        console.error("--- [TESTIGO] Error al leer la sesión del localStorage:", e);
     }
     
-    return window.usuarioLogueado || {};
+    // 3. Rescate final usando variables sueltas directamente en window
+    return {
+        SRIPerNumE: window.SRIPerNumE || window.numEmpUsuario || window.usuario || window.userEmp || '',
+        SRIRegId: window.SRIRegId || window.regIdUsuario || window.regId || '',
+        SRICenId: window.SRICenId || window.cenIdUsuario || window.cenId || ''
+    };
 }
 
 function cargarPersonalRh(cargarLista = true) {
@@ -332,9 +376,9 @@ async function cargarDatosPersonalSheets(forzar = false) {
         console.log("--- [TESTIGO] Usuario activo recuperado:", usuarioActivo);
 
         const params = {
-            usuario: usuarioActivo.SRIPerNumE || usuarioActivo.numEmp || usuarioActivo.numEmpUsuario || '',
-            SRIRegId: usuarioActivo.SRIRegId || usuarioActivo.regId || usuarioActivo.regIdUsuario || '',
-            SRICenId: usuarioActivo.SRICenId || usuarioActivo.cenId || usuarioActivo.cenIdUsuario || ''
+            usuario: usuarioActivo.SRIPerNumE || usuarioActivo.numEmp || usuarioActivo.usuario || '',
+            SRIRegId: usuarioActivo.SRIRegId || usuarioActivo.regId || '',
+            SRICenId: usuarioActivo.SRICenId || usuarioActivo.cenId || ''
         };
 
         console.log("--- [TESTIGO] Parámetros enviados a obtenerPersonalSQL:", params);
