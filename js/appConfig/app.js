@@ -90,6 +90,10 @@ const SistemaGlobal = {
         if (datosEnCache && tiempoCache && (ahora - tiempoCache < 30 * 60 * 1000)) {
             try {
                 datosReales = JSON.parse(datosEnCache);
+                
+                // 🟢 CORRECCIÓN: Si cargamos de caché, asignamos las variables globales de inmediato
+                window.allSubModulosData = datosReales.submodulos || [];
+                window.allModulosData = datosReales.departamentos || datosReales.modulos || [];
             } catch (e) {
                 // Error silencioso de caché
             }
@@ -103,6 +107,10 @@ const SistemaGlobal = {
                 ocultarCarga();
                 return;
             }
+        } else {
+            // Aseguramos respaldo por si acaso
+            window.allSubModulosData = datosReales.submodulos || [];
+            window.allModulosData = datosReales.departamentos || datosReales.modulos || [];
         }
 
         this.datos = datosReales;
