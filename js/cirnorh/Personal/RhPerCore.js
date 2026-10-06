@@ -297,39 +297,55 @@ async function cargarDatosPersonalSheets(forzar = false) {
     const tbody = document.getElementById('tabla-personal-body');
     if (!tbody) return;
 
+    console.log("--- [TESTIGO] Entrando a cargarDatosPersonalSheets ---", { forzar, cacheLength: window._empleadosCache.length });
+
     if (!forzar && window._empleadosCache.length > 0) {
+        console.log("--- [TESTIGO] Usando datos desde caché ---");
         aplicarFiltroYRenderizar(window._empleadosCache);
         return;
     }
 
     try {
         // Obtenemos los parámetros de sesión dinámicamente de forma segura
+        console.log("--- [TESTIGO] Objeto window.usuarioLogueado actual:", window.usuarioLogueado);
+
         const params = {
             usuario: window.usuarioLogueado?.SRIPerNumE || window.usuarioLogueado?.numEmp || window.numEmpUsuario || '',
             SRIRegId: window.usuarioLogueado?.SRIRegId || window.usuarioLogueado?.regId || window.regIdUsuario || '',
             SRICenId: window.usuarioLogueado?.SRICenId || window.usuarioLogueado?.cenId || window.cenIdUsuario || ''
         };
 
+        console.log("--- [TESTIGO] Parámetros enviados a obtenerPersonalSQL:", params);
+
         const data = await callAppsScript('obtenerPersonalSQL', params);
+        console.log("--- [TESTIGO] Datos recibidos de la BD:", data ? data.length : 0, "registros");
+
         window._empleadosCache = data || [];
         aplicarFiltroYRenderizar(window._empleadosCache);
     } catch (error) {
-        console.error("Error al cargar personal:", error);
+        console.error("--- [TESTIGO] Error al cargar personal:", error);
         tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500 italic">Error al conectar con la Base de Datos.</td></tr>`;
     }
 }
 
 // Función para filtrar y aplicar renderizado según el centro del usuario logueado dinámicamente
 function aplicarFiltroYRenderizar(empleados) {
+    console.log("--- [TESTIGO] Entrando a aplicarFiltroYRenderizar ---");
+    console.log("--- [TESTIGO] window.usuarioLogueado completo:", window.usuarioLogueado);
+
     const centroUsuario = String(window.usuarioLogueado?.SRICenId || window.cenIdUsuario || '').trim();
-    
+    console.log("--- [TESTIGO] Centro detectado del usuario activo (centroUsuario):", JSON.stringify(centroUsuario));
+
     let empleadosFiltrados = empleados;
-    // Si el usuario tiene un centro asignado (ej. '108'), filtramos localmente los datos de la caché
-    if (centroUsuario && centroUsuario !== '0' && centroUsuario !== 'undefined') {
+    
+    if (centroUsuario && centroUsuario !== '0' && centroUsuario !== 'undefined' && centroUsuario !== '') {
         empleadosFiltrados = empleados.filter(emp => {
             const centroEmp = String(emp.SRICenId || '').trim();
             return centroEmp.includes(centroUsuario);
         });
+        console.log(`--- [TESTIGO] Filtrado aplicado. Registros antes: ${empleados.length}, después: ${empleadosFiltrados.length}`);
+    } else {
+        console.log("--- [TESTIGO] NO se aplicó filtro local (centroUsuario vacío, 0 o undefined). Se muestran todos.");
     }
 
     renderizarTablaPersonal(empleadosFiltrados);
