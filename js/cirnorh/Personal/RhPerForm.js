@@ -49,7 +49,14 @@ function cancelarEdicionPersonal() {
 async function seleccionarEmpleadoParaEditar(numEmpParam) {
     if (!window._empleadosCache || window._empleadosCache.length === 0) {
         try {
-            const data = await FetchAPI('obtenerPersonalSQL');
+            // Se agregan los parámetros de contexto para respetar los filtros regionales o por centro
+            const params = {
+                usuario: window.usuarioLogueado?.SRIPerNumE || window.numEmpUsuario || '',
+                SRIRegId: window.usuarioLogueado?.SRIRegId || window.regIdUsuario || '',
+                SRICenId: window.usuarioLogueado?.SRICenId || window.cenIdUsuario || ''
+            };
+
+            const data = await FetchAPI('obtenerPersonalSQL', params);
             window._empleadosCache = data || [];
         } catch (error) {
             console.error("❌ Error al recuperar empleados:", error);
