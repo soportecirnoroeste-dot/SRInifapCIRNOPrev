@@ -21,9 +21,11 @@ function cargarDatosDelSistema() {
             if (cacheGuardada) {
                 datosCacheados = JSON.parse(cacheGuardada);
             }
-        } catch (err) {}
+        } catch (err) {
+            console.warn("No se pudo leer la caché local del sistema:", err);
+        }
 
-        window.allSubModulosData = datosCacheados.submodulos || [];
+        window.allSubModulosData = datosCacheados?.submodulos || [];
         window.datosSistema = datosCacheados;
 
         // Pintar el menú al instante con los datos guardados
@@ -39,6 +41,8 @@ function cargarDatosDelSistema() {
                 let respuesta = null;
                 if (typeof window.FetchAPI === 'function') {
                     respuesta = await window.FetchAPI('obtenerDatosSistema');
+                } else if (typeof window.callAppsScript === 'function') {
+                    respuesta = await window.callAppsScript('obtenerDatosSistema', {});
                 } else {
                     const response = await fetch("https://script.google.com/macros/s/AKfycbz1wzz5zC_6Cf4thUdl_5BkAca6m_MM7IWQyPwVAQcMaraPqfX8nBGMQpSdy31_tjz1Aw/exec", {
                         method: "POST",
@@ -52,7 +56,11 @@ function cargarDatosDelSistema() {
                 if (respuesta && respuesta.success && respuesta.submodulos) {
                     window.allSubModulosData = respuesta.submodulos;
                     window.datosSistema = respuesta;
-                    localStorage.setItem('sistema_cache_datos', JSON.stringify(respuesta));
+                    try {
+                        localStorage.setItem('sistema_cache_datos', JSON.stringify(respuesta));
+                    } catch (e) {
+                        // Manejo silencioso si localStorage está lleno o restringido
+                    }
                     
                     // Si hubo cambios en Sheets, actualiza el menú visualmente de forma imperceptible
                     if (typeof window.cargarMenuDepartamento === 'function') {
@@ -60,7 +68,7 @@ function cargarDatosDelSistema() {
                     }
                 }
             } catch (e) {
-                // Silencioso si no hay internet o falla la red, la caché sigue respondiendo
+                console.warn("Sincronización en segundo plano omitida o sin conexión:", e);
             }
         }, 100);
     });
@@ -130,7 +138,7 @@ function manejarAccionSeccionSis(idOpt) {
 
 function ejecutarCargaSeccionSis(idOpt) {
     const configDepto = window.cirnosisConfig;
-    const opciones = configDepto.options || [];
+    const opciones = configDepto?.options || [];
     const optEncontrada = opciones.find(o => o.id === String(idOpt));
     const tituloOpt = optEncontrada ? optEncontrada.title.toLowerCase() : '';
 
@@ -165,17 +173,13 @@ function cargarPermisosSis() {
     }
 }
 
-
 // ==========================================
 // CONTROLADOR MAESTRO DE NAVEGACIÓN Y HISTORIAL
 // ==========================================
 function procesarCargaInicialSeccionSis(event) {
     const urlParams = new URLSearchParams(window.location.search);
 
-    const seccion = event && event.state && 'seccion' in event.state
-        ? event.state.seccion
-        : urlParams.get('seccion');
-
+    const seccion = event?.state?.seccion ?? urlParams.get('seccion');
     const depto = urlParams.get('depto') || 'cirnosis';
     const contenedor = obtenerContenedor();
 
