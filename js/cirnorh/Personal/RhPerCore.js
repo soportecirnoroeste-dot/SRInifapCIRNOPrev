@@ -474,12 +474,13 @@ function renderizarTablaPersonal(registros) {
         });
     }
 
-    if (window._catDepartamentos && Array.isArray(window._catDepartamentos) && window._catDepartamentos.length > 0) {
+    // Mapeo robusto de departamentos (soporta múltiples variantes de campos)
+    if (!window._mapDeptosCache && window._catDepartamentos && Array.isArray(window._catDepartamentos)) {
         window._mapDeptosCache = {};
         window._catDepartamentos.forEach(d => {
-            const nomCor = String(d.SRIModNomC || d.nomCorDep || '').trim();
-            const nomLargo = d.SRIModNom || d.nomDep || d.nombre || '';
-            if (nomCor) window._mapDeptosCache[nomCor] = nomLargo;
+            const k = String(d.SRIModNomC || d.SRIDepId || d.claveDep || d.id || '').trim();
+            const v = d.SRIModNom || d.SRIModNomC || d.nombreDep || d.nombre || d.descripcion || '';
+            if (k) window._mapDeptosCache[k] = v;
         });
     }
 
@@ -496,7 +497,9 @@ function renderizarTablaPersonal(registros) {
         const cReg = String(row.SRIRegId || '').trim();
         const cCentro = String(row.SRICenId || '').trim();
         const cNumPto = String(row.SRIPtoId || '').trim();
-        const cNomCorDep = String(row.SRIModNomC || '').trim();
+        
+        // Buscar el código/nombre del departamento de forma flexible en el registro del empleado
+        const cNomCorDep = String(row.SRIModNomC || row.departamento || row.depto || row.SRIDepId || '').trim();
 
         const nomCortoReg = (window._mapRegsCache && window._mapRegsCache[cReg]) || '';
         const reg = nomCortoReg ? `${cReg} - ${nomCortoReg}` : cReg;
@@ -509,6 +512,7 @@ function renderizarTablaPersonal(registros) {
             puestoVisual = window._mapPuestosCache[cNumPto];
         }
 
+        // Resolver el nombre completo del departamento usando el mapa
         let deptoVisual = cNomCorDep;
         if (cNomCorDep && window._mapDeptosCache && window._mapDeptosCache[cNomCorDep]) {
             deptoVisual = window._mapDeptosCache[cNomCorDep];
