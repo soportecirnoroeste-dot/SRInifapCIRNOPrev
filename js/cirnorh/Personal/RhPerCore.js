@@ -10,6 +10,31 @@ window._mapCentrosCache = window._mapCentrosCache || null;
 window._mapPuestosCache = window._mapPuestosCache || null;
 window._mapDeptosCache = window._mapDeptosCache || null;
 
+// Función auxiliar robusta para recuperar la sesión activa del usuario
+function obtenerUsuarioSesion() {
+    if (window.usuarioLogueado && (window.usuarioLogueado.SRICenId || window.usuarioLogueado.cenId)) {
+        return window.usuarioLogueado;
+    }
+    
+    try {
+        const keysPossibles = ['usuario', 'usuarioLogueado', 'user', 'sesion', 'datosUsuario'];
+        for (let key of keysPossibles) {
+            const dataStr = localStorage.getItem(key);
+            if (dataStr) {
+                const parsed = JSON.parse(dataStr);
+                if (parsed && (parsed.SRICenId || parsed.cenId || parsed.numEmp || parsed.SRIPerNumE)) {
+                    window.usuarioLogueado = parsed;
+                    return parsed;
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Error al leer la sesión del localStorage:", e);
+    }
+    
+    return window.usuarioLogueado || {};
+}
+
 function cargarPersonalRh(cargarLista = true) {
     if (typeof renderizarVistaModuloRh === 'function') {
         renderizarVistaModuloRh('Personal', "Personal");
@@ -297,29 +322,24 @@ async function cargarDatosPersonalSheets(forzar = false) {
     const tbody = document.getElementById('tabla-personal-body');
     if (!tbody) return;
 
-    console.log("--- [TESTIGO] Entrando a cargarDatosPersonalSheets ---", { forzar, cacheLength: window._empleadosCache.length });
-
     if (!forzar && window._empleadosCache.length > 0) {
-        console.log("--- [TESTIGO] Usando datos desde caché ---");
         aplicarFiltroYRenderizar(window._empleadosCache);
         return;
     }
 
     try {
-        // Obtenemos los parámetros de sesión dinámicamente de forma segura
-        console.log("--- [TESTIGO] Objeto window.usuarioLogueado actual:", window.usuarioLogueado);
+        const usuarioActivo = obtenerUsuarioSesion();
+        console.log("--- [TESTIGO] Usuario activo recuperado:", usuarioActivo);
 
         const params = {
-            usuario: window.usuarioLogueado?.SRIPerNumE || window.usuarioLogueado?.numEmp || window.numEmpUsuario || '',
-            SRIRegId: window.usuarioLogueado?.SRIRegId || window.usuarioLogueado?.regId || window.regIdUsuario || '',
-            SRICenId: window.usuarioLogueado?.SRICenId || window.usuarioLogueado?.cenId || window.cenIdUsuario || ''
+            usuario: usuarioActivo.SRIPerNumE || usuarioActivo.numEmp || usuarioActivo.numEmpUsuario || '',
+            SRIRegId: usuarioActivo.SRIRegId || usuarioActivo.regId || usuarioActivo.regIdUsuario || '',
+            SRICenId: usuarioActivo.SRICenId || usuarioActivo.cenId || usuarioActivo.cenIdUsuario || ''
         };
 
         console.log("--- [TESTIGO] Parámetros enviados a obtenerPersonalSQL:", params);
 
         const data = await callAppsScript('obtenerPersonalSQL', params);
-        console.log("--- [TESTIGO] Datos recibidos de la BD:", data ? data.length : 0, "registros");
-
         window._empleadosCache = data || [];
         aplicarFiltroYRenderizar(window._empleadosCache);
     } catch (error) {
@@ -330,10 +350,9 @@ async function cargarDatosPersonalSheets(forzar = false) {
 
 // Función para filtrar y aplicar renderizado según el centro del usuario logueado dinámicamente
 function aplicarFiltroYRenderizar(empleados) {
-    console.log("--- [TESTIGO] Entrando a aplicarFiltroYRenderizar ---");
-    console.log("--- [TESTIGO] window.usuarioLogueado completo:", window.usuarioLogueado);
-
-    const centroUsuario = String(window.usuarioLogueado?.SRICenId || window.cenIdUsuario || '').trim();
+    const usuarioActivo = obtenerUsuarioSesion();
+    const centroUsuario = String(usuarioActivo.SRICenId || usuarioActivo.cenId || '').trim();
+    
     console.log("--- [TESTIGO] Centro detectado del usuario activo (centroUsuario):", JSON.stringify(centroUsuario));
 
     let empleadosFiltrados = empleados;
@@ -354,9 +373,10 @@ function aplicarFiltroYRenderizar(empleados) {
 function filtrarTablaPersonal(textoBusqueda) {
     const query = textoBusqueda.toLowerCase().trim();
 
-    // Filtramos primero considerando el centro del usuario actual
-    const centroUsuario = String(window.usuarioLogueado?.SRICenId || window.cenIdUsuario || '').trim();
+    const usuarioActivo = obtenerUsuarioSesion();
+    const centroUsuario = String(usuarioActivo.SRICenId || usuarioActivo.cenId || '').trim();
     let baseEmpleados = window._empleadosCache;
+    
     if (centroUsuario && centroUsuario !== '0' && centroUsuario !== 'undefined') {
         baseEmpleados = window._empleadosCache.filter(emp => String(emp.SRICenId || '').trim().includes(centroUsuario));
     }
