@@ -23,20 +23,25 @@
         seccionUrl = sessionStorage.getItem('seccion_activa_actual') || '';
     }
 
-    // 1. Obtener el nombre oficial de la caché
+    // 1. Obtener el nombre oficial de la caché buscando por las columnas reales de SQL
     let nombreOficialDep = nombreCortoUrl;
     try {
         const cacheBruto = localStorage.getItem('sistema_cache_datos');
         if (cacheBruto) {
             const cacheObj = JSON.parse(cacheBruto);
-            const departamentos = cacheObj.departamentos || [];
+            // Soportamos tanto los nombres estándar como los campos exactos de SQL (SRIModNom / SRIModNomC)
+            const departamentos = cacheObj.departamentos || cacheObj.submodulos || [];
+            
             const deptoEncontrado = departamentos.find(row => {
-                const cor = (row.nomCorDep || '').toLowerCase().trim();
+                const cor = (row.nomCorDep || row.SRIModNomC || '').toLowerCase().trim();
                 if (cor) return cor === nombreCortoUrl;
-                return (row.nomDep || '').toLowerCase().includes(nombreCortoUrl);
+                
+                const nom = (row.nomDep || row.SRIModNom || '').toLowerCase().trim();
+                return nom.includes(nombreCortoUrl);
             });
-            if (deptoEncontrado && deptoEncontrado.nomDep) {
-                nombreOficialDep = deptoEncontrado.nomDep;
+
+            if (deptoEncontrado) {
+                nombreOficialDep = deptoEncontrado.nomDep || deptoEncontrado.SRIModNom || nombreCortoUrl;
             }
         }
     } catch (e) {
