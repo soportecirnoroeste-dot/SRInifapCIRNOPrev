@@ -170,7 +170,7 @@ function renderizarVistaModuloRh(idOpt, tituloModulo) {
 }
 
 // ==========================================
-// CONTROLADOR MAESTRO DE NAVEGACIÓN E HISTORIAL (CORREGIDO)
+// CONTROLADOR MAESTRO DE NAVEGACIÓN E HISTORIAL
 // ==========================================
 async function procesarCargaInicialSeccionRh(event) {
     const urlParams = new URLSearchParams(window.location.search);
@@ -180,7 +180,7 @@ async function procesarCargaInicialSeccionRh(event) {
     const depto = urlParams.get('depto') || 'cirnorh';
     const contenedor = obtenerContenedor();
 
-    // 🛡️ BLINDAJE DE ESTADO: Si volvemos al menú o recargamos la vista y las variables globales están vacías, las consultamos a SQL de inmediato
+    // 🛡️ BLINDAJE: Si volvemos al menú o recargamos la vista y las variables globales están vacías, las consultamos a SQL de inmediato
     if (!window.allSubModulosData || window.allSubModulosData.length === 0) {
         await cargarDatosDelSistema();
     }
