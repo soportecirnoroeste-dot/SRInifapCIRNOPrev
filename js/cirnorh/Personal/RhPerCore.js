@@ -458,6 +458,14 @@ function renderizarTablaPersonal(registros) {
         return;
     }
 
+    // DIAGNOSTICO TEMPORAL: Ver la estructura del primer registro y del catálogo de departamentos en F12
+    if (registros.length > 0) {
+        console.log("--- [DIAGNOSTICO EMPLEADO] Primer registro:", registros[0]);
+    }
+    if (window._catDepartamentos && window._catDepartamentos.length > 0) {
+        console.log("--- [DIAGNOSTICO CATALOGO] Primer departamento:", window._catDepartamentos[0]);
+    }
+
     if (!window._mapRegsCache && window._catRegs) {
         window._mapRegsCache = {};
         window._catRegs.forEach(r => {
@@ -474,12 +482,12 @@ function renderizarTablaPersonal(registros) {
         });
     }
 
-    // Mapeo robusto de departamentos (soporta múltiples variantes de campos)
+    // Mapeo robusto de departamentos buscando cualquier coincidencia de clave/nombre
     if (!window._mapDeptosCache && window._catDepartamentos && Array.isArray(window._catDepartamentos)) {
         window._mapDeptosCache = {};
         window._catDepartamentos.forEach(d => {
-            const k = String(d.SRIModNomC || d.SRIDepId || d.claveDep || d.id || '').trim();
-            const v = d.SRIModNom || d.SRIModNomC || d.nombreDep || d.nombre || d.descripcion || '';
+            const k = String(d.SRIModNomC || d.SRIDepId || d.claveDep || d.id || d.Clave || '').trim();
+            const v = d.SRIModNom || d.SRIModNomC || d.nombreDep || d.nombre || d.descripcion || d.Descripcion || '';
             if (k) window._mapDeptosCache[k] = v;
         });
     }
@@ -498,8 +506,8 @@ function renderizarTablaPersonal(registros) {
         const cCentro = String(row.SRICenId || '').trim();
         const cNumPto = String(row.SRIPtoId || '').trim();
         
-        // Buscar el código/nombre del departamento de forma flexible en el registro del empleado
-        const cNomCorDep = String(row.SRIModNomC || row.departamento || row.depto || row.SRIDepId || '').trim();
+        // Buscar el departamento probando las propiedades más comunes
+        const cNomCorDep = String(row.SRIModNomC || row.departamento || row.depto || row.SRIDepId || row.ClaveDep || '').trim();
 
         const nomCortoReg = (window._mapRegsCache && window._mapRegsCache[cReg]) || '';
         const reg = nomCortoReg ? `${cReg} - ${nomCortoReg}` : cReg;
@@ -512,7 +520,6 @@ function renderizarTablaPersonal(registros) {
             puestoVisual = window._mapPuestosCache[cNumPto];
         }
 
-        // Resolver el nombre completo del departamento usando el mapa
         let deptoVisual = cNomCorDep;
         if (cNomCorDep && window._mapDeptosCache && window._mapDeptosCache[cNomCorDep]) {
             deptoVisual = window._mapDeptosCache[cNomCorDep];
