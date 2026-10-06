@@ -179,7 +179,7 @@ async function cargarCatalogosSheets(forzar = false) {
     if (!forzar && window._catRegs && window._catRegs.length > 0) return;
 
     try {
-        const data = await FetchAPI('obtenerDatosSistema', {});
+        const data = await callAppsScript('obtenerDatosSistema', {});
 
         window._catRegs = data.regionales || [];
         window._catCentros = data.campos || [];
@@ -303,7 +303,7 @@ async function cargarDatosPersonalSheets(forzar = false) {
     }
 
     try {
-        const data = await FetchAPI('obtenerPersonalSQL');
+        const data = await callAppsScript('obtenerPersonalSQL');
         window._empleadosCache = data || [];
         renderizarTablaPersonal(window._empleadosCache);
     } catch (error) {
