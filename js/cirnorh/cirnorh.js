@@ -10,12 +10,9 @@ window.manejarAccionSeccionCirnorh = function(idOpt) {
 };
 
 // ==========================================
-// CARGA DIRECTA DESDE SQL SERVER (CON AUDITORÍA DE DATOS)
+// CARGA DIRECTA DESDE SQL SERVER (SIN PERDER ESTADO PREVIO)
 // ==========================================
 async function cargarDatosDelSistema() {
-    window.datosSistema = { success: true, submodulos: [] };
-    window.allSubModulosData = [];
-
     try {
         let respuesta = null;
 
@@ -25,31 +22,20 @@ async function cargarDatosDelSistema() {
             respuesta = await window.API.getSistemaDatos();
         } else {
             console.error("❌ El cliente api.js no está disponible en el entorno global.");
-            return window.datosSistema;
+            return window.datosSistema || { success: false, submodulos: [] };
         }
 
-        console.log("🔍 Respuesta recibida de SQL Server (obtenerDatosSistema):", respuesta);
-
-        // Verificamos si la respuesta trae los submódulos (manejando posibles variantes de nombres de propiedades)
         if (respuesta && (respuesta.success || respuesta.submodulos || respuesta.data)) {
             const listaSubmodulos = respuesta.submodulos || respuesta.data || respuesta.list || [];
             
+            // Actualizamos los datos globales únicamente cuando ya los tenemos seguros
             window.datosSistema = {
                 success: true,
                 submodulos: listaSubmodulos
             };
             window.allSubModulosData = listaSubmodulos;
 
-            console.log("✅ Submódulos cargados en memoria global:", window.allSubModulosData.length);
-
-            const urlParams = new URLSearchParams(window.location.search);
-            if (!urlParams.get('seccion')) {
-                if (typeof window.cargarMenuDepartamento === 'function') {
-                    window.cargarMenuDepartamento();
-                } else if (typeof window.restaurarMenuDepto === 'function') {
-                    window.restaurarMenuDepto(urlParams.get('depto') || 'cirnorh');
-                }
-            }
+            console.log("✅ Submódulos sincronizados con SQL Server:", window.allSubModulosData.length);
         } else {
             console.warn("⚠️ La respuesta de SQL no contiene una lista de submódulos válida:", respuesta);
         }
@@ -57,7 +43,7 @@ async function cargarDatosDelSistema() {
         console.error("❌ Error crítico al sincronizar datos del sistema con SQL:", e);
     }
 
-    return window.datosSistema;
+    return window.datosSistema || { success: true, submodulos: [] };
 }
 
 // ==========================================
@@ -170,7 +156,7 @@ function renderizarVistaModuloRh(idOpt, tituloModulo) {
 }
 
 // ==========================================
-// CONTROLADOR MAESTRO DE NAVEGACIÓN E HISTORIAL
+// CONTROLADOR MAESTRO DE NAVEGACIÓN E HISTORIAL (BLINDADO)
 // ==========================================
 async function procesarCargaInicialSeccionRh(event) {
     const urlParams = new URLSearchParams(window.location.search);
@@ -180,7 +166,7 @@ async function procesarCargaInicialSeccionRh(event) {
     const depto = urlParams.get('depto') || 'cirnorh';
     const contenedor = obtenerContenedor();
 
-    // 🛡️ BLINDAJE: Si volvemos al menú o recargamos la vista y las variables globales están vacías, las consultamos a SQL de inmediato
+    // 🛡️ Aseguramos que los datos de SQL estén listos antes de tomar decisiones de renderizado
     if (!window.allSubModulosData || window.allSubModulosData.length === 0) {
         await cargarDatosDelSistema();
     }
@@ -218,6 +204,8 @@ window.addEventListener('popstate', (event) => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Primero cargamos los datos de SQL de forma síncrona/esperada
     await cargarDatosDelSistema();
-    procesarCargaInicialSeccionRh();
+    // 2. Después procesamos la vista inicial con los datos ya asegurados
+    await procesarCargaInicialSeccionRh();
 });
