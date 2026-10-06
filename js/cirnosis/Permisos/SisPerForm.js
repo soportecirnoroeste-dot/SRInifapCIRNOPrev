@@ -1,21 +1,6 @@
 // ==========================================
-// js/SisPer/SisPerForm.js - SOLO VISTA / FORMULARIO
+// js/SisPer/SisPerForm.js - VISTAS Y PLANTILLAS
 // ==========================================
-
-/*async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
-    const contenedorDinamico = document.getElementById('contenido-submodulo-dinamico');
-    if (!contenedorDinamico) return;
-
-    contenedorDinamico.className = "col-span-1 sm:col-span-2 md:col-span-3 space-y-6 animate-fade-in";
-
-    // 1. Dibujamos la estructura base del formulario/matriz
-    contenedorDinamico.innerHTML = generarHTMLMatrizPermisos(nombreColaborador, noEmp);
-
-    // 2. Delegamos la lógica de obtención y marcado de datos al Core/Cascada
-    if (typeof window.cargarYMarcarPermisosColaborador === 'function') {
-        await window.cargarYMarcarPermisosColaborador(noEmp);
-    }
-}*/
 
 function generarHTMLMatrizPermisos(nombreColaborador, noEmp) {
     const deptos = window._catDepartamentos || [];
@@ -74,7 +59,7 @@ function generarHTMLMatrizPermisos(nombreColaborador, noEmp) {
                     <table class="w-full text-left border-collapse text-xs">
                         <thead class="sticky top-0 z-10 bg-stone-100">
                             <tr class="text-stone-600 font-bold border-b border-stone-200 text-[11px]">
-                                <th class="p-3 pl-4">DEPARTAMENTO / SUBMÓDULO (SHEETS)</th>
+                                <th class="p-3 pl-4">DEPARTAMENTO / SUBMÓDULO</th>
                                 <th class="p-3 text-center">VER / LEER</th>
                                 <th class="p-3 text-center">CREAR / EDITAR</th>
                                 <th class="p-3 text-center pr-4">ELIMINAR</th>
@@ -91,3 +76,5 @@ function generarHTMLMatrizPermisos(nombreColaborador, noEmp) {
         </div>
     `;
 }
+
+window.generarHTMLMatrizPermisos = generarHTMLMatrizPermisos;

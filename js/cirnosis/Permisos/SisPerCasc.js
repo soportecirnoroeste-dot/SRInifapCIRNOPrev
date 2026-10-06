@@ -9,9 +9,12 @@ function cargarPermisosSis() {
 }
 
 function actualizarDatosPermisosSis() {
+    if (typeof window._empleadosCache !== 'undefined') {
+        window._empleadosCache = null;
+    }
     cargarPermisosSis();
 }
 
-// Exportamos únicamente las de este archivo de cascada de forma segura
+// Exportaciones seguras
 window.cargarPermisosSis = cargarPermisosSis;
 window.actualizarDatosPermisosSis = actualizarDatosPermisosSis;

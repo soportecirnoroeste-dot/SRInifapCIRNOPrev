@@ -2,6 +2,29 @@
 // MÓDULO DE PERMISOS - SISPER CORE
 // ==========================================
 
+async function invocarBackendSis(action, payload = {}) {
+    if (typeof window.FetchAPI === 'function') {
+        return await window.FetchAPI(action, payload);
+    } else if (typeof google !== 'undefined' && google.script && google.script.run) {
+        return new Promise((resolve, reject) => {
+            google.script.run
+                .withSuccessHandler(resolve)
+                .withFailureHandler(reject)[action](payload);
+        });
+    } else {
+        // Petición directa por fetch como respaldo para entornos Cloudflare/SQL
+        const response = await fetch("https://script.google.com/macros/s/AKfycbz1wzz5zC_6Cf4thUdl_5BkAca6m_MM7IWQyPwVAQcMaraPqfX8nBGMQpSdy31_tjz1Aw/exec", {
+            method: "POST",
+            redirect: "follow",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ action, ...payload })
+        });
+        const res = await response.json();
+        if (!res.success) throw new Error(res.message || "Error en la petición al servidor.");
+        return res;
+    }
+}
+
 function renderizarListadoPermisosSis() {
     const elementosPagina = document.querySelectorAll('div, section');
     elementosPagina.forEach(el => {
@@ -90,15 +113,16 @@ async function cargarDatosPermisosConCatalogos() {
 
     try {
         if (!window._catPuestos || window._catPuestos.length === 0 || !window._catDepartamentos || window._catDepartamentos.length === 0) {
-            const dataSys = await FetchAPI('obtenerDatosSistema', {});
-            window._catDepartamentos = dataSys.departamentos || dataSys.deptos || [];
-            window._catPuestos = dataSys.puestos || dataSys.catPuestos || [];
+            const dataSys = await invocarBackendSis('obtenerDatosSistema', {});
+            window._catDepartamentos = dataSys?.departamentos || dataSys?.deptos || [];
+            window._catPuestos = dataSys?.puestos || dataSys?.catPuestos || [];
         }
 
         let data = window._empleadosCache || [];
         if (!data || data.length === 0) {
-            data = await FetchAPI('obtenerPersonal');
-            window._empleadosCache = data || [];
+            const resEmp = await invocarBackendSis('obtenerPersonal');
+            data = Array.isArray(resEmp) ? resEmp : (resEmp?.empleados || resEmp?.data || []);
+            window._empleadosCache = data;
         }
 
         window.listaEmpleadosPermisosCache = window._empleadosCache;
@@ -107,7 +131,7 @@ async function cargarDatosPermisosConCatalogos() {
     } catch (err) {
         console.error("❌ Error en carga:", err);
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500">Error al conectar con Sheets: ${err.message || 'Error de red'}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500">Error al conectar con la Base de Datos / Servidor: ${err.message || 'Error de red'}</td></tr>`;
         }
     }
 }
@@ -117,7 +141,7 @@ function renderizarTarjetasPermisosSis(empleados) {
     if (!tbody) return;
 
     if (!empleados || empleados.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-stone-400">No se encontraron colaboradores registrados Sheets.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-stone-400">No se encontraron colaboradores registrados.</td></tr>`;
         return;
     }
 
@@ -150,13 +174,13 @@ function renderizarTarjetasPermisosSis(empleados) {
 
         const cNumPto = String(emp.NumPto || emp.numPto || emp.puesto || '').trim();
         let puestoVisual = cNumPto;
-        if (cNumPto && window._mapPuestosCache && window._mapPuestosCache[cNumPto]) {
+        if (cNumPto && window._mapPuestosCache?.[cNumPto]) {
             puestoVisual = window._mapPuestosCache[cNumPto];
         }
 
         const cNomCorDep = String(emp.NomCorDep || emp.nomCorDep || emp.depto || '').trim();
         let deptoVisual = cNomCorDep;
-        if (cNomCorDep && window._mapDeptosCache && window._mapDeptosCache[cNomCorDep]) {
+        if (cNomCorDep && window._mapDeptosCache?.[cNomCorDep]) {
             deptoVisual = window._mapDeptosCache[cNomCorDep];
         }
 
@@ -166,7 +190,7 @@ function renderizarTarjetasPermisosSis(empleados) {
                 <td class="p-3 font-mono text-stone-600">${centro}</td>
                 <td class="p-3 font-mono text-stone-600">${numEmp}</td>
                 <td class="p-3 font-bold text-[#249444] uppercase">
-                    <button type="button" onclick="abrirMatrizPermisosUsuario('${nombre.replace(/'/g, "\\'")}', '${numEmp}')" class="hover:underline text-left cursor-pointer focus:outline-none">
+                    <button type="button" onclick="abrirMatrizPermisosUsuario('${nombre.replace(/'/g, "\\\'")}', '${numEmp}')" class="hover:underline text-left cursor-pointer focus:outline-none">
                         ${nombre}
                     </button>
                 </td>
@@ -199,29 +223,12 @@ function filtrarTarjetasPermisosSis() {
     renderizarTarjetasPermisosSis(filtrados);
 }
 
-function cargarPermisosSis() {
-    if (typeof window.renderizarListadoPermisosSis === 'function') {
-        window.renderizarListadoPermisosSis();
-    }
-}
-
-function actualizarDatosPermisosSis() {
-    window._empleadosCache = null;
-    cargarPermisosSis();
-}
-
-
-// ==========================================
-// MÓDULO DE PERMISOS - SISPER CORE
-// ==========================================
-
 async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
     const contenedorDinamico = document.getElementById('contenido-submodulo-dinamico');
     if (!contenedorDinamico) return;
 
     contenedorDinamico.className = "col-span-1 sm:col-span-2 md:col-span-3 space-y-6 animate-fade-in";
 
-    // 1. Mostrar estado de carga inicial dentro del contenedor para evitar parpadeos
     contenedorDinamico.innerHTML = `
         <div class="w-full space-y-6 bg-white p-8 rounded-2xl soft-shadow border border-[#249444]/10 mb-8 text-center">
             <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-[#249444] border-t-transparent"></div>
@@ -230,15 +237,14 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
     `;
 
     try {
-        // 2. 🚀 PETICIÓN ÚNICA: Aseguramos catálogos y permisos del empleado de un solo golpe
         if (!window.allSubModulosData || window.allSubModulosData.length === 0) {
-            const dataSys = await FetchAPI('obtenerDatosSistema', {});
-            window._catDepartamentos = dataSys.departamentos || dataSys.deptos || [];
-            window.allSubModulosData = dataSys.submodulos || dataSys.subModulos || [];
+            const dataSys = await invocarBackendSis('obtenerDatosSistema', {});
+            window._catDepartamentos = dataSys?.departamentos || dataSys?.deptos || [];
+            window.allSubModulosData = dataSys?.submodulos || dataSys?.subModulos || [];
         }
 
-        // 3. Obtenemos los permisos específicos del colaborador
-        const permisosMap = await FetchAPI('obtenerPermisosColaborador', { numEmp: String(noEmp).trim() }) || {};
+        const respuestaPermisos = await invocarBackendSis('obtenerPermisosColaborador', { numEmp: String(noEmp).trim() });
+        const permisosMap = respuestaPermisos?.permisos || respuestaPermisos || {};
 
         const deptos = window._catDepartamentos || [];
         const submodulos = window.allSubModulosData || [];
@@ -261,9 +267,7 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
                         const nombreSub = sub.SModNom || sub.sModNom || sub.nombre || 'Submódulo';
                         const idSub = sub.SModClave || sub.sModClave || sub.id || '';
 
-                        const pDep = permisosMap[cDep] && permisosMap[cDep][idSub] ? permisosMap[cDep][idSub] : { ver: 0, editar: 0, eliminar: 0 };
-
-                        // Si el nivel de permiso almacenado es 4, marcamos todos los checkboxes por defecto
+                        const pDep = permisosMap?.[cDep]?.[idSub] || permisosMap?.[idSub] || { ver: 0, editar: 0, eliminar: 0 };
                         const esNivel4 = Number(pDep.nivper || pDep.ver) === 4 || (Number(pDep.ver) === 1 && Number(pDep.editar) === 1 && Number(pDep.eliminar) === 1);
 
                         const chkVer = esNivel4 || Number(pDep.ver) === 1 ? 'checked' : '';
@@ -289,7 +293,6 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
             });
         }
 
-        // 4. Renderizamos la estructura completa incluyendo el checkbox de Administrador
         contenedorDinamico.innerHTML = `
             <div class="w-full space-y-6 bg-white p-6 md:p-8 rounded-2xl soft-shadow border border-[#249444]/10 mb-8 animate-fade-in">
                 <div class="flex items-center justify-between pb-4 border-b border-stone-100">
@@ -300,7 +303,6 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
                         <div><h3 class="font-black text-stone-800 text-lg uppercase tracking-wide">Permisos</h3></div>
                     </div>
                     
-                    <!-- Checkbox Administrador General -->
                     <div class="flex items-center gap-2 bg-stone-50 px-4 py-2 rounded-xl border border-stone-200">
                         <input type="checkbox" id="chk-admin-general" onchange="togglePermisosAdministrador(this)" class="accent-[#249444] w-4 h-4 cursor-pointer">
                         <label for="chk-admin-general" class="text-xs font-bold text-stone-700 uppercase cursor-pointer select-none">Administrador (Todos los permisos)</label>
@@ -315,7 +317,7 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
                         <table class="w-full text-left border-collapse text-xs">
                             <thead class="sticky top-0 z-10 bg-stone-100">
                                 <tr class="text-stone-600 font-bold border-b border-stone-200 text-[11px]">
-                                    <th class="p-3 pl-4">DEPARTAMENTO / SUBMÓDULO (SHEETS)</th>
+                                    <th class="p-3 pl-4">DEPARTAMENTO / SUBMÓDULO</th>
                                     <th class="p-3 text-center">VER / LEER</th>
                                     <th class="p-3 text-center">CREAR / EDITAR</th>
                                     <th class="p-3 text-center pr-4">ELIMINAR</th>
@@ -340,10 +342,6 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
     }
 }
 
-// ==========================================
-// LÓGICA DE NEGOCIO Y MARCADO
-// ==========================================
-
 function togglePermisosAdministrador(masterCheckbox) {
     const checkboxes = document.querySelectorAll('.chk-permiso');
     checkboxes.forEach(chk => {
@@ -363,10 +361,6 @@ function actualizarEstadoCheckboxAdminGeneral() {
 
     chkAdmin.checked = todosMarcados;
 }
-
-// ==========================================
-// GUARDAR PERMISOS - SISPER CORE (FORZANDO NIVEL 4 SI ES ADMIN)
-// ==========================================
 
 async function guardarMatrizPermisosSis(noEmp) {
     const btnGuardar = document.querySelector(`button[onclick*="guardarMatrizPermisosSis('${noEmp}')"]`);
@@ -391,11 +385,10 @@ async function guardarMatrizPermisosSis(noEmp) {
     const checkboxes = document.querySelectorAll('.chk-permiso');
     const permisosEstructura = {};
 
-    // 1. Primero construimos o mapeamos todos los submódulos limpiamente
     checkboxes.forEach(chk => {
         const depto = chk.getAttribute('data-depto');
         const submodulo = chk.getAttribute('data-submodulo');
-        const tipo = chk.getAttribute('data-tipo'); // 'ver', 'editar', 'eliminar'
+        const tipo = chk.getAttribute('data-tipo');
 
         if (!permisosEstructura[depto]) {
             permisosEstructura[depto] = {};
@@ -404,25 +397,21 @@ async function guardarMatrizPermisosSis(noEmp) {
             permisosEstructura[depto][submodulo] = { ver: 0, editar: 0, eliminar: 0, nivper: 1 };
         }
 
-        // Asignamos el valor del checkbox correspondiente
         permisosEstructura[depto][submodulo][tipo] = chk.checked ? 1 : 0;
     });
 
-    // 2. Si el Administrador general está activo, barremos toda la estructura y forzamos NivPer a 4
     Object.keys(permisosEstructura).forEach(depto => {
         Object.keys(permisosEstructura[depto]).forEach(submodulo => {
-            // Si es admin activo, forzamos nivper a 4, de lo contrario calculamos según los checks
             if (esAdminActivo) {
                 permisosEstructura[depto][submodulo].ver = 1;
                 permisosEstructura[depto][submodulo].editar = 1;
                 permisosEstructura[depto][submodulo].eliminar = 1;
-                permisosEstructura[depto][submodulo].nivper = 4; // <--- El Core define que es 4
+                permisosEstructura[depto][submodulo].nivper = 4;
             } else {
                 const v = permisosEstructura[depto][submodulo].ver;
                 const ed = permisosEstructura[depto][submodulo].editar;
                 const el = permisosEstructura[depto][submodulo].eliminar;
 
-                // <--- El Core define el nivel exacto (1, 2, 3 o 0)
                 if (el === 1) {
                     permisosEstructura[depto][submodulo].nivper = 3;
                 } else if (ed === 1) {
@@ -442,18 +431,8 @@ async function guardarMatrizPermisosSis(noEmp) {
     };
 
     try {
-        console.log("💾 [SISPER] Guardando permisos con NivPer forzado:", payload);
-
-        if (typeof FetchAPI === 'function') {
-            await FetchAPI('guardarPermisos', payload);
-        } else if (typeof google !== 'undefined' && google.script && google.script.run) {
-            await new Promise((resolve, reject) => {
-                google.script.run
-                    .withSuccessHandler(resolve)
-                    .withFailureHandler(reject)
-                    .guardarPermisosEnSheet(payload);
-            });
-        }
+        console.log("💾 [SISPER] Guardando permisos hacia servidor/SQL:", payload);
+        await invocarBackendSis('guardarPermisos', payload);
 
         alert("¡Permisos actualizados correctamente para el colaborador!");
 
@@ -472,9 +451,6 @@ async function guardarMatrizPermisosSis(noEmp) {
     }
 }
 
-window.guardarMatrizPermisosSis = guardarMatrizPermisosSis;
-
-// Control de selección en cascada y actualización del admin general
 document.addEventListener('change', function (e) {
     const chk = e.target;
     if (!chk.classList.contains('chk-permiso')) return;
@@ -503,6 +479,7 @@ document.addEventListener('change', function (e) {
 });
 
 // Exportaciones globales
-window.guardarMatrizPermisosSis = guardarMatrizPermisosSis;
+window.renderizarListadoPermisosSis = renderizarListadoPermisosSis;
 window.abrirMatrizPermisosUsuario = abrirMatrizPermisosUsuario;
+window.guardarMatrizPermisosSis = guardarMatrizPermisosSis;
 window.togglePermisosAdministrador = togglePermisosAdministrador;
