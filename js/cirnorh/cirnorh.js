@@ -28,8 +28,9 @@ async function cargarDatosDelSistema() {
 
         console.log("🔍 Respuesta cruda de SQL Server (getSistemaDatos):", respuesta);
 
-        if (respuesta && (respuesta.success || respuesta.submodulos || respuesta.data)) {
-            const listaSubmodulos = respuesta.submodulos || respuesta.data || respuesta.list || [];
+        if (respuesta && (respuesta.success || respuesta.departamentos)) {
+            // Tomamos la propiedad 'departamentos' que es la que trae los 9 elementos de SQL
+            const listaSubmodulos = respuesta.departamentos || respuesta.submodulos || respuesta.data || [];
             
             window.datosSession = respuesta;
             window.datosSistema = {
@@ -38,9 +39,9 @@ async function cargarDatosDelSistema() {
             };
             window.allSubModulosData = listaSubmodulos;
 
-            console.log("✅ Submódulos cargados exitosamente:", window.allSubModulosData.length);
+            console.log("✅ Submódulos/Departamentos cargados exitosamente:", window.allSubModulosData.length);
         } else {
-            console.warn("⚠️ La respuesta del servidor no contiene submódulos válidos:", respuesta);
+            console.warn("⚠️ La respuesta del servidor no contiene datos válidos:", respuesta);
         }
     } catch (e) {
         console.error("❌ Error al sincronizar con SQL:", e);
