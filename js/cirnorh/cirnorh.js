@@ -10,26 +10,21 @@ window.manejarAccionSeccionCirnorh = function(idOpt) {
 };
 
 // ==========================================
-// CARGA DIRECTA DESDE SQL SERVER (USANDO API.JS CORRECTAMENTE)
+// CARGA Y PERSISTENCIA INTELIGENTE (SQL + LOCALSTORAGE)
 // ==========================================
 async function cargarDatosDelSistema() {
     try {
         let respuesta = null;
 
-        // Usamos la API centralizada con la acción correcta "getSistemaDatos"
+        // 1. Intentamos la petición en vivo a SQL Server a través de la API
         if (window.API && typeof window.API.getSistemaDatos === 'function') {
             respuesta = await window.API.getSistemaDatos();
         } else if (typeof window.callAppsScript === 'function') {
             respuesta = await window.callAppsScript('getSistemaDatos');
-        } else {
-            console.error("❌ El cliente api.js no está disponible en el entorno global.");
-            return window.datosSistema || { success: false, submodulos: [] };
         }
 
-        console.log("🔍 Respuesta cruda de SQL Server (getSistemaDatos):", respuesta);
-
+        // 2. Si SQL responde correctamente, extraemos los departamentos y actualizamos la caché local
         if (respuesta && (respuesta.success || respuesta.departamentos)) {
-            // Tomamos la propiedad 'departamentos' que es la que trae los 9 elementos de SQL
             const listaSubmodulos = respuesta.departamentos || respuesta.submodulos || respuesta.data || [];
             
             window.datosSession = respuesta;
@@ -39,15 +34,43 @@ async function cargarDatosDelSistema() {
             };
             window.allSubModulosData = listaSubmodulos;
 
-            console.log("✅ Submódulos/Departamentos cargados exitosamente:", window.allSubModulosData.length);
-        } else {
-            console.warn("⚠️ La respuesta del servidor no contiene datos válidos:", respuesta);
+            // Guardamos automáticamente en el localStorage para futuras recargas fluidas
+            try {
+                localStorage.setItem('sistema_cache_datos', JSON.stringify(respuesta));
+            } catch (err) {
+                console.warn("⚠️ No se pudo guardar la caché local:", err);
+            }
+
+            console.log("✅ Datos sincronizados desde SQL Server:", window.allSubModulosData.length);
+            return window.datosSistema;
         }
     } catch (e) {
-        console.error("❌ Error al sincronizar con SQL:", e);
+        console.warn("⚠️ La red falló o la petición a SQL no respondió. Intentando recuperar caché local...", e);
     }
 
-    return window.datosSistema || { success: true, submodulos: [] };
+    // 3. PLAN DE RESPALDO: Si SQL falla o no hay red, recuperamos del localStorage si existe
+    try {
+        const cacheLocal = localStorage.getItem('sistema_cache_datos');
+        if (cacheLocal) {
+            const datosParseados = JSON.parse(cacheLocal);
+            const listaSubmodulos = datosParseados.departamentos || datosParseados.submodulos || datosParseados.data || [];
+            
+            window.datosSession = datosParseados;
+            window.datosSistema = {
+                success: true,
+                submodulos: listaSubmodulos
+            };
+            window.allSubModulosData = listaSubmodulos;
+
+            console.log("📦 Datos recuperados exitosamente desde la caché local (localStorage):", window.allSubModulosData.length);
+            return window.datosSistema;
+        }
+    } catch (err) {
+        console.error("❌ Error al leer la caché local:", err);
+    }
+
+    // Si de plano no hay nada en ningún lado
+    return { success: false, submodulos: [] };
 }
 
 // ==========================================
