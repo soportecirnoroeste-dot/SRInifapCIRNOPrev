@@ -71,37 +71,56 @@
             const contenedorApp = document.getElementById('app-container');
             if (!contenedorApp) return;
 
-            // RUTA DIRECTA: Evaluamos las secciones de Asistencia o Permisos de forma dinámica
-            if ((seccionUrl === 'asistencia' || seccionUrl === 'biometrico') && window.RhAsisCasc && typeof window.RhAsisCasc.mostrarVistaBiometrico === 'function') {
-                window.RhAsisCasc.mostrarVistaBiometrico();
-                
-                setTimeout(() => {
-                    if (typeof window.actualizarBotonRegresar === 'function') {
-                        window.actualizarBotonRegresar('submodulo', nombreCortoUrl);
-                    }
-                }, 50);
+            if (seccionUrl) {
+                // 1. Buscamos la sección de forma dinámica comparando contra los IDs o títulos devueltos por SQL
+                const opcionEncontrada = deptoData.options.find(opt => 
+                    String(opt.id).toLowerCase().trim() === seccionUrl ||
+                    String(opt.title).toLowerCase().trim() === seccionUrl ||
+                    seccionUrl.includes(String(opt.id).toLowerCase().trim())
+                );
 
-            } else if (seccionUrl === 'permisos' || seccionUrl === 'gestion-permisos') {
-                // Soporte directo para el módulo de Permisos SisPer
-                if (typeof window.cargarPermisosSis === 'function') {
-                    window.cargarPermisosSis();
-                } else if (typeof window.renderizarListadoPermisosSis === 'function') {
-                    window.renderizarListadoPermisosSis();
+                let ejecutado = false;
+
+                // 2. Si la opción existe en el catálogo de SQL, ejecutamos su acción configurada
+                if (opcionEncontrada && opcionEncontrada.action && typeof opcionEncontrada.action === 'string') {
+                    try {
+                        new Function(opcionEncontrada.action)();
+                        ejecutado = true;
+                    } catch (err) {
+                        console.error("Error al ejecutar la acción dinámica del submódulo:", err);
+                    }
                 }
-                
-                setTimeout(() => {
-                    if (typeof window.actualizarBotonRegresar === 'function') {
-                        window.actualizarBotonRegresar('submodulo', nombreCortoUrl);
-                    }
-                }, 50);
 
-            } else if (seccionUrl && window.RhAsisCasc && typeof window.RhAsisCasc[seccionUrl] === 'function') {
-                window.RhAsisCasc[seccionUrl]();
-                setTimeout(() => {
-                    if (typeof window.actualizarBotonRegresar === 'function') {
-                        window.actualizarBotonRegresar('submodulo', nombreCortoUrl);
+                // 3. Respaldo dinámico genérico para funciones expuestas globalmente sin quemar nombres específicos
+                if (!ejecutado) {
+                    const nombrePascalCase = seccionUrl.charAt(0).toUpperCase() + seccionUrl.slice(1);
+
+                    if (window.RhAsisCasc && typeof window.RhAsisCasc[seccionUrl] === 'function') {
+                        window.RhAsisCasc[seccionUrl]();
+                        ejecutado = true;
+                    } else if (window.RhAsisCasc && typeof window.RhAsisCasc[`mostrarVista${nombrePascalCase}`] === 'function') {
+                        window.RhAsisCasc[`mostrarVista${nombrePascalCase}`]();
+                        ejecutado = true;
+                    } else if (typeof window[`cargar${nombrePascalCase}Sis`] === 'function') {
+                        window[`cargar${nombrePascalCase}Sis`]();
+                        ejecutado = true;
+                    } else if (typeof window[`renderizarListado${nombrePascalCase}Sis`] === 'function') {
+                        window[`renderizarListado${nombrePascalCase}Sis`]();
+                        ejecutado = true;
                     }
-                }, 50);
+                }
+
+                // 4. Si se ejecutó con éxito, actualizamos el botón de regresar; si no, volvemos al menú
+                if (ejecutado) {
+                    setTimeout(() => {
+                        if (typeof window.actualizarBotonRegresar === 'function') {
+                            window.actualizarBotonRegresar('submodulo', nombreCortoUrl);
+                        }
+                    }, 50);
+                } else {
+                    window.restaurarMenuDepto(nombreCortoUrl);
+                }
+
             } else {
                 // Si no hay sección activa, mostramos el menú principal de tarjetas de forma limpia
                 window.restaurarMenuDepto(nombreCortoUrl);
