@@ -303,7 +303,14 @@ async function cargarDatosPersonalSheets(forzar = false) {
     }
 
     try {
-        const data = await callAppsScript('obtenerPersonalSQL');
+        // Objeto con los datos de sesión/permisos del usuario actual para que el backend filtre bien
+        const params = {
+            usuario: window.usuarioLogueado?.SRIPerNumE || window.numEmpUsuario || '',
+            SRIRegId: window.usuarioLogueado?.SRIRegId || window.regIdUsuario || '',
+            SRICenId: window.usuarioLogueado?.SRICenId || window.cenIdUsuario || ''
+        };
+
+        const data = await callAppsScript('obtenerPersonalSQL', params);
         window._empleadosCache = data || [];
         renderizarTablaPersonal(window._empleadosCache);
     } catch (error) {
