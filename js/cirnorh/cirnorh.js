@@ -116,22 +116,43 @@ function manejarAccionSeccionRh(idOpt) {
 function ejecutarCargaSeccionRh(idOpt) {
     const configDepto = window.cirnorhConfig;
     const opciones = configDepto.options || [];
-    const optEncontrada = opciones.find(o => o.id === String(idOpt));
-    const tituloOpt = optEncontrada ? optEncontrada.title.toLowerCase() : '';
-    const idMinus = String(idOpt).toLowerCase();
+    let optEncontrada = opciones.find(o => o.id === String(idOpt));
 
-    if (idMinus.includes('personal') || idMinus === 'per' || idMinus === '1' || tituloOpt.includes('personal')) {
+    // PLAN DE RESPALDO: Si no se encuentra en las opciones dinámicas, buscamos por nombre genérico o ID común
+    if (!optEncontrada && window.allSubModulosData && Array.isArray(window.allSubModulosData)) {
+        const subModEncontrado = window.allSubModulosData.find(s => String(s.id || s.clave || s.seccion) === String(idOpt));
+        if (subModEncontrado) {
+            optEncontrada = { title: subModEncontrado.nombre || subModEncontrado.titulo || subModEncontrado.descripcion };
+        }
+    }
+
+    // Títulos predeterminados robustos según el ID o sección si todo lo demás falla
+    let tituloFallback = "Módulo de Recursos Humanos";
+    const idMinus = String(idOpt).toLowerCase();
+    if (idMinus.includes('personal') || idMinus === 'per' || idMinus === '1') {
+        tituloFallback = "Personal";
+    } else if (idMinus.includes('asistencia') || idMinus.includes('asis') || idMinus === 'biometrico' || idMinus === '2') {
+        tituloFallback = "Control Asistencia";
+    } else if (idMinus.includes('vacaciones') || idMinus === '3') {
+        tituloFallback = "Vacaciones";
+    } else if (idMinus.includes('oficios') || idMinus === '4') {
+        tituloFallback = "Oficios";
+    }
+
+    const tituloFinal = (optEncontrada && optEncontrada.title) ? optEncontrada.title : tituloFallback;
+
+    if (idMinus.includes('personal') || idMinus === 'per' || idMinus === '1' || tituloFinal.toLowerCase().includes('personal')) {
         if (typeof cargarPersonalRh === 'function') {
             cargarPersonalRh(true);
         } else {
-            renderizarVistaModuloRh(idOpt, optEncontrada ? optEncontrada.title : "Personal");
+            renderizarVistaModuloRh(idOpt, tituloFinal);
         }
     } 
-    else if (idMinus.includes('asistencia') || idMinus.includes('asis') || idMinus === 'biometrico' || idMinus === '2' || tituloOpt.includes('asistencia')) {
+    else if (idMinus.includes('asistencia') || idMinus.includes('asis') || idMinus === 'biometrico' || idMinus === '2' || tituloFinal.toLowerCase().includes('asistencia')) {
         cargarAsistenciaRh();
     } 
     else {
-        renderizarVistaModuloRh(idOpt, optEncontrada ? optEncontrada.title : "Módulo de Recursos Humanos.");
+        renderizarVistaModuloRh(idOpt, tituloFinal);
     }
 }
 
