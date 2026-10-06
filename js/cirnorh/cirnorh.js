@@ -10,72 +10,43 @@ window.manejarAccionSeccionCirnorh = function(idOpt) {
 };
 
 // ==========================================
-// CARGA INSTÁNTANEA CON CACHÉ Y RED EN SEGUNDO PLANO (BLINDADA)
+// CARGA DIRECTA DESDE SQL SERVER USANDO api.js
 // ==========================================
-function cargarDatosDelSistema() {
-    return new Promise((resolve) => {
-        let datosValidos = null;
-        
-        try {
-            const cacheGuardada = localStorage.getItem('sistema_cache_datos');
-            if (cacheGuardada) {
-                const parsed = JSON.parse(cacheGuardada);
-                if (parsed && (parsed.submodulos || parsed.success)) {
-                    datosValidos = parsed;
-                }
-            }
-        } catch (err) {
-            localStorage.removeItem('sistema_cache_datos');
-        }
+async function cargarDatosDelSistema() {
+    window.datosSistema = { success: true, submodulos: [] };
+    window.allSubModulosData = [];
 
-        if (datosValidos) {
-            window.datosSistema = datosValidos;
-            window.allSubModulosData = datosValidos.submodulos || [];
+    try {
+        let respuesta = null;
+
+        // Utilizamos la infraestructura centralizada de api.js
+        if (typeof window.callAppsScript === 'function') {
+            respuesta = await window.callAppsScript('obtenerDatosSistema');
+        } else if (window.API && typeof window.API.getSistemaDatos === 'function') {
+            respuesta = await window.API.getSistemaDatos();
         } else {
-            window.datosSistema = { success: true, submodulos: [] };
-            window.allSubModulosData = [];
+            console.error("El cliente api.js no está disponible en el entorno global.");
+            return window.datosSistema;
         }
 
-        if (window.allSubModulosData.length > 0 && typeof window.cargarMenuDepartamento === 'function') {
-            window.cargarMenuDepartamento();
-        }
-
-        resolve(window.datosSistema);
-
-        setTimeout(async () => {
-            try {
-                let respuesta = null;
-                if (typeof window.FetchAPI === 'function') {
-                    respuesta = await window.FetchAPI('obtenerDatosSistema');
-                } else {
-                    const response = await fetch("https://script.google.com/macros/s/AKfycbz1wzz5zC_6Cf4thUdl_5BkAca6m_MM7IWQyPwVAQcMaraPqfX8nBGMQpSdy31_tjz1Aw/exec", {
-                        method: "POST",
-                        redirect: "follow",
-                        headers: { "Content-Type": "text/plain;charset=utf-8" },
-                        body: JSON.stringify({ action: "obtenerDatosSistema" })
-                    });
-                    respuesta = await response.json();
+        if (respuesta && respuesta.success) {
+            window.datosSistema = respuesta;
+            window.allSubModulosData = respuesta.submodulos || [];
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            if (!urlParams.get('seccion')) {
+                if (typeof window.cargarMenuDepartamento === 'function') {
+                    window.cargarMenuDepartamento();
+                } else if (typeof window.restaurarMenuDepto === 'function') {
+                    window.restaurarMenuDepto(urlParams.get('depto') || 'cirnorh');
                 }
-
-                if (respuesta && respuesta.success) {
-                    window.datosSistema = respuesta;
-                    window.allSubModulosData = respuesta.submodulos || [];
-                    localStorage.setItem('sistema_cache_datos', JSON.stringify(respuesta));
-                    
-                    const urlParams = new URLSearchParams(window.location.search);
-                    if (!urlParams.get('seccion')) {
-                        if (typeof window.cargarMenuDepartamento === 'function') {
-                            window.cargarMenuDepartamento();
-                        } else if (typeof window.restaurarMenuDepto === 'function') {
-                            window.restaurarMenuDepto(urlParams.get('depto') || 'cirnorh');
-                        }
-                    }
-                }
-            } catch (e) {
-                console.error("Error al sincronizar datos en segundo plano:", e);
             }
-        }, 100);
-    });
+        }
+    } catch (e) {
+        console.error("Error al sincronizar datos del sistema con SQL:", e);
+    }
+
+    return window.datosSistema;
 }
 
 // ==========================================
@@ -188,7 +159,7 @@ function renderizarVistaModuloRh(idOpt, tituloModulo) {
 }
 
 // ==========================================
-// CONTROLADOR MAESTRO DE NAVEGACIÓN E HISTORIAL (ÚNICO)
+// CONTROLADOR MAESTRO DE NAVEGACIÓN E HISTORIAL
 // ==========================================
 function procesarCargaInicialSeccionRh(event) {
     const urlParams = new URLSearchParams(window.location.search);
@@ -210,25 +181,12 @@ function procesarCargaInicialSeccionRh(event) {
             window.actualizarBotonRegresar('principal', depto);
         }
 
-        try {
-            const cacheGuardada = localStorage.getItem('sistema_cache_datos');
-            if (cacheGuardada) {
-                const parsed = JSON.parse(cacheGuardada);
-                if (parsed && Array.isArray(parsed.submodulos) && parsed.submodulos.length > 0) {
-                    window.allSubModulosData = parsed.submodulos;
-                    window.datosSistema = parsed;
-                }
-            }
-        } catch (err) {}
-
         if (contenedor) contenedor.innerHTML = '';
         
         if (typeof window.cargarMenuDepartamento === 'function') {
             window.cargarMenuDepartamento();
         } else if (typeof window.restaurarMenuDepto === 'function') {
             window.restaurarMenuDepto(depto);
-        } else {
-            cargarDatosDelSistema();
         }
     }
 
@@ -243,7 +201,7 @@ window.addEventListener('popstate', (event) => {
     procesarCargaInicialSeccionRh(event);
 });
 
-document.addEventListener('DOMContentLoaded', () => {
-    cargarDatosDelSistema();
+document.addEventListener('DOMContentLoaded', async () => {
+    await cargarDatosDelSistema();
     procesarCargaInicialSeccionRh();
 });
