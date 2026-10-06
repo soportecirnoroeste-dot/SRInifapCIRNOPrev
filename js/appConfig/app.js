@@ -483,15 +483,24 @@ window.AppConfigUtils = {
             return [];
         }
 
+        // Filtro flexible adaptado para cualquier módulo (ID numérico, clave corta o texto)
         const submodulosFiltrados = fuenteDatos.filter(item => {
-            const dep = item.ClaveDep !== undefined ? item.ClaveDep : (item.SRIDepId || item.sModClave || item.claveDep);
-            return String(dep).trim().toUpperCase() === String(claveDepDepto).trim().toUpperCase();
+            const depModId = String(item.SRIModId || item.srimodid || '').trim();
+            const depClaveDep = String(item.ClaveDep || item.sModClave || item.claveDep || item.SRIDepId || '').trim();
+            const depNomC = String(item.SRIModNomC || item.srimodnomc || '').trim();
+
+            const busqueda = String(claveDepDepto).trim().toUpperCase();
+
+            return depModId.toUpperCase() === busqueda ||
+                   depClaveDep.toUpperCase() === busqueda ||
+                   depNomC.toUpperCase() === busqueda ||
+                   depModId.toLowerCase() === String(deptoKey).toLowerCase();
         });
 
         return submodulosFiltrados.map(sub => {
-            const idSheet = String(sub.SModClave !== undefined ? sub.SModClave : (sub.sModClave || sub.id));
-            const nombreSheet = String(sub.SModNom !== undefined ? sub.SModNom : (sub.sModNom || sub.nombre));
-            const iconoSheet = sub.SModIcon !== undefined ? sub.SModIcon : (sub.sModIcon || sub.icono);
+            const idSheet = String(sub.SRISubMId || sub.srisubmid || sub.SModClave || sub.sModClave || sub.id);
+            const nombreSheet = String(sub.SRIModNom || sub.SRISubMDes || sub.srimodmdes || sub.SModNom || sub.sModNom || sub.nombre || 'Submódulo');
+            const iconoSheet = sub.SRISubMIco || sub.srisubmico || sub.SModIcon || sub.sModIcon || sub.icono || '';
 
             const iconoPorDefecto = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='3' rx='2'/></svg>";
 
