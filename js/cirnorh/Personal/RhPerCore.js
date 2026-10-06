@@ -303,14 +303,15 @@ async function cargarDatosPersonalSheets(forzar = false) {
     }
 
     try {
-        // Creamos un FormData para enviar los parámetros de sesión de forma segura al backend
-        const formData = new FormData();
-        formData.append('usuario', window.usuarioLogueado?.SRIPerNumE || window.usuarioLogueado?.numEmp || window.numEmpUsuario || '');
-        formData.append('SRIRegId', window.usuarioLogueado?.SRIRegId || window.usuarioLogueado?.regId || window.regIdUsuario || '');
-        formData.append('SRICenId', window.usuarioLogueado?.SRICenId || window.usuarioLogueado?.cenId || window.cenIdUsuario || '');
+        // Empaquetamos los datos de sesión dinámicos en un objeto JSON estándar
+        const params = {
+            usuario: window.usuarioLogueado?.SRIPerNumE || window.usuarioLogueado?.numEmp || window.numEmpUsuario || '',
+            SRIRegId: window.usuarioLogueado?.SRIRegId || window.usuarioLogueado?.regId || window.regIdUsuario || '',
+            SRICenId: window.usuarioLogueado?.SRICenId || window.usuarioLogueado?.cenId || window.cenIdUsuario || ''
+        };
 
-        // Usamos FetchAPI que es la función estándar que ya utilizas para SQL
-        const data = await FetchAPI('obtenerPersonalSQL', formData);
+        // Usamos la función original de tu entorno (callAppsScript) enviando los parámetros
+        const data = await callAppsScript('obtenerPersonalSQL', params);
         window._empleadosCache = data || [];
         renderizarTablaPersonal(window._empleadosCache);
     } catch (error) {
