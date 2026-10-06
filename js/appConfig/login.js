@@ -118,3 +118,23 @@ function logout() {
     localStorage.removeItem('usuarioActivo');
     window.location.href = 'login.html';
 }
+
+// Ejemplo de la función que manejas al validar el acceso correctamente:
+async function procesarAccesoExitoso(respuestaServidor) {
+    // 1. Guardamos los datos del usuario activo en el almacenamiento local
+    localStorage.setItem('usuarioActivo', JSON.stringify(respuestaServidor.usuario));
+
+    // 2. Precargamos los módulos y submódulos en segundo plano antes de cambiar de página
+    try {
+        const datosSistema = await callAppsScript("obtenerDatosSistema");
+        
+        // Guardamos en la misma caché que lee app_2.js
+        localStorage.setItem('sistema_cache_datos', JSON.stringify(datosSistema));
+        localStorage.setItem('sistema_cache_tiempo', new Date().getTime());
+    } catch (error) {
+        console.error("No se pudo precargar la caché en el login, se intentará en main:", error);
+    }
+
+    // 3. Redirigimos al menú principal con todo cargado
+    window.location.href = "main.html";
+}
