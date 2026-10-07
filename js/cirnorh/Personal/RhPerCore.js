@@ -248,34 +248,44 @@ async function cargarCatalogosSheets(forzar = false) {
                 window._catCentros = data.campos || data.centros || [];
                 window._catSitios = data.sitios || [];
                 window._catDepartamentos = data.departamentos || data.deptos || [];
-                window._catPuestos = data.puestos || data.catPuestos || data.puesto || [];
+                // Capturamos cualquier variante posible del catálogo de puestos
+                window._catPuestos = data.puestos || data.catPuestos || data.puesto || data.puestosList || [];
             }
         } catch (e) {
             console.error("Error al cargar catálogos desde servidor...", e);
         }
     }
 
-    // Asegurarnos de tener el mapa de puestos listo si ya hay empleados o caché previa
-    if (!window._mapPuestosCache && window._catPuestos && Array.isArray(window._catPuestos)) {
+    // Construir o enriquecer el mapa global de puestos para descripciones
+    if (!window._mapPuestosCache) {
         window._mapPuestosCache = {};
+    }
+    
+    // Si _catPuestos trae elementos, llenamos el mapa con la descripción que venga
+    if (Array.isArray(window._catPuestos)) {
         window._catPuestos.forEach(p => {
-            const k = String(p.SRIPtoId || '').trim();
-            const v = String(p.SRIPtoDesc || p.NomPto || '').trim();
-            if (k) window._mapPuestosCache[k] = v;
+            const k = String(p.SRIPtoId || p.NumPto || p.numPto || p.clave || p.id || '').trim();
+            const v = String(p.SRIPtoDesc || p.NomPto || p.nomPto || p.nombre || p.descripcion || p.desc || '').trim();
+            if (k && v && v !== k) {
+                window._mapPuestosCache[k] = v;
+            }
         });
     }
 
-    // 🛡️ Fallback de seguridad mejorado para puestos
+    // 🛡️ Fallback de seguridad: si aún no hay puestos cargados, los intentamos rescatar de los empleados
     if ((!window._catPuestos || window._catPuestos.length === 0) && window._empleadosCache && window._empleadosCache.length > 0) {
         const puestosMap = new Map();
         window._empleadosCache.forEach(e => {
             if (e.SRIPtoId) {
                 const id = String(e.SRIPtoId).trim();
-                const desc = String(e.SRIPtoDesc || e.NomPto || (window._mapPuestosCache ? window._mapPuestosCache[id] : '') || '').trim();
+                const desc = String(e.SRIPtoDesc || e.NomPto || e.descripcion || window._mapPuestosCache[id] || '').trim();
                 puestosMap.set(id, desc);
             }
         });
-        window._catPuestos = Array.from(puestosMap.entries()).map(([id, desc]) => ({ SRIPtoId: id, SRIPtoDesc: desc }));
+        window._catPuestos = Array.from(puestosMap.entries()).map(([id, desc]) => ({
+            SRIPtoId: id,
+            SRIPtoDesc: desc
+        }));
     }
 
     if ((!window._catDepartamentos || window._catDepartamentos.length === 0) && window._empleadosCache && window._empleadosCache.length > 0) {
@@ -294,15 +304,15 @@ function pintarSelectsCatalogos() {
     if (selPuesto && window._catPuestos) {
         selPuesto.innerHTML = '<option value="" disabled selected>Seleccione un puesto...</option>' +
             window._catPuestos.map(p => {
-                const numPto = String(p.SRIPtoId || p.NumPto || p.numPto || p.clave || '').trim();
+                const numPto = String(p.SRIPtoId || p.NumPto || p.numPto || p.clave || p.id || '').trim();
                 
-                // Buscamos la descripción en el objeto o respaldamos con el mapa global si existe
-                let nomPto = String(p.SRIPtoDesc || p.NomPto || p.nomPto || p.nombre || '').trim();
+                // Buscamos la descripción en múltiples propiedades o en el mapa global de caché
+                let nomPto = String(p.SRIPtoDesc || p.NomPto || p.nomPto || p.nombre || p.descripcion || p.desc || '').trim();
                 if ((!nomPto || nomPto === numPto) && window._mapPuestosCache && window._mapPuestosCache[numPto]) {
                     nomPto = window._mapPuestosCache[numPto];
                 }
 
-                // Renderizamos en formato "SRIPtoId - SRIPtoDesc"
+                // Si tenemos descripción válida, mostramos "Clave - Descripción", de lo contrario solo la clave
                 const textoMostrado = (nomPto && nomPto !== numPto) ? `${numPto} - ${nomPto}` : numPto;
                 return `<option value="${numPto}">${textoMostrado}</option>`;
             }).join('');
@@ -313,46 +323,9 @@ function pintarSelectsCatalogos() {
         selDepto.innerHTML = '<option value="" disabled selected>Seleccione un departamento...</option>' +
             window._catDepartamentos.map(d => {
                 const nomCor = String(d.SRIModNomC || d.SRIDepId || d.nomCorDep || d.NomCorDep || d.claveDep || d.id || '').trim();
-                const nomDep = String(d.SRIModNom || d.nomDep || d.nombre || '').trim();
+                const nomDep = String(d.SRIModNom || d.nomDep || d.nombre || d.descripcion || '').trim();
                 const textoMostrado = (nomDep && nomDep !== nomCor) ? `${nomCor} - ${nomDep}` : nomCor;
                 return `<option value="${nomCor}">${textoMostrado}</option>`;
-            }).join('');
-    }
-
-    const selRegiones = document.getElementById('select-SRIRegId');
-    if (selRegiones && window._catRegs && selRegiones.options.length <= 1) {
-        selRegiones.innerHTML = '<option value="" disabled selected>Seleccione una región...</option>' +
-            window._catRegs.map(r => {
-                const claveReg = String(r.SRIRegId || r.claveReg || '').trim();
-                const nomReg = String(r.SRIRegNom || r.NomCorto || r.regional || '').trim();
-                return `<option value="${claveReg}">${claveReg} - ${nomReg}</option>`;
-            }).join('');
-    }
-
-    const selCentro = document.getElementById('select-SRICenId');
-    if (selCentro && selCentro.value && typeof filtrarSitiosPorCentro === 'function') {
-        filtrarSitiosPorCentro(selCentro.value);
-    }
-}
-
-function pintarSelectsCatalogos() {
-    const selPuesto = document.getElementById('select-SRIPtoId');
-    if (selPuesto && window._catPuestos) {
-        selPuesto.innerHTML = '<option value="" disabled selected>Seleccione un puesto...</option>' +
-            window._catPuestos.map(p => {
-                const numPto = String(p.SRIPtoId || p.NumPto || p.numPto || p.clave || '').trim();
-                const nomPto = String(p.SRIPtoDesc || p.NomPto || p.nomPto || p.nombre || '').trim();
-                return `<option value="${numPto}">${numPto}${nomPto && nomPto !== numPto ? ' - ' + nomPto : ''}</option>`;
-            }).join('');
-    }
-
-    const selDepto = document.getElementById('select-SRIModNomC');
-    if (selDepto && window._catDepartamentos) {
-        selDepto.innerHTML = '<option value="" disabled selected>Seleccione un departamento...</option>' +
-            window._catDepartamentos.map(d => {
-                const nomCor = String(d.SRIModNomC || d.SRIDepId || d.nomCorDep || d.NomCorDep || d.claveDep || d.id || '').trim();
-                const nomDep = String(d.SRIModNom || d.nomDep || d.nombre || '').trim();
-                return `<option value="${nomCor}">${nomCor}${nomDep && nomDep !== nomCor ? ' - ' + nomDep : ''}</option>`;
             }).join('');
     }
 
