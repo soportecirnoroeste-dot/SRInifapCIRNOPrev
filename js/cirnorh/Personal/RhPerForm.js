@@ -131,7 +131,6 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
         setTimeout(() => {
             seleccionarOpcionFlexible(form.elements['SRIPtoId'], emp.SRIPtoId);
             seleccionarOpcionFlexible(form.elements['SRIModNomC'], emp.SRIModNomC);
-            console.log("--- [TESTIGO PUESTO] Puesto intentado asignar:", emp.SRIPtoId, "Valor actual en select:", form.elements['SRIPtoId'].value);
         }, 50);
 
         form.elements['SRIPerCd'].value = limpiarValor(emp.SRIPerCd);
