@@ -70,7 +70,6 @@
         if (deptoData && deptoData.options) {
             const headerDeptoTitle = document.getElementById('header-depto-title');
             if (headerDeptoTitle) {
-                console.log(`${nombreOficialDep.toUpperCase()}`)
                 headerDeptoTitle.textContent = `SISTEMA REGIONAL INTERNO / ${nombreOficialDep.toUpperCase()}`;
             }
 
