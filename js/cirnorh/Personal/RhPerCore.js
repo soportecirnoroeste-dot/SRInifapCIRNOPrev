@@ -16,7 +16,7 @@ function obtenerUsuarioSesion() {
         const numE = posibleSesionGlobal.SRIPerNumE || posibleSesionGlobal.numEmp || posibleSesionGlobal.usuario || posibleSesionGlobal.id || '';
         const regId = posibleSesionGlobal.SRIRegId || posibleSesionGlobal.regId || posibleSesionGlobal.reg || '';
         const cenId = posibleSesionGlobal.SRICenId || posibleSesionGlobal.cenId || posibleSesionGlobal.centro || '';
-        
+
         if (numE || regId || cenId) {
             return {
                 SRIPerNumE: numE,
@@ -26,7 +26,7 @@ function obtenerUsuarioSesion() {
             };
         }
     }
-    
+
     try {
         const keysPossibles = ['usuario', 'usuarioLogueado', 'usuarioActivo', 'user', 'sesion', 'datosUsuario', 'currentUser'];
         for (let key of keysPossibles) {
@@ -36,7 +36,7 @@ function obtenerUsuarioSesion() {
                 try {
                     parsed = JSON.parse(dataStr);
                 } catch (errParse) {
-                    parsed = dataStr; 
+                    parsed = dataStr;
                 }
 
                 if (parsed && typeof parsed === 'object') {
@@ -45,7 +45,7 @@ function obtenerUsuarioSesion() {
                     const cenId = parsed.SRICenId || parsed.cenId || parsed.centro || '';
 
                     if (numE || regId || cenId) {
-                        window.usuarioLogueado = parsed; 
+                        window.usuarioLogueado = parsed;
                         return {
                             SRIPerNumE: numE,
                             SRIRegId: regId,
@@ -62,8 +62,8 @@ function obtenerUsuarioSesion() {
                 }
             }
         }
-    } catch (e) {}
-    
+    } catch (e) { }
+
     return {
         SRIPerNumE: window.SRIPerNumE || window.numEmpUsuario || window.usuario || window.userEmp || '',
         SRIRegId: window.SRIRegId || window.regIdUsuario || window.regId || '',
@@ -281,14 +281,21 @@ function pintarSelectsCatalogos() {
         selPuesto.innerHTML = '<option value="" disabled selected>Seleccione un puesto...</option>' +
             window._catPuestos.map(p => {
                 const numPto = String(p.SRIPtoId || p.NumPto || p.numPto || p.clave || '').trim();
-                
-                // Buscamos la descripción en varias propiedades posibles, incluyendo la caché global si existe
+
+                // Evaluamos las posibles propiedades de la descripción
                 let nomPto = String(p.SRIPtoDesc || p.NomPto || p.nomPto || p.nombre || '').trim();
-                if ((!nomPto || nomPto === numPto) && window._mapPuestosCache && window._mapPuestosCache[numPto]) {
-                    nomPto = window._mapPuestosCache[numPto];
+
+                // Si la descripción es idéntica al código o viene vacía, la limpiamos para que no se duplique
+                if (!nomPto || nomPto === numPto) {
+                    nomPto = '';
                 }
-                    console.log(numPto+' - '+nomPto)
-                return `<option value="${numPto}">${numPto}${nomPto && nomPto !== numPto ? ' - ' + nomPto : ''}</option>`;
+
+                console.log(numPto + (nomPto ? ' - ' + nomPto : ''));
+
+                // Si hay descripción real, muestra "Código - Descripción", de lo contrario solo muestra el código
+                const textoMostrado = nomPto ? `${numPto} - ${nomPto}` : numPto;
+
+                return `<option value="${numPto}">${textoMostrado}</option>`;
             }).join('');
     }
 
@@ -298,7 +305,7 @@ function pintarSelectsCatalogos() {
             window._catDepartamentos.map(d => {
                 const nomCor = String(d.SRIModNomC || d.SRIDepId || d.nomCorDep || d.NomCorDep || d.claveDep || d.id || '').trim();
                 let nomDep = String(d.SRIModNom || d.nomDep || d.nombre || '').trim();
-                
+
                 if ((!nomDep || nomDep === nomCor) && window._mapDeptosCache && window._mapDeptosCache[nomCor]) {
                     nomDep = window._mapDeptosCache[nomCor];
                 }
@@ -313,7 +320,7 @@ function pintarSelectsCatalogos() {
             window._catRegs.map(r => {
                 const claveReg = String(r.SRIRegId || r.claveReg || '').trim();
                 const nomReg = String(r.SRIRegNom || r.NomCorto || r.regional || '').trim();
-                
+
                 return `<option value="${claveReg}">${claveReg} - ${nomReg}</option>`;
             }).join('');
     }
@@ -479,7 +486,7 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
 
         form.elements['SRIPerNumE'].value = String(emp.SRIPerNumE || '').trim();
         if (inputNumEmp) inputNumEmp.setAttribute('readonly', true);
-        
+
         form.elements['SRIPerNomE'].value = String(emp.SRIPerNomE || '').trim();
         form.elements['SRIPerNExt'].value = String(emp.SRIPerNExt || '').trim();
         form.elements['SRIPerNCel'].value = String(emp.SRIPerNCel || '').trim();
@@ -551,7 +558,7 @@ function aplicarFiltroYRenderizar(empleados) {
     const usuarioActivo = obtenerUsuarioSesion();
     const centroUsuario = String(usuarioActivo.SRICenId || usuarioActivo.cenId || '').trim();
     let empleadosFiltrados = empleados;
-    
+
     if (centroUsuario && centroUsuario !== '0' && centroUsuario !== 'undefined' && centroUsuario !== '') {
         empleadosFiltrados = empleados.filter(emp => {
             const centroEmp = String(emp.SRICenId || '').trim();
@@ -568,7 +575,7 @@ function filtrarTablaPersonal(textoBusqueda) {
     const usuarioActivo = obtenerUsuarioSesion();
     const centroUsuario = String(usuarioActivo.SRICenId || usuarioActivo.cenId || '').trim();
     let baseEmpleados = window._empleadosCache;
-    
+
     if (centroUsuario && centroUsuario !== '0' && centroUsuario !== 'undefined') {
         baseEmpleados = window._empleadosCache.filter(emp => String(emp.SRICenId || '').trim().includes(centroUsuario));
     }
