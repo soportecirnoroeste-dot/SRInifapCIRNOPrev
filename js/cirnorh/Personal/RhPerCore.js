@@ -35,12 +35,11 @@ function obtenerUsuarioSesion() {
         for (let key of keysPossibles) {
             const dataStr = localStorage.getItem(key);
             if (dataStr) {
-                // Intentar parsear por si es JSON
                 let parsed;
                 try {
                     parsed = JSON.parse(dataStr);
                 } catch (errParse) {
-                    parsed = dataStr; // Por si está guardado como texto plano
+                    parsed = dataStr; 
                 }
 
                 if (parsed && typeof parsed === 'object') {
@@ -49,7 +48,7 @@ function obtenerUsuarioSesion() {
                     const cenId = parsed.SRICenId || parsed.cenId || parsed.centro || '';
 
                     if (numE || regId || cenId) {
-                        window.usuarioLogueado = parsed; // Guardar en caché global
+                        window.usuarioLogueado = parsed; 
                         return {
                             SRIPerNumE: numE,
                             SRIRegId: regId,
@@ -58,7 +57,6 @@ function obtenerUsuarioSesion() {
                         };
                     }
                 } else if (typeof parsed === 'string' && parsed.trim() !== '') {
-                    // Si el localStorage guardaba solo el número de empleado o usuario en texto plano
                     return {
                         SRIPerNumE: parsed,
                         SRIRegId: window.SRIRegId || '',
@@ -133,7 +131,7 @@ function cargarPersonalRh(cargarLista = true) {
                 <div><label class="block font-bold text-stone-700 mb-1">Nombre Completo:</label><input type="text" name="SRIPerNomE" required class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
                 
                 <div><label class="block font-bold text-stone-700 mb-1">Extensión:</label><input type="text" name="SRIPerNExt" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
-                <div><label class="block font-bold text-stone-700 mb-1">SNúm. Personal / Celular:</label><input type="text" name="SRIPerNCel" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">Núm. Personal / Celular:</label><input type="text" name="SRIPerNCel" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
                 <div><label class="block font-bold text-stone-700 mb-1">Escolaridad:</label><input type="text" name="SRIPerEsco" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
                 <div><label class="block font-bold text-stone-700 mb-1">Dirección:</label><input type="text" name="SRIPerDir" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
                 <div><label class="block font-bold text-stone-700 mb-1">C.P.:</label><input type="text" name="SRIPerCP" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
@@ -244,7 +242,6 @@ function ocultarFormularioPersonal() {
 }
 
 async function cargarCatalogosSheets(forzar = false) {
-    // 1. Si no hay datos en memoria o se fuerza, los pedimos al servidor
     if (forzar || !window._catRegs || window._catRegs.length === 0) {
         try {
             const data = await callAppsScript('obtenerDatosSistema', {});
@@ -260,11 +257,9 @@ async function cargarCatalogosSheets(forzar = false) {
         }
     }
 
-    // 2. Pintar los combos en el DOM siempre (vengan de la red o de la caché)
     pintarSelectsCatalogos();
 }
 
-// Función auxiliar para dibujar los combos de puestos y departamentos
 function pintarSelectsCatalogos() {
     const selPuesto = document.getElementById('select-SRIPtoId');
     if (selPuesto && window._catPuestos) {
@@ -286,13 +281,22 @@ function pintarSelectsCatalogos() {
             }).join('');
     }
 
+    const selRegiones = document.getElementById('select-SRIRegId');
+    if (selRegiones && window._catRegs && selRegiones.options.length <= 1) {
+        selRegiones.innerHTML = '<option value="" disabled selected>Seleccione una región...</option>' +
+            window._catRegs.map(r => {
+                const claveReg = r.SRIRegId || r.claveReg || '';
+                const nomReg = r.SRIRegNom || r.NomCorto || r.regional || '';
+                return `<option value="${claveReg}">${claveReg} - ${nomReg}</option>`;
+            }).join('');
+    }
+
     const selCentro = document.getElementById('select-SRICenId');
     if (selCentro && selCentro.value && typeof filtrarSitiosPorCentro === 'function') {
         filtrarSitiosPorCentro(selCentro.value);
     }
 }
 
-// Función auxiliar para comparar claves de forma flexible (ignora espacios y ceros iniciales, ej: "5" == "05")
 function matchClave(a, b) {
     const strA = String(a || '').trim();
     const strB = String(b || '').trim();
@@ -330,7 +334,6 @@ window.filtrarCentrosPorRegion = function (centroActual = '', sitActual = '') {
             return `<option value="${claveC}" ${selected}>${claveC} - ${nombreC}</option>`;
         }).join('');
 
-        // Forzar selección explícita por si acaso
         if (centroActual) {
             for (let option of selCentro.options) {
                 if (matchClave(option.value, centroActual)) {
@@ -352,7 +355,7 @@ function filtrarSitiosPorCentro(claveCentro = '', sitActual = '') {
     if (!selSit) return;
 
     selSit.innerHTML = `<option value="" disabled selected>Seleccione un sitio...</option>`;
-    const centroId = extraerClave(claveCentro || document.getElementById('select-SRICenId')?.value || '');
+    const centroId = String(claveCentro || document.getElementById('select-SRICenId')?.value || '').trim();
 
     if (!centroId) {
         selSit.innerHTML = `<option value="N/A">N/A - No aplica</option>`;
@@ -365,7 +368,6 @@ function filtrarSitiosPorCentro(claveCentro = '', sitActual = '') {
         return matchClave(cAsociado, centroId);
     });
 
-    // Validamos si el sitio actual o los datos filtrados indican que no aplica (valor 0 o vacío)
     const esCero = String(sitActual).trim() === '0' || String(sitActual).trim() === 'N/A';
 
     let opcionesHTML = `<option value="N/A" ${esCero ? 'selected' : ''}>N/A</option>`;
@@ -374,7 +376,6 @@ function filtrarSitiosPorCentro(claveCentro = '', sitActual = '') {
         opcionesHTML += sitiosFiltrados.map(s => {
             const claveS = String(s.SRISitId || s.clave || s.ClaveSitio || s.claveSit || '').trim();
             const nombreS = s.SRISitNom || s.nombre || s.Sitio || s.sitio || '';
-            // Si la clave del sitio es 0, evitamos pintarla como opción normal si solo debe decir No aplica
             if (claveS === '0') return '';
             return `<option value="${claveS}">${claveS} - ${nombreS}</option>`;
         }).join('');
@@ -382,14 +383,12 @@ function filtrarSitiosPorCentro(claveCentro = '', sitActual = '') {
 
     selSit.innerHTML = opcionesHTML;
 
-    // Si el valor recibido es 0, forzamos directamente el "N/A" en pantalla
     if (String(sitActual).trim() === '0' || String(sitActual).trim() === 'N/A') {
         selSit.value = "N/A";
     } else if (sitActual) {
-        const limpioSit = extraerClave(sitActual);
         let encontrado = false;
         for (let opt of selSit.options) {
-            if (matchClave(opt.value, limpioSit)) {
+            if (matchClave(opt.value, sitActual)) {
                 selSit.value = opt.value;
                 encontrado = true;
                 break;
@@ -444,7 +443,6 @@ async function cargarDatosPersonalSheets(forzar = false) {
     }
 }
 
-// Función para filtrar y aplicar renderizado según el centro del usuario logueado dinámicamente
 function aplicarFiltroYRenderizar(empleados) {
     const usuarioActivo = obtenerUsuarioSesion();
     const centroUsuario = String(usuarioActivo.SRICenId || usuarioActivo.cenId || '').trim();
@@ -455,7 +453,6 @@ function aplicarFiltroYRenderizar(empleados) {
             const centroEmp = String(emp.SRICenId || '').trim();
             return centroEmp.includes(centroUsuario);
         });
-    } else {
     }
 
     renderizarTablaPersonal(empleadosFiltrados);
@@ -505,14 +502,6 @@ function renderizarTablaPersonal(registros) {
         return;
     }
 
-    // DIAGNOSTICO TEMPORAL: Ver la estructura del primer registro y del catálogo de departamentos en F12
-    if (registros.length > 0) {
-        console.log("--- [DIAGNOSTICO EMPLEADO] Primer registro:", registros[0]);
-    }
-    if (window._catDepartamentos && window._catDepartamentos.length > 0) {
-        console.log("--- [DIAGNOSTICO CATALOGO] Primer departamento:", window._catDepartamentos[0]);
-    }
-
     if (!window._mapRegsCache && window._catRegs) {
         window._mapRegsCache = {};
         window._catRegs.forEach(r => {
@@ -529,7 +518,6 @@ function renderizarTablaPersonal(registros) {
         });
     }
 
-    // Mapeo robusto de departamentos buscando cualquier coincidencia de clave/nombre
     if (!window._mapDeptosCache && window._catDepartamentos && Array.isArray(window._catDepartamentos)) {
         window._mapDeptosCache = {};
         window._catDepartamentos.forEach(d => {
@@ -552,8 +540,6 @@ function renderizarTablaPersonal(registros) {
         const cReg = String(row.SRIRegId || '').trim();
         const cCentro = String(row.SRICenId || '').trim();
         const cNumPto = String(row.SRIPtoId || '').trim();
-        
-        // Buscar el departamento probando las propiedades más comunes
         const cNomCorDep = String(row.SRIModNomC || row.departamento || row.depto || row.SRIDepId || row.ClaveDep || '').trim();
 
         const nomCortoReg = (window._mapRegsCache && window._mapRegsCache[cReg]) || '';
