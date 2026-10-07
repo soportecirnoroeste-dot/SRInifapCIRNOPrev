@@ -1,5 +1,5 @@
 // ==========================================
-// CASCADA DE SELECTORES (REGIONES -> CENTROS -> SITIOS -> DEPTOS)
+// CASCADA DE SELECTORES Y UTILIDADES COMPARTIDAS
 // ==========================================
 
 function matchClave(a, b) {
@@ -18,6 +18,8 @@ function extraerClave(val) {
     if (str.includes(' - ')) return str.split(' - ')[0].trim();
     return str;
 }
+
+// ... resto del código de poblarSelectoresCascada ...
 
 function poblarSelectoresCascada(regSeleccionada = '', centroSeleccionado = '', sitioSeleccionado = '', deptoSeleccionado = '') {
     const selectReg = document.getElementById('select-SRIRegId');
