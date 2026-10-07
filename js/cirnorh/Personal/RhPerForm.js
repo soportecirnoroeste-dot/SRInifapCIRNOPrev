@@ -51,10 +51,27 @@ function cancelarEdicionPersonal() {
     ocultarFormularioPersonal();
 }
 
+// Función auxiliar para seleccionar opciones de forma flexible (ignora ceros, espacios y descripciones)
+function seleccionarOpcionFlexible(selectElement, valorBuscado) {
+    if (!selectElement || !valorBuscado) return;
+    const limpioBuscado = extraerClave(valorBuscado);
+    
+    for (let option of selectElement.options) {
+        const valorOpt = extraerClave(option.value);
+        const textoOpt = extraerClave(option.text);
+        
+        // Compara si coincide la clave numérica, el texto o el valor completo
+        if (matchClave(valorOpt, limpioBuscado) || matchClave(textoOpt, limpioBuscado) || matchClave(option.value, valorBuscado)) {
+            selectElement.value = option.value;
+            selectElement.dispatchEvent(new Event('change'));
+            return;
+        }
+    }
+}
+
 async function seleccionarEmpleadoParaEditar(numEmpParam) {
     if (!window._empleadosCache || window._empleadosCache.length === 0) {
         try {
-            // Se agregan los parámetros de contexto para respetar los filtros regionales o por centro
             const params = {
                 usuario: window.usuarioLogueado?.SRIPerNumE || window.numEmpUsuario || '',
                 SRIRegId: window.usuarioLogueado?.SRIRegId || window.regIdUsuario || '',
@@ -91,6 +108,7 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
         let rawSit = extraerClave(emp.SRISitId);
         const sitVal = (!rawSit || rawSit === 0 || rawSit === '0' || String(rawSit).trim().toUpperCase() === 'N/A') ? 'N/A' : rawSit;
 
+        // 1. Poblar cascada de Región -> Centro -> Sitio de manera sincronizada
         if (typeof poblarSelectoresCascada === 'function') {
             poblarSelectoresCascada(regVal, centroVal, sitVal);
         }
@@ -106,8 +124,11 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
         form.elements['SRIPerCP'].value = limpiarValor(emp.SRIPerCP);
         form.elements['SRIPerEml'].value = limpiarValor(emp.SRIPerEml);
         form.elements['SRIPerRFC'].value = limpiarValor(emp.SRIPerRFC);
-        form.elements['SRIPtoId'].value = limpiarValor(emp.SRIPtoId);
-        form.elements['SRIModNomC'].value = limpiarValor(emp.SRIModNomC);
+        
+        // 2. Asignación flexible para Puesto y Departamento
+        seleccionarOpcionFlexible(form.elements['SRIPtoId'], emp.SRIPtoId);
+        seleccionarOpcionFlexible(form.elements['SRIModNomC'], emp.SRIModNomC);
+
         form.elements['SRIPerCd'].value = limpiarValor(emp.SRIPerCd);
         form.elements['SRIPerEdo'].value = limpiarValor(emp.SRIPerEdo);
 
