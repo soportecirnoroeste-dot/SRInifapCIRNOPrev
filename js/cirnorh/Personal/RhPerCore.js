@@ -340,13 +340,17 @@ window.filtrarCentrosPorRegion = function (centroActual = '', sitActual = '') {
     }
 };
 
-window.filtrarSitiosPorCentro = function (claveCentro = '', sitActual = '') {
+function filtrarSitiosPorCentro(claveCentro = '', sitActual = '') {
     const selSit = document.getElementById('select-SRISitId');
     if (!selSit) return;
 
     selSit.innerHTML = `<option value="" disabled selected>Seleccione un sitio...</option>`;
+    const centroId = extraerClave(claveCentro || document.getElementById('select-SRICenId')?.value || '');
 
-    const centroId = claveCentro || document.getElementById('select-SRICenId')?.value || '';
+    if (!centroId) {
+        selSit.innerHTML = `<option value="N/A">N/A - No aplica</option>`;
+        return;
+    }
 
     const sitiosArray = Array.isArray(window._catSitios) ? window._catSitios : [];
     const sitiosFiltrados = sitiosArray.filter(s => {
@@ -354,27 +358,43 @@ window.filtrarSitiosPorCentro = function (claveCentro = '', sitActual = '') {
         return matchClave(cAsociado, centroId);
     });
 
+    // Validamos si el sitio actual o los datos filtrados indican que no aplica (valor 0 o vacío)
+    const esCero = String(sitActual).trim() === '0' || String(sitActual).trim() === 'N/A';
+
+    let opcionesHTML = `<option value="N/A" ${esCero ? 'selected' : ''}>N/A</option>`;
+
     if (sitiosFiltrados.length > 0) {
-        selSit.innerHTML += sitiosFiltrados.map(s => {
-            const claveS = s.SRISitId || s.clave || s.ClaveSitio || '';
-            const nombreS = s.SRISitNom || s.nombre || s.Sitio || '';
-            const match = matchClave(claveS, sitActual);
-            const selected = match ? 'selected' : '';
-            return `<option value="${claveS}" ${selected}>${claveS} - ${nombreS}</option>`;
+        opcionesHTML += sitiosFiltrados.map(s => {
+            const claveS = String(s.SRISitId || s.clave || s.ClaveSitio || s.claveSit || '').trim();
+            const nombreS = s.SRISitNom || s.nombre || s.Sitio || s.sitio || '';
+            // Si la clave del sitio es 0, evitamos pintarla como opción normal si solo debe decir No aplica
+            if (claveS === '0') return '';
+            return `<option value="${claveS}">${claveS} - ${nombreS}</option>`;
         }).join('');
-    } else {
-        selSit.innerHTML += `<option value="0" selected>0 - No aplica</option>`;
     }
 
-    if (sitActual) {
-        for (let option of selSit.options) {
-            if (matchClave(option.value, sitActual)) {
-                selSit.value = option.value;
+    selSit.innerHTML = opcionesHTML;
+
+    // Si el valor recibido es 0, forzamos directamente el "N/A" en pantalla
+    if (String(sitActual).trim() === '0' || String(sitActual).trim() === 'N/A') {
+        selSit.value = "N/A";
+    } else if (sitActual) {
+        const limpioSit = extraerClave(sitActual);
+        let encontrado = false;
+        for (let opt of selSit.options) {
+            if (matchClave(opt.value, limpioSit)) {
+                selSit.value = opt.value;
+                encontrado = true;
                 break;
             }
         }
+        if (!encontrado) {
+            selSit.value = "N/A";
+        }
+    } else {
+        selSit.value = "N/A";
     }
-};
+}
 
 document.addEventListener("DOMContentLoaded", () => {
     const selReg = document.getElementById('select-SRIRegId') || document.querySelector('select[name="SRIRegId"]');
