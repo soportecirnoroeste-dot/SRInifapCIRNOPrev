@@ -306,7 +306,7 @@ function pintarSelectsCatalogos() {
 
                 // Si por alguna razón el objeto viniera en otra estructura, usamos el nombre como valor y como texto visible
                 let valorYTexto = nomDep;
-
+                console.log(nomDep)
                 return `<option value="${valorYTexto}">${valorYTexto}</option>`;
             }).join('');
     }
