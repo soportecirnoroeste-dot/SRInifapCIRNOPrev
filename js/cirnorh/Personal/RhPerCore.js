@@ -1,6 +1,6 @@
 // js/cirnorh/RhPersonal.js
 
-// Variables globales de caché (protegidas y alineadas con los nombres SQL)
+// Variables globales de caché
 window._catRegsCache = window._catRegsCache || null;
 window._catCentrosCache = window._catCentrosCache || null;
 window._catSitiosCache = window._catSitiosCache || null;
@@ -10,9 +10,7 @@ window._mapCentrosCache = window._mapCentrosCache || null;
 window._mapPuestosCache = window._mapPuestosCache || null;
 window._mapDeptosCache = window._mapDeptosCache || null;
 
-// Función auxiliar robusta y mejorada para recuperar la sesión activa del usuario
 function obtenerUsuarioSesion() {
-    // 1. Revisar objetos de sesión directos en memoria global
     const posibleSesionGlobal = window.usuarioLogueado || window.usuarioActivo || window.sesion || window.currentUser || window.user;
     if (posibleSesionGlobal && typeof posibleSesionGlobal === 'object') {
         const numE = posibleSesionGlobal.SRIPerNumE || posibleSesionGlobal.numEmp || posibleSesionGlobal.usuario || posibleSesionGlobal.id || '';
@@ -29,7 +27,6 @@ function obtenerUsuarioSesion() {
         }
     }
     
-    // 2. Buscar exhaustivamente en localStorage
     try {
         const keysPossibles = ['usuario', 'usuarioLogueado', 'usuarioActivo', 'user', 'sesion', 'datosUsuario', 'currentUser'];
         for (let key of keysPossibles) {
@@ -65,10 +62,8 @@ function obtenerUsuarioSesion() {
                 }
             }
         }
-    } catch (e) {
-    }
+    } catch (e) {}
     
-    // 3. Rescate final usando variables sueltas directamente en window
     return {
         SRIPerNumE: window.SRIPerNumE || window.numEmpUsuario || window.usuario || window.userEmp || '',
         SRIRegId: window.SRIRegId || window.regIdUsuario || window.regId || '',
@@ -260,13 +255,14 @@ async function cargarCatalogosSheets(forzar = false) {
     pintarSelectsCatalogos();
 }
 
+// Pintar los combos mapeando correctamente las llaves reales de SQL Server (SRIPtoId / SRIPtoDesc)
 function pintarSelectsCatalogos() {
     const selPuesto = document.getElementById('select-SRIPtoId');
     if (selPuesto && window._catPuestos) {
         selPuesto.innerHTML = '<option value="" disabled selected>Seleccione un puesto...</option>' +
             window._catPuestos.map(p => {
-                const numPto = p.SRIPtoId || p.NumPto || p.numPto || p.clave || '';
-                const nomPto = p.SRIPtoDesc || p.NomPto || p.nomPto || p.nombre || '';
+                const numPto = String(p.SRIPtoId || p.NumPto || p.numPto || p.clave || '').trim();
+                const nomPto = String(p.SRIPtoDesc || p.NomPto || p.nomPto || p.nombre || '').trim();
                 return `<option value="${numPto}">${numPto} - ${nomPto}</option>`;
             }).join('');
     }
@@ -275,8 +271,8 @@ function pintarSelectsCatalogos() {
     if (selDepto && window._catDepartamentos) {
         selDepto.innerHTML = '<option value="" disabled selected>Seleccione un departamento...</option>' +
             window._catDepartamentos.map(d => {
-                const nomCor = d.SRIModNomC || d.nomCorDep || d.NomCorDep || d.claveDep || '';
-                const nomDep = d.SRIModNom || d.nomDep || d.nombre || '';
+                const nomCor = String(d.SRIModNomC || d.nomCorDep || d.NomCorDep || d.claveDep || '').trim();
+                const nomDep = String(d.SRIModNom || d.nomDep || d.nombre || '').trim();
                 return `<option value="${nomCor}">${nomCor} - ${nomDep}</option>`;
             }).join('');
     }
@@ -285,8 +281,8 @@ function pintarSelectsCatalogos() {
     if (selRegiones && window._catRegs && selRegiones.options.length <= 1) {
         selRegiones.innerHTML = '<option value="" disabled selected>Seleccione una región...</option>' +
             window._catRegs.map(r => {
-                const claveReg = r.SRIRegId || r.claveReg || '';
-                const nomReg = r.SRIRegNom || r.NomCorto || r.regional || '';
+                const claveReg = String(r.SRIRegId || r.claveReg || '').trim();
+                const nomReg = String(r.SRIRegNom || r.NomCorto || r.regional || '').trim();
                 return `<option value="${claveReg}">${claveReg} - ${nomReg}</option>`;
             }).join('');
     }
@@ -327,8 +323,8 @@ window.filtrarCentrosPorRegion = function (centroActual = '', sitActual = '') {
 
     if (centrosFiltrados.length > 0) {
         selCentro.innerHTML += centrosFiltrados.map(c => {
-            const claveC = c.SRICenId || c.ClaveCentro || c.claveCentro || '';
-            const nombreC = c.SRICenNom || c.Centro || c.centro || c.nombre || '';
+            const claveC = String(c.SRICenId || c.ClaveCentro || c.claveCentro || '').trim();
+            const nombreC = String(c.SRICenNom || c.Centro || c.centro || c.nombre || '').trim();
             const match = matchClave(claveC, centroActual);
             const selected = match ? 'selected' : '';
             return `<option value="${claveC}" ${selected}>${claveC} - ${nombreC}</option>`;
@@ -375,7 +371,7 @@ function filtrarSitiosPorCentro(claveCentro = '', sitActual = '') {
     if (sitiosFiltrados.length > 0) {
         opcionesHTML += sitiosFiltrados.map(s => {
             const claveS = String(s.SRISitId || s.clave || s.ClaveSitio || s.claveSit || '').trim();
-            const nombreS = s.SRISitNom || s.nombre || s.Sitio || s.sitio || '';
+            const nombreS = String(s.SRISitNom || s.nombre || s.Sitio || s.sitio || '').trim();
             if (claveS === '0') return '';
             return `<option value="${claveS}">${claveS} - ${nombreS}</option>`;
         }).join('');
@@ -402,21 +398,92 @@ function filtrarSitiosPorCentro(claveCentro = '', sitActual = '') {
     }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    const selReg = document.getElementById('select-SRIRegId') || document.querySelector('select[name="SRIRegId"]');
-    if (selReg) {
-        selReg.addEventListener('change', () => {
-            window.filtrarCentrosPorRegion();
-        });
+// Función completa para seleccionar y cargar el empleado al editar
+async function seleccionarEmpleadoParaEditar(numEmpParam) {
+    if (!window._empleadosCache || window._empleadosCache.length === 0) {
+        try {
+            const usuarioActivo = obtenerUsuarioSesion();
+            const params = {
+                usuario: usuarioActivo.SRIPerNumE || usuarioActivo.numEmp || usuarioActivo.usuario || '',
+                SRIRegId: usuarioActivo.SRIRegId || usuarioActivo.regId || '',
+                SRICenId: usuarioActivo.SRICenId || usuarioActivo.cenId || ''
+            };
+
+            const data = await callAppsScript('obtenerPersonalSQL', params);
+            window._empleadosCache = data || [];
+        } catch (error) {
+            console.error("❌ Error al recuperar empleados:", error);
+        }
     }
 
-    const selCentro = document.getElementById('select-SRICenId');
-    if (selCentro) {
-        selCentro.addEventListener('change', function (e) {
-            window.filtrarSitiosPorCentro(e.target.value);
-        });
+    const busqueda = String(numEmpParam || '').trim();
+    let emp = window._empleadosCache.find(e => String(e.SRIPerNumE || '').trim() === busqueda);
+
+    if (!emp) {
+        alert("No se pudieron cargar los datos del empleado.");
+        return;
     }
-});
+
+    if (typeof cargarCatalogosSheets === 'function') {
+        await cargarCatalogosSheets(true);
+    }
+
+    const form = document.getElementById('form-nuevo-personal');
+    const formContainer = document.getElementById('contenedor-formulario-personal');
+    const gestionContainer = document.getElementById('contenedor-gestion-personal');
+    const listadoContainer = document.getElementById('contenedor-listado-personal');
+    const titulo = document.getElementById('titulo-formulario');
+    const inputNumEmp = document.getElementById('input-SRIPerNumE');
+
+    if (formContainer && form) {
+        const regVal = String(emp.SRIRegId || '').trim();
+        const centroVal = String(emp.SRICenId || '').trim();
+        let rawSit = String(emp.SRISitId || '').trim();
+        const sitVal = (!rawSit || rawSit === '0' || rawSit.toUpperCase() === 'N/A') ? 'N/A' : rawSit;
+
+        const selReg = document.getElementById('select-SRIRegId');
+        if (selReg) selReg.value = regVal;
+
+        if (typeof filtrarCentrosPorRegion === 'function') {
+            filtrarCentrosPorRegion(centroVal, sitVal);
+        }
+
+        form.elements['SRIPerNumE'].value = String(emp.SRIPerNumE || '').trim();
+        if (inputNumEmp) inputNumEmp.setAttribute('readonly', true);
+        
+        form.elements['SRIPerNomE'].value = String(emp.SRIPerNomE || '').trim();
+        form.elements['SRIPerNExt'].value = String(emp.SRIPerNExt || '').trim();
+        form.elements['SRIPerNCel'].value = String(emp.SRIPerNCel || '').trim();
+        form.elements['SRIPerEsco'].value = String(emp.SRIPerEsco || '').trim();
+        form.elements['SRIPerDir'].value = String(emp.SRIPerDir || '').trim();
+        form.elements['SRIPerCP'].value = String(emp.SRIPerCP || '').trim();
+        form.elements['SRIPerEml'].value = String(emp.SRIPerEml || '').trim();
+        form.elements['SRIPerRFC'].value = String(emp.SRIPerRFC || '').trim();
+        form.elements['SRIPerCd'].value = String(emp.SRIPerCd || '').trim();
+        form.elements['SRIPerEdo'].value = String(emp.SRIPerEdo || '').trim();
+
+        // Asignación de Puesto y Departamento utilizando las claves reales
+        setTimeout(() => {
+            const selPto = document.getElementById('select-SRIPtoId');
+            const selDep = document.getElementById('select-SRIModNomC');
+
+            if (emp.SRIPtoId && selPto) {
+                selPto.value = String(emp.SRIPtoId).trim();
+            }
+            if (emp.SRIModNomC && selDep) {
+                selDep.value = String(emp.SRIModNomC).trim();
+            }
+        }, 150);
+
+        if (titulo) {
+            titulo.innerHTML = `Editando empleado: <span class="text-[#249444]">${String(emp.SRIPerNomE || '')}</span> (No. Empleado: ${String(emp.SRIPerNumE || '')})`;
+        }
+
+        formContainer.classList.remove('hidden');
+        if (gestionContainer) gestionContainer.classList.add('hidden');
+        if (listadoContainer) listadoContainer.classList.add('hidden');
+    }
+}
 
 async function cargarDatosPersonalSheets(forzar = false) {
     const tbody = document.getElementById('tabla-personal-body');
