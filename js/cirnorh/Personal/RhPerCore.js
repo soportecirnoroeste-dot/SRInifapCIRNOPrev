@@ -281,7 +281,13 @@ function pintarSelectsCatalogos() {
         selPuesto.innerHTML = '<option value="" disabled selected>Seleccione un puesto...</option>' +
             window._catPuestos.map(p => {
                 const numPto = String(p.SRIPtoId || p.NumPto || p.numPto || p.clave || '').trim();
-                const nomPto = String(p.SRIPtoDesc || p.NomPto || p.nomPto || p.nombre || '').trim();
+                
+                // Buscamos la descripción en varias propiedades posibles, incluyendo la caché global si existe
+                let nomPto = String(p.SRIPtoDesc || p.NomPto || p.nomPto || p.nombre || '').trim();
+                if ((!nomPto || nomPto === numPto) && window._mapPuestosCache && window._mapPuestosCache[numPto]) {
+                    nomPto = window._mapPuestosCache[numPto];
+                }
+
                 return `<option value="${numPto}">${numPto}${nomPto && nomPto !== numPto ? ' - ' + nomPto : ''}</option>`;
             }).join('');
     }
@@ -291,7 +297,12 @@ function pintarSelectsCatalogos() {
         selDepto.innerHTML = '<option value="" disabled selected>Seleccione un departamento...</option>' +
             window._catDepartamentos.map(d => {
                 const nomCor = String(d.SRIModNomC || d.SRIDepId || d.nomCorDep || d.NomCorDep || d.claveDep || d.id || '').trim();
-                const nomDep = String(d.SRIModNom || d.nomDep || d.nombre || '').trim();
+                let nomDep = String(d.SRIModNom || d.nomDep || d.nombre || '').trim();
+                
+                if ((!nomDep || nomDep === nomCor) && window._mapDeptosCache && window._mapDeptosCache[nomCor]) {
+                    nomDep = window._mapDeptosCache[nomCor];
+                }
+
                 return `<option value="${nomCor}">${nomCor}${nomDep && nomDep !== nomCor ? ' - ' + nomDep : ''}</option>`;
             }).join('');
     }
