@@ -93,6 +93,7 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
         return;
     }
 
+    // 1. IMPORTANTE: Esperar a que los catálogos estén completamente cargados y pintados en el DOM
     await cargarCatalogosSheets();
 
     const form = document.getElementById('form-nuevo-personal');
@@ -108,7 +109,7 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
         let rawSit = extraerClave(emp.SRISitId);
         const sitVal = (!rawSit || rawSit === 0 || rawSit === '0' || String(rawSit).trim().toUpperCase() === 'N/A') ? 'N/A' : rawSit;
 
-        // 1. Poblar cascada de Región -> Centro -> Sitio de manera sincronizada
+        // 2. Poblar cascada de Región -> Centro -> Sitio
         if (typeof poblarSelectoresCascada === 'function') {
             poblarSelectoresCascada(regVal, centroVal, sitVal);
         }
@@ -125,9 +126,13 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
         form.elements['SRIPerEml'].value = limpiarValor(emp.SRIPerEml);
         form.elements['SRIPerRFC'].value = limpiarValor(emp.SRIPerRFC);
         
-        // 2. Asignación flexible para Puesto y Departamento
-        seleccionarOpcionFlexible(form.elements['SRIPtoId'], emp.SRIPtoId);
-        seleccionarOpcionFlexible(form.elements['SRIModNomC'], emp.SRIModNomC);
+        // 3. Forzar selección explícita del puesto y departamento con un pequeño respiro (setTimeout)
+        // Esto garantiza que el navegador haya terminado de renderizar las opciones del <select>
+        setTimeout(() => {
+            seleccionarOpcionFlexible(form.elements['SRIPtoId'], emp.SRIPtoId);
+            seleccionarOpcionFlexible(form.elements['SRIModNomC'], emp.SRIModNomC);
+            console.log("--- [TESTIGO PUESTO] Puesto intentado asignar:", emp.SRIPtoId, "Valor actual en select:", form.elements['SRIPtoId'].value);
+        }, 50);
 
         form.elements['SRIPerCd'].value = limpiarValor(emp.SRIPerCd);
         form.elements['SRIPerEdo'].value = limpiarValor(emp.SRIPerEdo);
