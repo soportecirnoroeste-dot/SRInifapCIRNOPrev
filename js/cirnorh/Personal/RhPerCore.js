@@ -287,7 +287,7 @@ function pintarSelectsCatalogos() {
                 if ((!nomPto || nomPto === numPto) && window._mapPuestosCache && window._mapPuestosCache[numPto]) {
                     nomPto = window._mapPuestosCache[numPto];
                 }
-
+                    console.log(numPto+' - '+nomPto)
                 return `<option value="${numPto}">${numPto}${nomPto && nomPto !== numPto ? ' - ' + nomPto : ''}</option>`;
             }).join('');
     }
@@ -313,6 +313,7 @@ function pintarSelectsCatalogos() {
             window._catRegs.map(r => {
                 const claveReg = String(r.SRIRegId || r.claveReg || '').trim();
                 const nomReg = String(r.SRIRegNom || r.NomCorto || r.regional || '').trim();
+                
                 return `<option value="${claveReg}">${claveReg} - ${nomReg}</option>`;
             }).join('');
     }
