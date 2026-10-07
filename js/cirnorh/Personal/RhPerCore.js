@@ -293,7 +293,7 @@ function pintarSelectsCatalogos() {
                 // Si hay descripción real, muestra "Código - Descripción", de lo contrario solo muestra el código
                 const textoMostrado = nomPto ? `${numPto} - ${nomPto}` : numPto;
 
-                console.log(textoMostrado);
+                console.log(numPto+' - '+nomPto);
 
                 return `<option value="${numPto}">${textoMostrado}</option>`;
             }).join('');
