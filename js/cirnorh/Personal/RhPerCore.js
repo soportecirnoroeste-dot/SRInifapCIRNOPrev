@@ -280,7 +280,7 @@ function pintarSelectsCatalogos() {
     if (selPuesto && window._catPuestos) {
         selPuesto.innerHTML = '<option value="" disabled selected>Seleccione un puesto...</option>' +
             window._catPuestos.map(p => {
-                const numPto = String(p.SRIPtoId || p.NumPto || p.numPto || p.clave || '').trim();
+                let numPto = String(p.SRIPtoId || p.NumPto || p.numPto || p.clave || '').trim();
 
                 // Evaluamos las posibles propiedades de la descripción
                 let nomPto = String(p.SRIPtoDesc || p.NomPto || p.nomPto || p.nombre || '').trim();
