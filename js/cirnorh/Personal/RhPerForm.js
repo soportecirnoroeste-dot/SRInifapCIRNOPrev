@@ -38,7 +38,12 @@ function ocultarFormularioPersonal() {
     if (listadoContainer) listadoContainer.classList.remove('hidden');
 
     if (window._empleadosCache && window._empleadosCache.length > 0) {
-        renderizarTablaPersonal(window._empleadosCache);
+        // Llamar al filtro global en lugar de renderizar la caché cruda
+        if (typeof aplicarFiltroYRenderizar === 'function') {
+            aplicarFiltroYRenderizar(window._empleadosCache);
+        } else {
+            renderizarTablaPersonal(window._empleadosCache);
+        }
     }
 }
 
