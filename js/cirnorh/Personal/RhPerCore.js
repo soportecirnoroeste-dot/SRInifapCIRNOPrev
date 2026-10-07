@@ -248,44 +248,20 @@ async function cargarCatalogosSheets(forzar = false) {
                 window._catCentros = data.campos || data.centros || [];
                 window._catSitios = data.sitios || [];
                 window._catDepartamentos = data.departamentos || data.deptos || [];
-                // Capturamos cualquier variante posible del catálogo de puestos
-                window._catPuestos = data.puestos || data.catPuestos || data.puesto || data.puestosList || [];
+                window._catPuestos = data.puestos || data.catPuestos || data.puesto || [];
             }
         } catch (e) {
             console.error("Error al cargar catálogos desde servidor...", e);
         }
     }
 
-    // Construir o enriquecer el mapa global de puestos para descripciones
-    if (!window._mapPuestosCache) {
-        window._mapPuestosCache = {};
-    }
-    
-    // Si _catPuestos trae elementos, llenamos el mapa con la descripción que venga
-    if (Array.isArray(window._catPuestos)) {
-        window._catPuestos.forEach(p => {
-            const k = String(p.SRIPtoId || p.NumPto || p.numPto || p.clave || p.id || '').trim();
-            const v = String(p.SRIPtoDesc || p.NomPto || p.nomPto || p.nombre || p.descripcion || p.desc || '').trim();
-            if (k && v && v !== k) {
-                window._mapPuestosCache[k] = v;
-            }
-        });
-    }
-
-    // 🛡️ Fallback de seguridad: si aún no hay puestos cargados, los intentamos rescatar de los empleados
+    // 🛡️ Fallback de seguridad: si el servidor no devolvió puestos/deptos, los extraemos de los empleados cargados
     if ((!window._catPuestos || window._catPuestos.length === 0) && window._empleadosCache && window._empleadosCache.length > 0) {
         const puestosMap = new Map();
         window._empleadosCache.forEach(e => {
-            if (e.SRIPtoId) {
-                const id = String(e.SRIPtoId).trim();
-                const desc = String(e.SRIPtoDesc || e.NomPto || e.descripcion || window._mapPuestosCache[id] || '').trim();
-                puestosMap.set(id, desc);
-            }
+            if (e.SRIPtoId) puestosMap.set(String(e.SRIPtoId).trim(), String(e.SRIPtoId).trim());
         });
-        window._catPuestos = Array.from(puestosMap.entries()).map(([id, desc]) => ({
-            SRIPtoId: id,
-            SRIPtoDesc: desc
-        }));
+        window._catPuestos = Array.from(puestosMap.keys()).map(id => ({ SRIPtoId: id, SRIPtoDesc: id }));
     }
 
     if ((!window._catDepartamentos || window._catDepartamentos.length === 0) && window._empleadosCache && window._empleadosCache.length > 0) {
@@ -304,17 +280,9 @@ function pintarSelectsCatalogos() {
     if (selPuesto && window._catPuestos) {
         selPuesto.innerHTML = '<option value="" disabled selected>Seleccione un puesto...</option>' +
             window._catPuestos.map(p => {
-                const numPto = String(p.SRIPtoId || p.NumPto || p.numPto || p.clave || p.id || '').trim();
-                
-                // Buscamos la descripción en múltiples propiedades o en el mapa global de caché
-                let nomPto = String(p.SRIPtoDesc || p.NomPto || p.nomPto || p.nombre || p.descripcion || p.desc || '').trim();
-                if ((!nomPto || nomPto === numPto) && window._mapPuestosCache && window._mapPuestosCache[numPto]) {
-                    nomPto = window._mapPuestosCache[numPto];
-                }
-
-                // Si tenemos descripción válida, mostramos "Clave - Descripción", de lo contrario solo la clave
-                const textoMostrado = (nomPto && nomPto !== numPto) ? `${numPto} - ${nomPto}` : numPto;
-                return `<option value="${numPto}">${textoMostrado}</option>`;
+                const numPto = String(p.SRIPtoId || p.NumPto || p.numPto || p.clave || '').trim();
+                const nomPto = String(p.SRIPtoDesc || p.NomPto || p.nomPto || p.nombre || '').trim();
+                return `<option value="${numPto}">${numPto}${nomPto && nomPto !== numPto ? ' - ' + nomPto : ''}</option>`;
             }).join('');
     }
 
@@ -323,9 +291,8 @@ function pintarSelectsCatalogos() {
         selDepto.innerHTML = '<option value="" disabled selected>Seleccione un departamento...</option>' +
             window._catDepartamentos.map(d => {
                 const nomCor = String(d.SRIModNomC || d.SRIDepId || d.nomCorDep || d.NomCorDep || d.claveDep || d.id || '').trim();
-                const nomDep = String(d.SRIModNom || d.nomDep || d.nombre || d.descripcion || '').trim();
-                const textoMostrado = (nomDep && nomDep !== nomCor) ? `${nomCor} - ${nomDep}` : nomCor;
-                return `<option value="${nomCor}">${textoMostrado}</option>`;
+                const nomDep = String(d.SRIModNom || d.nomDep || d.nombre || '').trim();
+                return `<option value="${nomCor}">${nomCor}${nomDep && nomDep !== nomCor ? ' - ' + nomDep : ''}</option>`;
             }).join('');
     }
 
