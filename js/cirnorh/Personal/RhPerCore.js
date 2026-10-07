@@ -280,20 +280,21 @@ function pintarSelectsCatalogos() {
     if (selPuesto && window._catPuestos) {
         selPuesto.innerHTML = '<option value="" disabled selected>Seleccione un puesto...</option>' +
             window._catPuestos.map(p => {
-                let numPto = String(p.SRIPtoId || p.NumPto || p.numPto || p.clave || '').trim();
+                // Declaramos como 'let' por si la propiedad cambia o se normaliza
+                let numPto = String(p.SRIPtoId || p.SRIPuestoId || p.NumPto || p.numPto || p.clave || '').trim();
 
-                // Evaluamos las posibles propiedades de la descripción
-                let nomPto = String(p.SRIPtoDesc || p.NomPto || p.nomPto || p.nombre || '').trim();
+                // Evaluamos las posibles propiedades de la descripción con 'let'
+                let nomPto = String(p.SRIPtoDesc || p.SRIPuestoDesc || p.NomPto || p.nomPto || p.nombre || '').trim();
 
-                // Si la descripción es idéntica al código o viene vacía, la limpiamos para que no se duplique
+                // Si la descripción es idéntica al código o viene vacía, la limpiamos
                 if (!nomPto || nomPto === numPto) {
                     nomPto = '';
                 }
 
                 // Si hay descripción real, muestra "Código - Descripción", de lo contrario solo muestra el código
-                const textoMostrado = nomPto ? `${numPto} - ${nomPto}` : numPto;
+                let textoMostrado = nomPto ? `${numPto} - ${nomPto}` : numPto;
 
-                console.log(numPto+' - '+nomPto);
+                console.log(numPto + ' - ' + nomPto);
 
                 return `<option value="${numPto}">${textoMostrado}</option>`;
             }).join('');
