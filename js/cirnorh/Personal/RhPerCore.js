@@ -245,43 +245,51 @@ function ocultarFormularioPersonal() {
 }
 
 async function cargarCatalogosSheets(forzar = false) {
-    if (!forzar && window._catRegs && window._catRegs.length > 0) return;
+    // 1. Si no hay datos en memoria o se fuerza, los pedimos al servidor
+    if (forzar || !window._catRegs || window._catRegs.length === 0) {
+        try {
+            const data = await callAppsScript('obtenerDatosSistema', {});
 
-    try {
-        const data = await callAppsScript('obtenerDatosSistema', {});
-
-        window._catRegs = data.regionales || [];
-        window._catCentros = data.campos || [];
-        window._catSitios = data.sitios || [];
-        window._catDepartamentos = data.departamentos || data.deptos || [];
-        window._catPuestos = data.puestos || data.catPuestos || [];
-
-        const selPuesto = document.getElementById('select-SRIPtoId');
-        if (selPuesto && window._catPuestos) {
-            selPuesto.innerHTML = '<option value="" disabled selected>Seleccione un puesto...</option>' +
-                window._catPuestos.map(p => {
-                    const numPto = p.SRIPtoId || p.NumPto || p.numPto || p.clave || '';
-                    const nomPto = p.SRIPtoDesc || p.NomPto || p.nomPto || p.nombre || '';
-                    return `<option value="${numPto}">${numPto} - ${nomPto}</option>`;
-                }).join('');
+            window._catRegs = data.regionales || [];
+            window._catCentros = data.campos || [];
+            window._catSitios = data.sitios || [];
+            window._catDepartamentos = data.departamentos || data.deptos || [];
+            window._catPuestos = data.puestos || data.catPuestos || [];
+        } catch (e) {
+            console.error("Error al cargar catálogos desde servidor...", e);
+            return;
         }
+    }
 
-        const selDepto = document.getElementById('select-SRIModNomC');
-        if (selDepto && window._catDepartamentos) {
-            selDepto.innerHTML = '<option value="" disabled selected>Seleccione un departamento...</option>' +
-                window._catDepartamentos.map(d => {
-                    const nomCor = d.SRIModNomC || d.nomCorDep || d.NomCorDep || d.claveDep || '';
-                    const nomDep = d.SRIModNom || d.nomDep || d.nombre || '';
-                    return `<option value="${nomCor}">${nomCor} - ${nomDep}</option>`;
-                }).join('');
-        }
+    // 2. Pintar los combos en el DOM siempre (vengan de la red o de la caché)
+    pintarSelectsCatalogos();
+}
 
-        const selCentro = document.getElementById('select-SRICenId');
-        if (selCentro && selCentro.value && typeof filtrarSitiosPorCentro === 'function') {
-            filtrarSitiosPorCentro(selCentro.value);
-        }
-    } catch (e) {
-        console.error("Error al cargar catálogos desde servidor...", e);
+// Función auxiliar para dibujar los combos de puestos y departamentos
+function pintarSelectsCatalogos() {
+    const selPuesto = document.getElementById('select-SRIPtoId');
+    if (selPuesto && window._catPuestos) {
+        selPuesto.innerHTML = '<option value="" disabled selected>Seleccione un puesto...</option>' +
+            window._catPuestos.map(p => {
+                const numPto = p.SRIPtoId || p.NumPto || p.numPto || p.clave || '';
+                const nomPto = p.SRIPtoDesc || p.NomPto || p.nomPto || p.nombre || '';
+                return `<option value="${numPto}">${numPto} - ${nomPto}</option>`;
+            }).join('');
+    }
+
+    const selDepto = document.getElementById('select-SRIModNomC');
+    if (selDepto && window._catDepartamentos) {
+        selDepto.innerHTML = '<option value="" disabled selected>Seleccione un departamento...</option>' +
+            window._catDepartamentos.map(d => {
+                const nomCor = d.SRIModNomC || d.nomCorDep || d.NomCorDep || d.claveDep || '';
+                const nomDep = d.SRIModNom || d.nomDep || d.nombre || '';
+                return `<option value="${nomCor}">${nomCor} - ${nomDep}</option>`;
+            }).join('');
+    }
+
+    const selCentro = document.getElementById('select-SRICenId');
+    if (selCentro && selCentro.value && typeof filtrarSitiosPorCentro === 'function') {
+        filtrarSitiosPorCentro(selCentro.value);
     }
 }
 
