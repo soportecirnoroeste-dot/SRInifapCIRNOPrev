@@ -112,50 +112,50 @@ function cargarPersonalRh(cargarLista = true) {
             </h5>
             <form id="form-nuevo-personal" onsubmit="guardarOActualizarPersonal(event)" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
                 <div>
-                    <label class="block font-bold text-stone-700 mb-1">SRIRegId (Región):</label>
+                    <label class="block font-bold text-stone-700 mb-1">Región:</label>
                     <select name="SRIRegId" id="select-SRIRegId" onchange="filtrarCentrosPorRegion()" required class="w-full p-2.5 border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-[#249444]">
                         <option value="" disabled selected>Seleccione una región...</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block font-bold text-stone-700 mb-1">SRICenId (Centro):</label>
+                    <label class="block font-bold text-stone-700 mb-1">Centro:</label>
                     <select name="SRICenId" id="select-SRICenId" onchange="filtrarSitiosPorCentro(this.value)" required class="w-full p-2.5 border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-[#249444]">
                         <option value="" disabled selected>Seleccione un centro...</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block font-bold text-stone-700 mb-1">SRISitId (Sitio):</label>
+                    <label class="block font-bold text-stone-700 mb-1">Sitio:</label>
                     <select name="SRISitId" id="select-SRISitId" required class="w-full p-2.5 border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-[#249444]">
                         <option value="" disabled selected>Seleccione un sitio...</option>
                     </select>
                 </div>
                 
-                <div><label class="block font-bold text-stone-700 mb-1">SRIPerNumE (Núm. Empleado):</label><input type="text" name="SRIPerNumE" id="input-SRIPerNumE" required class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
-                <div><label class="block font-bold text-stone-700 mb-1">SRIPerNomE (Nombre Completo):</label><input type="text" name="SRIPerNomE" required class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">Núm. Empleado:</label><input type="text" name="SRIPerNumE" id="input-SRIPerNumE" required class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">Nombre Completo:</label><input type="text" name="SRIPerNomE" required class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
                 
-                <div><label class="block font-bold text-stone-700 mb-1">SRIPerNExt (Extensión):</label><input type="text" name="SRIPerNExt" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
-                <div><label class="block font-bold text-stone-700 mb-1">SRIPerNCel (Núm. Personal / Celular):</label><input type="text" name="SRIPerNCel" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
-                <div><label class="block font-bold text-stone-700 mb-1">SRIPerEsco (Escolaridad):</label><input type="text" name="SRIPerEsco" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
-                <div><label class="block font-bold text-stone-700 mb-1">SRIPerDir (Dirección):</label><input type="text" name="SRIPerDir" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
-                <div><label class="block font-bold text-stone-700 mb-1">SRIPerCP (C.P.):</label><input type="text" name="SRIPerCP" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
-                <div><label class="block font-bold text-stone-700 mb-1">SRIPerEml (Email):</label><input type="email" name="SRIPerEml" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
-                <div><label class="block font-bold text-stone-700 mb-1">SRIPerRFC (RFC):</label><input type="text" name="SRIPerRFC" required class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">Extensión:</label><input type="text" name="SRIPerNExt" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">SNúm. Personal / Celular:</label><input type="text" name="SRIPerNCel" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">Escolaridad:</label><input type="text" name="SRIPerEsco" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">Dirección:</label><input type="text" name="SRIPerDir" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">C.P.:</label><input type="text" name="SRIPerCP" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">Email:</label><input type="email" name="SRIPerEml" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">RFC:</label><input type="text" name="SRIPerRFC" required class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
                 
                 <div>
-                    <label class="block font-bold text-stone-700 mb-1">SRIPtoId (Puesto):</label>
+                    <label class="block font-bold text-stone-700 mb-1">Puesto:</label>
                     <select name="SRIPtoId" id="select-SRIPtoId" required class="w-full p-2.5 border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-[#249444]">
                         <option value="" disabled selected>Seleccione un puesto...</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block font-bold text-stone-700 mb-1">SRIModNomC (Departamento):</label>
+                    <label class="block font-bold text-stone-700 mb-1">Departamento:</label>
                     <select name="SRIModNomC" id="select-SRIModNomC" required class="w-full p-2.5 border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-[#249444]">
                         <option value="" disabled selected>Seleccione un departamento...</option>
                     </select>
                 </div>
 
-                <div><label class="block font-bold text-stone-700 mb-1">SRIPerCd (Ciudad):</label><input type="text" name="SRIPerCd" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
-                <div><label class="block font-bold text-stone-700 mb-1">SRIPerEdo (Estado):</label><input type="text" name="SRIPerEdo" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">Ciudad:</label><input type="text" name="SRIPerCd" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
+                <div><label class="block font-bold text-stone-700 mb-1">Estado:</label><input type="text" name="SRIPerEdo" class="w-full p-2.5 border border-stone-300 rounded-lg focus:outline-none focus:border-[#249444]"></div>
                 
                 <div class="sm:col-span-2 md:col-span-3 flex items-end gap-2 pt-2">
                     <button type="submit" class="py-2.5 px-6 bg-[#249444] text-white font-bold rounded-lg hover:bg-[#047857] transition flex items-center justify-center gap-1.5">
