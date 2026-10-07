@@ -277,24 +277,27 @@ async function cargarCatalogosSheets(forzar = false) {
 
 function pintarSelectsCatalogos() {
     const selPuesto = document.getElementById('select-SRIPtoId');
-    if (selPuesto && window._catPuestos) {
-        selPuesto.innerHTML = '<option value="" disabled selected>Seleccione un puesto...</option>' +
-            window._catPuestos.map(p => {
-                // Imprimimos todo el objeto en consola para ver los nombres exactos de las propiedades
-                console.log("Objeto puesto crudo:", p);
+if (selPuesto && window._catPuestos) {
+    selPuesto.innerHTML = '<option value="" disabled selected>Seleccione un puesto...</option>' +
+        window._catPuestos.map(p => {
+            // Incluimos 'SRIPrtoId' que es la llave real que viene del servidor
+            let numPto = String(p.SRIPrtoId || p.SRIPtoId || p.SRIPuestoId || p.NumPto || p.numPto || p.clave || '').trim();
 
-                let numPto = String(p.SRIPtoId || p.SRIPuestoId || p.PtoId || p.id || p.clave || p.NumPto || '').trim();
-                let nomPto = String(p.SRIPtoDesc || p.SRIPuestoDesc || p.PtoDesc || p.NomPto || p.nombre || '').trim();
+            // Evaluamos la descripción
+            let nomPto = String(p.SRIPtoDesc || p.SRIPuestoDesc || p.NomPto || p.nomPto || p.nombre || '').trim();
 
-                if (!nomPto || nomPto === numPto) {
-                    nomPto = '';
-                }
+            // Si la descripción es idéntica al código o viene vacía, la limpiamos
+            if (!nomPto || nomPto === numPto) {
+                nomPto = '';
+            }
 
-                let textoMostrado = nomPto ? `${numPto} - ${nomPto}` : numPto;
+            let textoMostrado = nomPto ? `${numPto} - ${nomPto}` : numPto;
 
-                return `<option value="${numPto}">${textoMostrado}</option>`;
-            }).join('');
-    }
+            console.log(numPto + ' - ' + nomPto);
+
+            return `<option value="${numPto}">${textoMostrado}</option>`;
+        }).join('');
+}
 
     const selDepto = document.getElementById('select-SRIModNomC');
     if (selDepto && window._catDepartamentos) {
