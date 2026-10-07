@@ -68,7 +68,6 @@ function obtenerUsuarioSesion() {
             }
         }
     } catch (e) {
-        console.error("--- [TESTIGO] Error al leer la sesión del localStorage:", e);
     }
     
     // 3. Rescate final usando variables sueltas directamente en window
@@ -431,21 +430,16 @@ async function cargarDatosPersonalSheets(forzar = false) {
 
     try {
         const usuarioActivo = obtenerUsuarioSesion();
-        console.log("--- [TESTIGO] Usuario activo recuperado:", usuarioActivo);
-
         const params = {
             usuario: usuarioActivo.SRIPerNumE || usuarioActivo.numEmp || usuarioActivo.usuario || '',
             SRIRegId: usuarioActivo.SRIRegId || usuarioActivo.regId || '',
             SRICenId: usuarioActivo.SRICenId || usuarioActivo.cenId || ''
         };
 
-        console.log("--- [TESTIGO] Parámetros enviados a obtenerPersonalSQL:", params);
-
         const data = await callAppsScript('obtenerPersonalSQL', params);
         window._empleadosCache = data || [];
         aplicarFiltroYRenderizar(window._empleadosCache);
     } catch (error) {
-        console.error("--- [TESTIGO] Error al cargar personal:", error);
         tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500 italic">Error al conectar con la Base de Datos.</td></tr>`;
     }
 }
@@ -454,9 +448,6 @@ async function cargarDatosPersonalSheets(forzar = false) {
 function aplicarFiltroYRenderizar(empleados) {
     const usuarioActivo = obtenerUsuarioSesion();
     const centroUsuario = String(usuarioActivo.SRICenId || usuarioActivo.cenId || '').trim();
-    
-    console.log("--- [TESTIGO] Centro detectado del usuario activo (centroUsuario):", JSON.stringify(centroUsuario));
-
     let empleadosFiltrados = empleados;
     
     if (centroUsuario && centroUsuario !== '0' && centroUsuario !== 'undefined' && centroUsuario !== '') {
@@ -464,9 +455,7 @@ function aplicarFiltroYRenderizar(empleados) {
             const centroEmp = String(emp.SRICenId || '').trim();
             return centroEmp.includes(centroUsuario);
         });
-        console.log(`--- [TESTIGO] Filtrado aplicado. Registros antes: ${empleados.length}, después: ${empleadosFiltrados.length}`);
     } else {
-        console.log("--- [TESTIGO] NO se aplicó filtro local (centroUsuario vacío, 0 o undefined). Se muestran todos.");
     }
 
     renderizarTablaPersonal(empleadosFiltrados);
