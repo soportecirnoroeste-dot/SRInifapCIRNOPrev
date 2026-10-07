@@ -277,40 +277,37 @@ async function cargarCatalogosSheets(forzar = false) {
 
 function pintarSelectsCatalogos() {
     const selPuesto = document.getElementById('select-SRIPtoId');
-if (selPuesto && window._catPuestos) {
-    selPuesto.innerHTML = '<option value="" disabled selected>Seleccione un puesto...</option>' +
-        window._catPuestos.map(p => {
-            // Incluimos 'SRIPrtoId' que es la llave real que viene del servidor
-            let numPto = String(p.SRIPrtoId || p.SRIPtoId || p.SRIPuestoId || p.NumPto || p.numPto || p.clave || '').trim();
+    if (selPuesto && window._catPuestos) {
+        selPuesto.innerHTML = '<option value="" disabled selected>Seleccione un puesto...</option>' +
+            window._catPuestos.map(p => {
+                // Incluimos 'SRIPrtoId' que es la llave real que viene del servidor
+                let numPto = String(p.SRIPrtoId || p.SRIPtoId || p.SRIPuestoId || p.NumPto || p.numPto || p.clave || '').trim();
 
-            // Evaluamos la descripción
-            let nomPto = String(p.SRIPtoDesc || p.SRIPuestoDesc || p.NomPto || p.nomPto || p.nombre || '').trim();
+                // Evaluamos la descripción
+                let nomPto = String(p.SRIPtoDesc || p.SRIPuestoDesc || p.NomPto || p.nomPto || p.nombre || '').trim();
 
-            // Si la descripción es idéntica al código o viene vacía, la limpiamos
-            if (!nomPto || nomPto === numPto) {
-                nomPto = '';
-            }
+                // Si la descripción es idéntica al código o viene vacía, la limpiamos
+                if (!nomPto || nomPto === numPto) {
+                    nomPto = '';
+                }
 
-            let textoMostrado = nomPto ? `${numPto} - ${nomPto}` : numPto;
+                let textoMostrado = nomPto ? `${numPto} - ${nomPto}` : numPto;
 
-            console.log(numPto + ' - ' + nomPto);
-
-            return `<option value="${numPto}">${textoMostrado}</option>`;
-        }).join('');
-}
+                return `<option value="${numPto}">${textoMostrado}</option>`;
+            }).join('');
+    }
 
     const selDepto = document.getElementById('select-SRIModNomC');
     if (selDepto && window._catDepartamentos) {
         selDepto.innerHTML = '<option value="" disabled selected>Seleccione un departamento...</option>' +
             window._catDepartamentos.map(d => {
-                const nomCor = String(d.SRIModNomC || d.SRIDepId || d.nomCorDep || d.NomCorDep || d.claveDep || d.id || '').trim();
-                let nomDep = String(d.SRIModNom || d.nomDep || d.nombre || '').trim();
+                // Obtenemos el nombre del departamento
+                let nomDep = String(d.SRIModNom || d.SRIDepDesc || d.DeptoDesc || d.nombre || '').trim();
 
-                if ((!nomDep || nomDep === nomCor) && window._mapDeptosCache && window._mapDeptosCache[nomCor]) {
-                    nomDep = window._mapDeptosCache[nomCor];
-                }
+                // Si por alguna razón el objeto viniera en otra estructura, usamos el nombre como valor y como texto visible
+                let valorYTexto = nomDep;
 
-                return `<option value="${nomCor}">${nomCor}${nomDep && nomDep !== nomCor ? ' - ' + nomDep : ''}</option>`;
+                return `<option value="${valorYTexto}">${valorYTexto}</option>`;
             }).join('');
     }
 
