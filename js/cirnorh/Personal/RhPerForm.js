@@ -184,9 +184,3 @@ function limpiarValor(val) {
     return (!val || val === 0 || val === '0' || String(val).trim() === '') ? '' : val;
 }
 
-function extraerClave(val) {
-    if (!val) return '';
-    const str = String(val).trim();
-    if (str.includes(' - ')) return str.split(' - ')[0].trim();
-    return str;
-}
