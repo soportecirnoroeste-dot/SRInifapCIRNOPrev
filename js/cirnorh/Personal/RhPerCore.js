@@ -206,6 +206,9 @@ async function cargarDatosGenerales(forzarRecarga = false) {
         window._mapRegsCache = null;
         window._mapCentrosCache = null;
         window._mapPuestosCache = null;
+        window._mapDeptosCache = null;
+        window._catPuestos = null;
+        window._catDepartamentos = null;
         window._empleadosCache = [];
     }
 
@@ -214,8 +217,8 @@ async function cargarDatosGenerales(forzarRecarga = false) {
         tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-stone-400 italic">Sincronizando datos...</td></tr>`;
     }
 
-    await cargarCatalogosSheets(forzarRecarga);
     await cargarDatosPersonalSheets(forzarRecarga);
+    await cargarCatalogosSheets(forzarRecarga);
 }
 
 function cancelarEdicionPersonal() {
@@ -237,25 +240,41 @@ function ocultarFormularioPersonal() {
 }
 
 async function cargarCatalogosSheets(forzar = false) {
-    if (forzar || !window._catRegs || window._catRegs.length === 0) {
+    if (forzar || !window._catRegs || window._catRegs.length === 0 || !window._catPuestos || window._catPuestos.length === 0) {
         try {
             const data = await callAppsScript('obtenerDatosSistema', {});
-
-            window._catRegs = data.regionales || [];
-            window._catCentros = data.campos || [];
-            window._catSitios = data.sitios || [];
-            window._catDepartamentos = data.departamentos || data.deptos || [];
-            window._catPuestos = data.puestos || data.catPuestos || [];
+            if (data) {
+                window._catRegs = data.regionales || data.regiones || [];
+                window._catCentros = data.campos || data.centros || [];
+                window._catSitios = data.sitios || [];
+                window._catDepartamentos = data.departamentos || data.deptos || [];
+                window._catPuestos = data.puestos || data.catPuestos || data.puesto || [];
+            }
         } catch (e) {
             console.error("Error al cargar catálogos desde servidor...", e);
-            return;
         }
+    }
+
+    // 🛡️ Fallback de seguridad: si el servidor no devolvió puestos/deptos, los extraemos de los empleados cargados
+    if ((!window._catPuestos || window._catPuestos.length === 0) && window._empleadosCache && window._empleadosCache.length > 0) {
+        const puestosMap = new Map();
+        window._empleadosCache.forEach(e => {
+            if (e.SRIPtoId) puestosMap.set(String(e.SRIPtoId).trim(), String(e.SRIPtoId).trim());
+        });
+        window._catPuestos = Array.from(puestosMap.keys()).map(id => ({ SRIPtoId: id, SRIPtoDesc: id }));
+    }
+
+    if ((!window._catDepartamentos || window._catDepartamentos.length === 0) && window._empleadosCache && window._empleadosCache.length > 0) {
+        const deptosMap = new Map();
+        window._empleadosCache.forEach(e => {
+            if (e.SRIModNomC) deptosMap.set(String(e.SRIModNomC).trim(), String(e.SRIModNomC).trim());
+        });
+        window._catDepartamentos = Array.from(deptosMap.keys()).map(id => ({ SRIModNomC: id, SRIModNom: id }));
     }
 
     pintarSelectsCatalogos();
 }
 
-// Pintar los combos mapeando correctamente las llaves reales de SQL Server (SRIPtoId / SRIPtoDesc)
 function pintarSelectsCatalogos() {
     const selPuesto = document.getElementById('select-SRIPtoId');
     if (selPuesto && window._catPuestos) {
@@ -263,7 +282,7 @@ function pintarSelectsCatalogos() {
             window._catPuestos.map(p => {
                 const numPto = String(p.SRIPtoId || p.NumPto || p.numPto || p.clave || '').trim();
                 const nomPto = String(p.SRIPtoDesc || p.NomPto || p.nomPto || p.nombre || '').trim();
-                return `<option value="${numPto}">${numPto} - ${nomPto}</option>`;
+                return `<option value="${numPto}">${numPto}${nomPto && nomPto !== numPto ? ' - ' + nomPto : ''}</option>`;
             }).join('');
     }
 
@@ -271,9 +290,9 @@ function pintarSelectsCatalogos() {
     if (selDepto && window._catDepartamentos) {
         selDepto.innerHTML = '<option value="" disabled selected>Seleccione un departamento...</option>' +
             window._catDepartamentos.map(d => {
-                const nomCor = String(d.SRIModNomC || d.nomCorDep || d.NomCorDep || d.claveDep || '').trim();
+                const nomCor = String(d.SRIModNomC || d.SRIDepId || d.nomCorDep || d.NomCorDep || d.claveDep || d.id || '').trim();
                 const nomDep = String(d.SRIModNom || d.nomDep || d.nombre || '').trim();
-                return `<option value="${nomCor}">${nomCor} - ${nomDep}</option>`;
+                return `<option value="${nomCor}">${nomCor}${nomDep && nomDep !== nomCor ? ' - ' + nomDep : ''}</option>`;
             }).join('');
     }
 
@@ -360,7 +379,7 @@ function filtrarSitiosPorCentro(claveCentro = '', sitActual = '') {
 
     const sitiosArray = Array.isArray(window._catSitios) ? window._catSitios : [];
     const sitiosFiltrados = sitiosArray.filter(s => {
-        const cAsociado = String(s.SRICenId || s.claveCentro || s.ClaveCentro || '').trim();
+        const cAsociado = String(s.SRICenId || s.claveCentro || c.ClaveCentro || '').trim();
         return matchClave(cAsociado, centroId);
     });
 
@@ -398,7 +417,6 @@ function filtrarSitiosPorCentro(claveCentro = '', sitActual = '') {
     }
 }
 
-// Función completa para seleccionar y cargar el empleado al editar
 async function seleccionarEmpleadoParaEditar(numEmpParam) {
     if (!window._empleadosCache || window._empleadosCache.length === 0) {
         try {
@@ -424,9 +442,8 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
         return;
     }
 
-    if (typeof cargarCatalogosSheets === 'function') {
-        await cargarCatalogosSheets(true);
-    }
+    // Asegurarnos de tener catálogos y respaldos listos antes de pintar el formulario
+    await cargarCatalogosSheets(false);
 
     const form = document.getElementById('form-nuevo-personal');
     const formContainer = document.getElementById('contenedor-formulario-personal');
@@ -462,18 +479,26 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
         form.elements['SRIPerCd'].value = String(emp.SRIPerCd || '').trim();
         form.elements['SRIPerEdo'].value = String(emp.SRIPerEdo || '').trim();
 
-        // Asignación de Puesto y Departamento utilizando las claves reales
-        setTimeout(() => {
-            const selPto = document.getElementById('select-SRIPtoId');
-            const selDep = document.getElementById('select-SRIModNomC');
+        // Asignación síncrona/asíncrona segura de Puesto y Departamento
+        const ptoVal = String(emp.SRIPtoId || '').trim();
+        const depVal = String(emp.SRIModNomC || '').trim();
 
-            if (emp.SRIPtoId && selPto) {
-                selPto.value = String(emp.SRIPtoId).trim();
+        const selPto = document.getElementById('select-SRIPtoId');
+        const selDep = document.getElementById('select-SRIModNomC');
+
+        if (selPto) {
+            if (ptoVal && ![...selPto.options].some(o => o.value === ptoVal)) {
+                selPto.innerHTML += `<option value="${ptoVal}">${ptoVal}</option>`;
             }
-            if (emp.SRIModNomC && selDep) {
-                selDep.value = String(emp.SRIModNomC).trim();
+            selPto.value = ptoVal;
+        }
+
+        if (selDep) {
+            if (depVal && ![...selDep.options].some(o => o.value === depVal)) {
+                selDep.innerHTML += `<option value="${depVal}">${depVal}</option>`;
             }
-        }, 150);
+            selDep.value = depVal;
+        }
 
         if (titulo) {
             titulo.innerHTML = `Editando empleado: <span class="text-[#249444]">${String(emp.SRIPerNomE || '')}</span> (No. Empleado: ${String(emp.SRIPerNumE || '')})`;
