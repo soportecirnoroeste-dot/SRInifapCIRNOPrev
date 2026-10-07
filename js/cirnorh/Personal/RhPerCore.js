@@ -285,6 +285,17 @@ async function cargarCatalogosSheets(forzar = false) {
     }
 }
 
+// Función auxiliar para comparar claves de forma flexible (ignora espacios y ceros iniciales, ej: "5" == "05")
+function matchClave(a, b) {
+    const strA = String(a || '').trim();
+    const strB = String(b || '').trim();
+    if (strA === strB) return true;
+    if (!isNaN(strA) && !isNaN(strB) && strA !== '' && strB !== '') {
+        return Number(strA) === Number(strB);
+    }
+    return false;
+}
+
 window.filtrarCentrosPorRegion = function (centroActual = '', sitActual = '') {
     const selReg = document.getElementById('select-SRIRegId') || document.querySelector('select[name="SRIRegId"]');
     const selCentro = document.getElementById('select-SRICenId') || document.querySelector('select[name="SRICenId"]');
@@ -300,20 +311,32 @@ window.filtrarCentrosPorRegion = function (centroActual = '', sitActual = '') {
     const centrosArray = Array.isArray(window._catCentros) ? window._catCentros : [];
     const centrosFiltrados = regionSeleccionada ? centrosArray.filter(c => {
         const regEnFila = String(c.SRIRegId || c.ClaveReg || c.claveReg || '').trim();
-        return regEnFila === String(regionSeleccionada).trim();
+        return matchClave(regEnFila, regionSeleccionada);
     }) : [];
 
     if (centrosFiltrados.length > 0) {
         selCentro.innerHTML += centrosFiltrados.map(c => {
             const claveC = c.SRICenId || c.ClaveCentro || c.claveCentro || '';
             const nombreC = c.SRICenNom || c.Centro || c.centro || c.nombre || '';
-            const selected = (String(claveC) === String(centroActual)) ? 'selected' : '';
+            const match = matchClave(claveC, centroActual);
+            const selected = match ? 'selected' : '';
             return `<option value="${claveC}" ${selected}>${claveC} - ${nombreC}</option>`;
         }).join('');
+
+        // Forzar selección explícita por si acaso
+        if (centroActual) {
+            for (let option of selCentro.options) {
+                if (matchClave(option.value, centroActual)) {
+                    selCentro.value = option.value;
+                    break;
+                }
+            }
+        }
     }
 
-    if (centroActual || selCentro.value) {
-        filtrarSitiosPorCentro(centroActual || selCentro.value, sitActual);
+    const centroIdAUsar = selCentro.value || centroActual;
+    if (centroIdAUsar) {
+        filtrarSitiosPorCentro(centroIdAUsar, sitActual);
     }
 };
 
@@ -323,26 +346,33 @@ window.filtrarSitiosPorCentro = function (claveCentro = '', sitActual = '') {
 
     selSit.innerHTML = `<option value="" disabled selected>Seleccione un sitio...</option>`;
 
-    const centroId = claveCentro || document.getElementById('select-SRICenId').value;
+    const centroId = claveCentro || document.getElementById('select-SRICenId')?.value || '';
 
     const sitiosArray = Array.isArray(window._catSitios) ? window._catSitios : [];
     const sitiosFiltrados = sitiosArray.filter(s => {
         const cAsociado = String(s.SRICenId || s.claveCentro || s.ClaveCentro || '').trim();
-        return cAsociado === String(centroId).trim();
+        return matchClave(cAsociado, centroId);
     });
 
     if (sitiosFiltrados.length > 0) {
         selSit.innerHTML += sitiosFiltrados.map(s => {
             const claveS = s.SRISitId || s.clave || s.ClaveSitio || '';
             const nombreS = s.SRISitNom || s.nombre || s.Sitio || '';
-            return `<option value="${claveS}">${claveS} - ${nombreS}</option>`;
+            const match = matchClave(claveS, sitActual);
+            const selected = match ? 'selected' : '';
+            return `<option value="${claveS}" ${selected}>${claveS} - ${nombreS}</option>`;
         }).join('');
     } else {
         selSit.innerHTML += `<option value="0" selected>0 - No aplica</option>`;
     }
 
     if (sitActual) {
-        selSit.value = sitActual;
+        for (let option of selSit.options) {
+            if (matchClave(option.value, sitActual)) {
+                selSit.value = option.value;
+                break;
+            }
+        }
     }
 };
 
