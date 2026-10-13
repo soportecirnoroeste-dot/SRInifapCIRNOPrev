@@ -108,10 +108,13 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
         const centroVal = extraerClave(emp.SRICenId);
         let rawSit = extraerClave(emp.SRISitId);
         const sitVal = (!rawSit || rawSit === 0 || rawSit === '0' || String(rawSit).trim().toUpperCase() === 'N/A') ? 'N/A' : rawSit;
+        
+        // Obtenemos el valor del departamento del empleado
+        const depVal = String(emp.SRIModNomC || '').trim();
 
-        // 2. Poblar cascada de Región -> Centro -> Sitio
+        // 2. Poblar cascada de Región -> Centro -> Sitio -> Departamento pasando todos los valores
         if (typeof poblarSelectoresCascada === 'function') {
-            poblarSelectoresCascada(regVal, centroVal, sitVal);
+            poblarSelectoresCascada(regVal, centroVal, sitVal, depVal);
         }
 
         form.elements['SRIPerNumE'].value = limpiarValor(emp.SRIPerNumE);
@@ -130,7 +133,7 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
         // Esto garantiza que el navegador haya terminado de renderizar las opciones del <select>
         setTimeout(() => {
             seleccionarOpcionFlexible(form.elements['SRIPtoId'], emp.SRIPtoId);
-            seleccionarOpcionFlexible(form.elements['SRIModNomC'], emp.SRIModNomC);
+            seleccionarOpcionFlexible(form.elements['SRIModNomC'], depVal);
         }, 50);
 
         form.elements['SRIPerCd'].value = limpiarValor(emp.SRIPerCd);
