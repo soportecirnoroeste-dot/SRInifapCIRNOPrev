@@ -301,13 +301,10 @@ function pintarSelectsCatalogos() {
     if (selDepto && window._catDepartamentos) {
         selDepto.innerHTML = '<option value="" disabled selected>Seleccione un departamento...</option>' +
             window._catDepartamentos.map(d => {
-                // Obtenemos el nombre del departamento
+                // Usamos SRIModNom para mostrar solo el nombre completo
                 let nomDep = String(d.SRIModNom || d.SRIDepDesc || d.DeptoDesc || d.nombre || '').trim();
 
-                // Si por alguna razón el objeto viniera en otra estructura, usamos el nombre como valor y como texto visible
-                let valorYTexto = nomDep;
-                
-                return `<option value="${valorYTexto}">${valorYTexto}</option>`;
+                return `<option value="${nomDep}">${nomDep}</option>`;
             }).join('');
     }
 
