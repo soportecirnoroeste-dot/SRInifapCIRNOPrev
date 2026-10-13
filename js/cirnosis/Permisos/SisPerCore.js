@@ -13,7 +13,7 @@ async function invocarBackendSis(action, payload = {}) {
         });
     } else {
         // Petición directa por fetch como respaldo para entornos Cloudflare/SQL
-        const response = await fetch("https://script.google.com/macros/s/AKfycbz1wzz5zC_6Cf4thUdl_5BkAca6m_MM7IWQyPwVAQcMaraPqfX8nBGMQpSdy31_tjz1Aw/exec", {
+        const response = await fetch("https://script.google.com/macros/s/AKfycbylGqLUoXKuvvECfXPMxR4kszlDSsB2m65sQQRIaypnm-0C4CSBdQHT207vNQJtAzUj0Q/exec", {
             method: "POST",
             redirect: "follow",
             headers: { "Content-Type": "text/plain;charset=utf-8" },

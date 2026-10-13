@@ -1,11 +1,11 @@
 /**
  * ============================================================================
  * api.js - Cliente Frontend para conectar con Google Apps Script
- * URL del Web App:https://script.google.com/macros/s/AKfycbxCHnQUUDwzdyxkzY9ZzpzGtdWlfTkfBBS0ht6UdHD-ptwiRM1cP6Ilr_ZpHbDg_RhNTw/exec
+ * URL del Web App:https://script.google.com/macros/s/AKfycbylGqLUoXKuvvECfXPMxR4kszlDSsB2m65sQQRIaypnm-0C4CSBdQHT207vNQJtAzUj0Q/exec
  * ============================================================================
  */
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxCHnQUUDwzdyxkzY9ZzpzGtdWlfTkfBBS0ht6UdHD-ptwiRM1cP6Ilr_ZpHbDg_RhNTw/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbylGqLUoXKuvvECfXPMxR4kszlDSsB2m65sQQRIaypnm-0C4CSBdQHT207vNQJtAzUj0Q/exec";
 
 /**
  * Función genérica para enviar peticiones POST a Google Apps Script
