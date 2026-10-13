@@ -43,9 +43,9 @@ function poblarSelectoresCascada(regSeleccionada = '', centroSeleccionado = '', 
         const deptosArray = Array.isArray(window._catDepartamentos) ? window._catDepartamentos : [];
         selectDepto.innerHTML = '<option value="" disabled selected>Seleccione un departamento...</option>' +
             deptosArray.map(d => {
-                const nombreCortoValor = d.SRIModNomC || d.nomCorDep || d.NomCorDep || d.claveDep || '';
-                const nombreLargoTexto = d.SRIModNom || d.nomDep || d.nombre || '';
-                return `<option value="${nombreCortoValor}">${nombreCortoValor} - ${nombreLargoTexto}</option>`;
+                // Mostramos únicamente el nombre completo limpio
+                const nomDep = String(d.SRIModNom || d.SRIModNomC || d.nomDep || d.nombre || '').trim();
+                return `<option value="${nomDep}">${nomDep}</option>`;
             }).join('');
 
         if (deptoSeleccionado) {
