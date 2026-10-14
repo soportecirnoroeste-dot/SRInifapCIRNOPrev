@@ -5,8 +5,8 @@ async function mostrarFormularioNuevoPersonal() {
     const gestionContainer = document.getElementById('contenedor-gestion-personal');
     const listadoContainer = document.getElementById('contenedor-listado-personal');
     const form = document.getElementById('form-nuevo-personal');
-    const titulo = document.getElementById('titulo-formulario'); // Corregido ID
-    const inputNumEmp = document.getElementById('input-SRIPerNumE'); // Corregido ID
+    const titulo = document.getElementById('titulo-formulario');
+    const inputNumEmp = document.getElementById('input-SRIPerNumE');
 
     if (formContainer && form) {
         form.reset();
@@ -28,30 +28,6 @@ async function mostrarFormularioNuevoPersonal() {
     }
 }
 
-function ocultarFormularioPersonal() {
-    const formContainer = document.getElementById('contenedor-formulario-personal');
-    const gestionContainer = document.getElementById('contenedor-gestion-personal');
-    const listadoContainer = document.getElementById('contenedor-listado-personal');
-
-    if (formContainer) formContainer.classList.add('hidden');
-    if (gestionContainer) gestionContainer.classList.remove('hidden');
-    if (listadoContainer) listadoContainer.classList.remove('hidden');
-
-    if (window._empleadosCache && window._empleadosCache.length > 0) {
-        // Llamar al filtro global en lugar de renderizar la caché cruda
-        if (typeof aplicarFiltroYRenderizar === 'function') {
-            aplicarFiltroYRenderizar(window._empleadosCache);
-        } else {
-            renderizarTablaPersonal(window._empleadosCache);
-        }
-    }
-}
-
-function cancelarEdicionPersonal() {
-    ocultarFormularioPersonal();
-}
-
-// Función auxiliar para seleccionar opciones de forma flexible (ignora ceros, espacios y descripciones)
 function seleccionarOpcionFlexible(selectElement, valorBuscado) {
     if (!selectElement || !valorBuscado) return;
     const limpioBuscado = extraerClave(valorBuscado);
@@ -60,7 +36,6 @@ function seleccionarOpcionFlexible(selectElement, valorBuscado) {
         const valorOpt = extraerClave(option.value);
         const textoOpt = extraerClave(option.text);
 
-        // Compara si coincide la clave numérica, el texto o el valor completo
         if (matchClave(valorOpt, limpioBuscado) || matchClave(textoOpt, limpioBuscado) || matchClave(option.value, valorBuscado)) {
             selectElement.value = option.value;
             selectElement.dispatchEvent(new Event('change'));
@@ -72,13 +47,13 @@ function seleccionarOpcionFlexible(selectElement, valorBuscado) {
 async function seleccionarEmpleadoParaEditar(numEmpParam) {
     if (!window._empleadosCache || window._empleadosCache.length === 0) {
         try {
+            const usuarioActivo = obtenerUsuarioSesion();
             const params = {
-                usuario: window.usuarioLogueado?.SRIPerNumE || window.numEmpUsuario || '',
-                SRIRegId: window.usuarioLogueado?.SRIRegId || window.regIdUsuario || '',
-                SRICenId: window.usuarioLogueado?.SRICenId || window.cenIdUsuario || ''
+                usuario: usuarioActivo.SRIPerNumE || '',
+                SRIRegId: usuarioActivo.SRIRegId || '',
+                SRICenId: usuarioActivo.SRICenId || ''
             };
-
-            const data = await FetchAPI('obtenerPersonalSQL', params);
+            const data = await callAppsScript('obtenerPersonalSQL', params);
             window._empleadosCache = data || [];
         } catch (error) {
             console.error("❌ Error al recuperar empleados:", error);
@@ -93,7 +68,6 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
         return;
     }
 
-    // 1. IMPORTANTE: Esperar a que los catálogos estén completamente cargados y pintados en el DOM
     await cargarCatalogosSheets();
 
     const form = document.getElementById('form-nuevo-personal');
@@ -107,12 +81,9 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
         const regVal = extraerClave(emp.SRIRegId);
         const centroVal = extraerClave(emp.SRICenId);
         let rawSit = extraerClave(emp.SRISitId);
-        const sitVal = (!rawSit || rawSit === 0 || rawSit === '0' || String(rawSit).trim().toUpperCase() === 'N/A') ? 'N/A' : rawSit;
-
-        // Obtenemos el valor del departamento del empleado
+        const sitVal = (!rawSit || rawSit === '0' || String(rawSit).trim().toUpperCase() === 'N/A') ? 'N/A' : rawSit;
         const depVal = String(emp.SRIModNomC || '').trim();
 
-        // 2. Poblar cascada de Región -> Centro -> Sitio -> Departamento pasando todos los valores
         if (typeof poblarSelectoresCascada === 'function') {
             poblarSelectoresCascada(regVal, centroVal, sitVal, depVal);
         }
@@ -128,19 +99,16 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
         form.elements['SRIPerCP'].value = limpiarValor(emp.SRIPerCP);
         form.elements['SRIPerEml'].value = limpiarValor(emp.SRIPerEml);
         form.elements['SRIPerRFC'].value = limpiarValor(emp.SRIPerRFC);
+        form.elements['SRIPerCd'].value = limpiarValor(emp.SRIPerCd);
+        form.elements['SRIPerEdo'].value = limpiarValor(emp.SRIPerEdo);
 
-        // 3. Forzar selección explícita del puesto y departamento con un pequeño respiro (setTimeout)
-        // Esto garantiza que el navegador haya terminado de renderizar las opciones del <select>
         setTimeout(() => {
             seleccionarOpcionFlexible(form.elements['SRIPtoId'], emp.SRIPtoId);
             seleccionarOpcionFlexible(form.elements['SRIModNomC'], depVal);
         }, 50);
 
-        form.elements['SRIPerCd'].value = limpiarValor(emp.SRIPerCd);
-        form.elements['SRIPerEdo'].value = limpiarValor(emp.SRIPerEdo);
-
         if (titulo) {
-            titulo.innerHTML = `Editando empleado: <span class="text-[#249444]">${limpiarValor(emp.SRIPerNomE)}</span> (No. Empleado: ${limpiarValor(emp.SRIPerNumE)})`;
+            titulo.innerHTML = `Editando empleado: <span class="text-[#249444]">${limpiarValor(emp.SRIPerNomE)}</span>`;
         }
 
         formContainer.classList.remove('hidden');
@@ -152,9 +120,6 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
 async function guardarOActualizarPersonal(event) {
     event.preventDefault();
     const form = event.target;
-
-    if (typeof mostrarCarga === 'function') mostrarCarga();
-
     const formData = new FormData(form);
     let datosEmpleado = Object.fromEntries(formData.entries());
 
@@ -164,28 +129,23 @@ async function guardarOActualizarPersonal(event) {
 
     const existe = window._empleadosCache.some(e => String(e.SRIPerNumE).trim() === String(datosEmpleado.SRIPerNumE).trim());
     const actionName = existe ? 'actualizarPersonal' : 'guardarPersonal';
-
-    
     const btnSubmit = form.querySelector('button[type="submit"]');
+
     if (btnSubmit) btnSubmit.disabled = true;
 
     try {
-        // CORRECCIÓN: Usamos callAppsScript en lugar de FetchAPI
         const res = await callAppsScript(actionName, datosEmpleado);
-
         alert(res.message || "Guardado exitoso");
-        ocultarFormularioPersonal();
+        cancelarEdicionPersonal();
         cargarDatosGenerales(true);
     } catch (e) {
         console.error("Error al guardar:", e);
-        alert("Error de conexión al guardar: " + (e.message || e));
+        alert("Error de conexión al guardar.");
     } finally {
         if (btnSubmit) btnSubmit.disabled = false;
-        if (typeof ocultarCarga === 'function') ocultarCarga();
     }
 }
 
 function limpiarValor(val) {
     return (!val || val === 0 || val === '0' || String(val).trim() === '') ? '' : val;
 }
-
