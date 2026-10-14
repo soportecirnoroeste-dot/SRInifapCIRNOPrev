@@ -388,6 +388,29 @@ const SistemaGlobal = {
             if (claveCentroUser) {
                 selectFiltro.value = claveCentroUser;
             }
+
+            // ==========================================
+            // 🟢 VALIDACIÓN DE ADMIN (SRIPermEm === 5)
+            // ==========================================
+            const permisosCache = window.userPermisosCache || {};
+            const nivelPermisoEm = Number(
+                usuarioActivoObjTemp.SRIPermEm || 
+                usuarioActivoObjTemp.permisoEm || 
+                permisosCache.SRIPermEm || 
+                permisosCache.nivel || 
+                0
+            );
+
+            if (nivelPermisoEm === 5) {
+                // Administrador: Campo editable
+                selectFiltro.removeAttribute('disabled');
+                selectFiltro.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-stone-100');
+                selectFiltro.classList.add('bg-stone-50');
+            } else {
+                // Menor a 5: Campo bloqueado / No editable
+                selectFiltro.setAttribute('disabled', 'true');
+                selectFiltro.classList.add('opacity-50', 'cursor-not-allowed', 'bg-stone-100');
+            }
         }
     },
 
