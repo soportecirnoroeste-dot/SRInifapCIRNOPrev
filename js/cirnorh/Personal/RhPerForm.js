@@ -162,11 +162,6 @@ async function guardarOActualizarPersonal(event) {
         datosEmpleado.SRISitId = '0';
     }
 
-    const formDataFinal = new FormData();
-    for (const key in datosEmpleado) {
-        formDataFinal.append(key, datosEmpleado[key]);
-    }
-
     const existe = window._empleadosCache.some(e => String(e.SRIPerNumE).trim() === String(datosEmpleado.SRIPerNumE).trim());
     const actionName = existe ? 'actualizarPersonalSQL' : 'guardarPersonalSQL';
 
@@ -174,13 +169,15 @@ async function guardarOActualizarPersonal(event) {
     if (btnSubmit) btnSubmit.disabled = true;
 
     try {
-        const res = await FetchAPI(actionName, formDataFinal);
+        // CORRECCIÓN: Enviamos el objeto plano 'datosEmpleado' en lugar de FormData
+        const res = await FetchAPI(actionName, datosEmpleado);
+        
         alert(res.message || "Guardado exitoso");
         ocultarFormularioPersonal();
         cargarDatosGenerales(true);
     } catch (e) {
         console.error("Error al guardar:", e);
-        alert("Error de conexión al guardar.");
+        alert("Error de conexión al guardar: " + (e.message || e));
     } finally {
         if (btnSubmit) btnSubmit.disabled = false;
         if (typeof ocultarCarga === 'function') ocultarCarga();
