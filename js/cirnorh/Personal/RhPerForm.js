@@ -165,7 +165,6 @@ async function guardarOActualizarPersonal(event) {
     const existe = window._empleadosCache.some(e => String(e.SRIPerNumE).trim() === String(datosEmpleado.SRIPerNumE).trim());
     const actionName = existe ? 'actualizarPersonal' : 'guardarPersonal';
 
-    
     const btnSubmit = form.querySelector('button[type="submit"]');
     if (btnSubmit) btnSubmit.disabled = true;
 
