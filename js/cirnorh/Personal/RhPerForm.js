@@ -32,19 +32,35 @@ function seleccionarOpcionFlexible(selectElement, valorBuscado) {
     if (!selectElement || !valorBuscado) return;
     const limpioBuscado = String(valorBuscado).trim().toLowerCase();
 
+    let encontrado = false;
+
+    // 1. Intentar hacer match directo con el value o con el texto exacto
     for (let option of selectElement.options) {
         const valOpt = String(option.value || '').trim().toLowerCase();
         const txtOpt = String(option.text || '').trim().toLowerCase();
 
-        // Compara si coincide el valor corto (value) o el texto visible
-        if (valOpt === limpioBuscado || txtOpt.includes(limpiuBuscado) || limpioBuscado.includes(valOpt)) {
+        if (valOpt === limpioBuscado || txtOpt === limpioBuscado || txtOpt.startsWith(limpioBuscado + ' -')) {
             selectElement.value = option.value;
             selectElement.dispatchEvent(new Event('change'));
-            return;
+            encontrado = true;
+            break;
+        }
+    }
+
+    // 2. PLAN DE RESPALDO: Si no encontró coincidencia exacta, buscamos coincidencia parcial
+    if (!encontrado) {
+        for (let option of selectElement.options) {
+            const valOpt = String(option.value || '').trim().toLowerCase();
+            const txtOpt = String(option.text || '').trim().toLowerCase();
+
+            if (valOpt.includes(limpioBuscado) || limpioBuscado.includes(valOpt) || txtOpt.includes(limpioBuscado)) {
+                selectElement.value = option.value;
+                selectElement.dispatchEvent(new Event('change'));
+                break;
+            }
         }
     }
 }
-
 async function seleccionarEmpleadoParaEditar(numEmpParam) {
     if (!window._empleadosCache || window._empleadosCache.length === 0) {
         try {
@@ -103,15 +119,15 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
         form.elements['SRIPerCd'].value = limpiarValor(emp.SRIPerCd);
         form.elements['SRIPerEdo'].value = limpiarValor(emp.SRIPerEdo);
 
-        // 3. Selección flexible y segura del Puesto y Departamento
+        // 3. Selección segura con un pequeño margen de tiempo para el renderizado del DOM
         setTimeout(() => {
-            seleccionarOpcionFlexible(form.elements['SRIPtoId'], emp.SRIPtoId);
-            
-            // 🟢 Búsqueda flexible para el Departamento (soporta tanto nombre corto como largo)
+            if (form.elements['SRIPtoId']) {
+                seleccionarOpcionFlexible(form.elements['SRIPtoId'], emp.SRIPtoId);
+            }
             if (form.elements['SRIModNomC']) {
                 seleccionarOpcionFlexible(form.elements['SRIModNomC'], emp.SRIModNomC);
             }
-        }, 50);
+        }, 100);
 
         if (titulo) {
             titulo.innerHTML = `Editando empleado: <span class="text-[#249444]">${limpiarValor(emp.SRIPerNomE)}</span>`;
@@ -136,9 +152,9 @@ async function guardarOActualizarPersonal(event) {
     // 🟢 TRADUCTOR DE RESPALDO: Garantizamos que en SRIModNomC viaje SIEMPRE el nombre corto
     if (datosEmpleado.SRIModNomC && window._catDepartamentos) {
         const valActual = String(datosEmpleado.SRIModNomC).trim().toLowerCase();
-        
+
         // Buscamos el departamento coincidente en el catálogo
-        const deptoEncontrado = window._catDepartamentos.find(d => 
+        const deptoEncontrado = window._catDepartamentos.find(d =>
             String(d.SRIModNomC || '').trim().toLowerCase() === valActual ||
             String(d.SRIModNom || '').trim().toLowerCase() === valActual
         );
