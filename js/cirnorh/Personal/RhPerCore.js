@@ -1,14 +1,31 @@
 // js/cirnorh/RhPersonal.js
 
-// Variables globales de caché
-window._catRegsCache = window._catRegsCache || null;
-window._catCentrosCache = window._catCentrosCache || null;
-window._catSitiosCache = window._catSitiosCache || null;
-window._empleadosCache = window._empleadosCache || [];
-window._mapRegsCache = window._mapRegsCache || null;
-window._mapCentrosCache = window._mapCentrosCache || null;
-window._mapPuestosCache = window._mapPuestosCache || null;
-window._mapDeptosCache = window._mapDeptosCache || null;
+// Variables globales de caché y mapas
+window._catRegsCache = null;
+window._catCentrosCache = null;
+window._catSitiosCache = null;
+window._empleadosCache = [];
+window._mapRegsCache = null;
+window._mapCentrosCache = null;
+window._mapPuestosCache = null;
+window._mapDeptosCache = null;
+
+function matchClave(a, b) {
+    const strA = String(a || '').trim();
+    const strB = String(b || '').trim();
+    if (strA === strB) return true;
+    if (!isNaN(strA) && !isNaN(strB) && strA !== '' && strB !== '') {
+        return Number(strA) === Number(strB);
+    }
+    return false;
+}
+
+function extraerClave(val) {
+    if (!val) return '';
+    const str = String(val).trim();
+    if (str.includes(' - ')) return str.split(' - ')[0].trim();
+    return str;
+}
 
 function obtenerUsuarioSesion() {
     const posibleSesionGlobal = window.usuarioLogueado || window.usuarioActivo || window.sesion || window.currentUser || window.user;
@@ -18,12 +35,7 @@ function obtenerUsuarioSesion() {
         const cenId = posibleSesionGlobal.SRICenId || posibleSesionGlobal.cenId || posibleSesionGlobal.centro || '';
 
         if (numE || regId || cenId) {
-            return {
-                SRIPerNumE: numE,
-                SRIRegId: regId,
-                SRICenId: cenId,
-                ...posibleSesionGlobal
-            };
+            return { SRIPerNumE: numE, SRIRegId: regId, SRICenId: cenId, ...posibleSesionGlobal };
         }
     }
 
@@ -33,11 +45,7 @@ function obtenerUsuarioSesion() {
             const dataStr = localStorage.getItem(key);
             if (dataStr) {
                 let parsed;
-                try {
-                    parsed = JSON.parse(dataStr);
-                } catch (errParse) {
-                    parsed = dataStr;
-                }
+                try { parsed = JSON.parse(dataStr); } catch (e) { parsed = dataStr; }
 
                 if (parsed && typeof parsed === 'object') {
                     const numE = parsed.SRIPerNumE || parsed.numEmp || parsed.usuario || parsed.id || '';
@@ -46,28 +54,17 @@ function obtenerUsuarioSesion() {
 
                     if (numE || regId || cenId) {
                         window.usuarioLogueado = parsed;
-                        return {
-                            SRIPerNumE: numE,
-                            SRIRegId: regId,
-                            SRICenId: cenId,
-                            ...parsed
-                        };
+                        return { SRIPerNumE: numE, SRIRegId: regId, SRICenId: cenId, ...parsed };
                     }
-                } else if (typeof parsed === 'string' && parsed.trim() !== '') {
-                    return {
-                        SRIPerNumE: parsed,
-                        SRIRegId: window.SRIRegId || '',
-                        SRICenId: window.SRICenId || ''
-                    };
                 }
             }
         }
     } catch (e) { }
 
     return {
-        SRIPerNumE: window.SRIPerNumE || window.numEmpUsuario || window.usuario || window.userEmp || '',
-        SRIRegId: window.SRIRegId || window.regIdUsuario || window.regId || '',
-        SRICenId: window.SRICenId || window.cenIdUsuario || window.cenId || ''
+        SRIPerNumE: window.SRIPerNumE || '',
+        SRIRegId: window.SRIRegId || '',
+        SRICenId: window.SRICenId || ''
     };
 }
 
@@ -198,6 +195,7 @@ function cargarPersonalRh(cargarLista = true) {
     }
 }
 
+// 🟢 ORDEN CORREGIDO: Catálogos primero, luego personal
 async function cargarDatosGenerales(forzarRecarga = false) {
     if (forzarRecarga) {
         window._catRegsCache = null;
@@ -214,33 +212,15 @@ async function cargarDatosGenerales(forzarRecarga = false) {
 
     const tbody = document.getElementById('tabla-personal-body');
     if (tbody && window._empleadosCache.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-stone-400 italic">Sincronizando datos...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-stone-400 italic">Sincronizando catálogos y datos...</td></tr>`;
     }
 
-    await cargarDatosPersonalSheets(forzarRecarga);
     await cargarCatalogosSheets(forzarRecarga);
-}
-
-function cancelarEdicionPersonal() {
-    ocultarFormularioPersonal();
-}
-
-function ocultarFormularioPersonal() {
-    const formContainer = document.getElementById('contenedor-formulario-personal');
-    const gestionContainer = document.getElementById('contenedor-gestion-personal');
-    const listadoContainer = document.getElementById('contenedor-listado-personal');
-
-    if (formContainer) formContainer.classList.add('hidden');
-    if (gestionContainer) gestionContainer.classList.remove('hidden');
-    if (listadoContainer) listadoContainer.classList.remove('hidden');
-
-    if (window._empleadosCache && window._empleadosCache.length > 0) {
-        aplicarFiltroYRenderizar(window._empleadosCache);
-    }
+    await cargarDatosPersonalSheets(forzarRecarga);
 }
 
 async function cargarCatalogosSheets(forzar = false) {
-    if (forzar || !window._catRegs || window._catRegs.length === 0 || !window._catPuestos || window._catPuestos.length === 0) {
+    if (forzar || !window._catRegs || window._catRegs.length === 0) {
         try {
             const data = await callAppsScript('obtenerDatosSistema', {});
             if (data) {
@@ -251,28 +231,35 @@ async function cargarCatalogosSheets(forzar = false) {
                 window._catPuestos = data.puestos || data.catPuestos || data.puesto || [];
             }
         } catch (e) {
-            console.error("Error al cargar catálogos desde servidor...", e);
+            console.error("Error al cargar catálogos:", e);
         }
     }
-
-    // 🛡️ Fallback de seguridad: si el servidor no devolvió puestos/deptos, los extraemos de los empleados cargados
-    if ((!window._catPuestos || window._catPuestos.length === 0) && window._empleadosCache && window._empleadosCache.length > 0) {
-        const puestosMap = new Map();
-        window._empleadosCache.forEach(e => {
-            if (e.SRIPtoId) puestosMap.set(String(e.SRIPtoId).trim(), String(e.SRIPtoId).trim());
-        });
-        window._catPuestos = Array.from(puestosMap.keys()).map(id => ({ SRIPtoId: id, SRIPtoDesc: id }));
-    }
-
-    if ((!window._catDepartamentos || window._catDepartamentos.length === 0) && window._empleadosCache && window._empleadosCache.length > 0) {
-        const deptosMap = new Map();
-        window._empleadosCache.forEach(e => {
-            if (e.SRIModNomC) deptosMap.set(String(e.SRIModNomC).trim(), String(e.SRIModNomC).trim());
-        });
-        window._catDepartamentos = Array.from(deptosMap.keys()).map(id => ({ SRIModNomC: id, SRIModNom: id }));
-    }
-
     pintarSelectsCatalogos();
+}
+
+async function cargarDatosPersonalSheets(forzar = false) {
+    const tbody = document.getElementById('tabla-personal-body');
+    if (!tbody) return;
+
+    if (!forzar && window._empleadosCache.length > 0) {
+        aplicarFiltroYRenderizar(window._empleadosCache);
+        return;
+    }
+
+    try {
+        const usuarioActivo = obtenerUsuarioSesion();
+        const params = {
+            usuario: usuarioActivo.SRIPerNumE || '',
+            SRIRegId: usuarioActivo.SRIRegId || '',
+            SRICenId: usuarioActivo.SRICenId || ''
+        };
+
+        const data = await callAppsScript('obtenerPersonalSQL', params);
+        window._empleadosCache = data || [];
+        aplicarFiltroYRenderizar(window._empleadosCache);
+    } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500 italic">Error al conectar con la Base de Datos.</td></tr>`;
+    }
 }
 
 function pintarSelectsCatalogos() {
@@ -280,20 +267,10 @@ function pintarSelectsCatalogos() {
     if (selPuesto && window._catPuestos) {
         selPuesto.innerHTML = '<option value="" disabled selected>Seleccione un puesto...</option>' +
             window._catPuestos.map(p => {
-                // Incluimos 'SRIPrtoId' que es la llave real que viene del servidor
-                let numPto = String(p.SRIPrtoId || p.SRIPtoId || p.SRIPuestoId || p.NumPto || p.numPto || p.clave || '').trim();
-
-                // Evaluamos la descripción
-                let nomPto = String(p.SRIPtoDesc || p.SRIPuestoDesc || p.NomPto || p.nomPto || p.nombre || '').trim();
-
-                // Si la descripción es idéntica al código o viene vacía, la limpiamos
-                if (!nomPto || nomPto === numPto) {
-                    nomPto = '';
-                }
-
-                let textoMostrado = nomPto ? `${numPto} - ${nomPto}` : numPto;
-
-                return `<option value="${numPto}">${textoMostrado}</option>`;
+                let numPto = String(p.SRIPrtoId || p.SRIPtoId || p.SRIPuestoId || '').trim();
+                let nomPto = String(p.SRIPtoDesc || p.SRIPuestoDesc || '').trim();
+                if (!nomPto || nomPto === numPto) nomPto = '';
+                return `<option value="${numPto}">${nomPto ? `${numPto} -${nomPto}` : numPto}</option>`;
             }).join('');
     }
 
@@ -301,81 +278,44 @@ function pintarSelectsCatalogos() {
     if (selDepto && window._catDepartamentos) {
         selDepto.innerHTML = '<option value="" disabled selected>Seleccione un departamento...</option>' +
             window._catDepartamentos.map(d => {
-                // Usamos SRIModNom para mostrar solo el nombre completo
-                let nomDep = String(d.SRIModNom || d.SRIDepDesc || d.DeptoDesc || d.nombre || '').trim();
-
+                let nomDep = String(d.SRIModNom || d.SRIDepDesc || '').trim();
                 return `<option value="${nomDep}">${nomDep}</option>`;
             }).join('');
     }
 
     const selRegiones = document.getElementById('select-SRIRegId');
-    if (selRegiones && window._catRegs && selRegiones.options.length <= 1) {
+    if (selRegiones && window._catRegs) {
         selRegiones.innerHTML = '<option value="" disabled selected>Seleccione una región...</option>' +
             window._catRegs.map(r => {
-                const claveReg = String(r.SRIRegId || r.claveReg || '').trim();
-                const nomReg = String(r.SRIRegNom || r.NomCorto || r.regional || '').trim();
-
+                const claveReg = String(r.SRIRegId || '').trim();
+                const nomReg = String(r.SRIRegNom || '').trim();
                 return `<option value="${claveReg}">${claveReg} - ${nomReg}</option>`;
             }).join('');
     }
-
-    const selCentro = document.getElementById('select-SRICenId');
-    if (selCentro && selCentro.value && typeof filtrarSitiosPorCentro === 'function') {
-        filtrarSitiosPorCentro(selCentro.value);
-    }
-}
-
-function matchClave(a, b) {
-    const strA = String(a || '').trim();
-    const strB = String(b || '').trim();
-    if (strA === strB) return true;
-    if (!isNaN(strA) && !isNaN(strB) && strA !== '' && strB !== '') {
-        return Number(strA) === Number(strB);
-    }
-    return false;
 }
 
 window.filtrarCentrosPorRegion = function (centroActual = '', sitActual = '') {
-    const selReg = document.getElementById('select-SRIRegId') || document.querySelector('select[name="SRIRegId"]');
-    const selCentro = document.getElementById('select-SRICenId') || document.querySelector('select[name="SRICenId"]');
-    const selSit = document.getElementById('select-SRISitId') || document.querySelector('select[name="SRISitId"]');
-
+    const selReg = document.getElementById('select-SRIRegId');
+    const selCentro = document.getElementById('select-SRICenId');
+    const selSit = document.getElementById('select-SRISitId');
     if (!selReg || !selCentro || !selSit) return;
 
     const regionSeleccionada = selReg.value;
-
     selCentro.innerHTML = `<option value="" disabled selected>Seleccione un centro...</option>`;
     selSit.innerHTML = `<option value="" disabled selected>Seleccione un sitio...</option>`;
 
     const centrosArray = Array.isArray(window._catCentros) ? window._catCentros : [];
-    const centrosFiltrados = regionSeleccionada ? centrosArray.filter(c => {
-        const regEnFila = String(c.SRIRegId || c.ClaveReg || c.claveReg || '').trim();
-        return matchClave(regEnFila, regionSeleccionada);
-    }) : [];
+    const centrosFiltrados = regionSeleccionada ? centrosArray.filter(c => matchClave(c.SRIRegId, regionSeleccionada)) : [];
 
     if (centrosFiltrados.length > 0) {
         selCentro.innerHTML += centrosFiltrados.map(c => {
-            const claveC = String(c.SRICenId || c.ClaveCentro || c.claveCentro || '').trim();
-            const nombreC = String(c.SRICenNom || c.Centro || c.centro || c.nombre || '').trim();
-            const match = matchClave(claveC, centroActual);
-            const selected = match ? 'selected' : '';
-            return `<option value="${claveC}" ${selected}>${claveC} - ${nombreC}</option>`;
+            const claveC = String(c.SRICenId || '').trim();
+            const nombreC = String(c.SRICenNom || '').trim();
+            return `<option value="${claveC}" ${matchClave(claveC, centroActual) ? 'selected' : ''}>${claveC} - ${nombreC}</option>`;
         }).join('');
-
-        if (centroActual) {
-            for (let option of selCentro.options) {
-                if (matchClave(option.value, centroActual)) {
-                    selCentro.value = option.value;
-                    break;
-                }
-            }
-        }
     }
-
-    const centroIdAUsar = selCentro.value || centroActual;
-    if (centroIdAUsar) {
-        filtrarSitiosPorCentro(centroIdAUsar, sitActual);
-    }
+    if (centroActual) selCentro.value = centroActual;
+    if (selCentro.value) filtrarSitiosPorCentro(selCentro.value, sitActual);
 };
 
 function filtrarSitiosPorCentro(claveCentro = '', sitActual = '') {
@@ -391,187 +331,40 @@ function filtrarSitiosPorCentro(claveCentro = '', sitActual = '') {
     }
 
     const sitiosArray = Array.isArray(window._catSitios) ? window._catSitios : [];
-    const sitiosFiltrados = sitiosArray.filter(s => {
-        const cAsociado = String(s.SRICenId || s.claveCentro || c.ClaveCentro || '').trim();
-        return matchClave(cAsociado, centroId);
-    });
+    const sitiosFiltrados = sitiosArray.filter(s => matchClave(s.SRICenId, centroId));
 
-    const esCero = String(sitActual).trim() === '0' || String(sitActual).trim() === 'N/A';
-
-    let opcionesHTML = `<option value="N/A" ${esCero ? 'selected' : ''}>N/A</option>`;
-
+    let opcionesHTML = `<option value="N/A">N/A</option>`;
     if (sitiosFiltrados.length > 0) {
         opcionesHTML += sitiosFiltrados.map(s => {
-            const claveS = String(s.SRISitId || s.clave || s.ClaveSitio || s.claveSit || '').trim();
-            const nombreS = String(s.SRISitNom || s.nombre || s.Sitio || s.sitio || '').trim();
+            const claveS = String(s.SRISitId || '').trim();
+            const nombreS = String(s.SRISitNom || '').trim();
             if (claveS === '0') return '';
             return `<option value="${claveS}">${claveS} - ${nombreS}</option>`;
         }).join('');
     }
-
     selSit.innerHTML = opcionesHTML;
-
-    if (String(sitActual).trim() === '0' || String(sitActual).trim() === 'N/A') {
-        selSit.value = "N/A";
-    } else if (sitActual) {
-        let encontrado = false;
-        for (let opt of selSit.options) {
-            if (matchClave(opt.value, sitActual)) {
-                selSit.value = opt.value;
-                encontrado = true;
-                break;
-            }
-        }
-        if (!encontrado) {
-            selSit.value = "N/A";
-        }
-    } else {
-        selSit.value = "N/A";
-    }
-}
-
-async function seleccionarEmpleadoParaEditar(numEmpParam) {
-    if (!window._empleadosCache || window._empleadosCache.length === 0) {
-        try {
-            const usuarioActivo = obtenerUsuarioSesion();
-            const params = {
-                usuario: usuarioActivo.SRIPerNumE || usuarioActivo.numEmp || usuarioActivo.usuario || '',
-                SRIRegId: usuarioActivo.SRIRegId || usuarioActivo.regId || '',
-                SRICenId: usuarioActivo.SRICenId || usuarioActivo.cenId || ''
-            };
-
-            const data = await callAppsScript('obtenerPersonalSQL', params);
-            window._empleadosCache = data || [];
-        } catch (error) {
-            console.error("❌ Error al recuperar empleados:", error);
-        }
-    }
-
-    const busqueda = String(numEmpParam || '').trim();
-    let emp = window._empleadosCache.find(e => String(e.SRIPerNumE || '').trim() === busqueda);
-
-    if (!emp) {
-        alert("No se pudieron cargar los datos del empleado.");
-        return;
-    }
-
-    // Asegurarnos de tener catálogos y respaldos listos antes de pintar el formulario
-    await cargarCatalogosSheets(false);
-
-    const form = document.getElementById('form-nuevo-personal');
-    const formContainer = document.getElementById('contenedor-formulario-personal');
-    const gestionContainer = document.getElementById('contenedor-gestion-personal');
-    const listadoContainer = document.getElementById('contenedor-listado-personal');
-    const titulo = document.getElementById('titulo-formulario');
-    const inputNumEmp = document.getElementById('input-SRIPerNumE');
-
-    if (formContainer && form) {
-        const regVal = String(emp.SRIRegId || '').trim();
-        const centroVal = String(emp.SRICenId || '').trim();
-        let rawSit = String(emp.SRISitId || '').trim();
-        const sitVal = (!rawSit || rawSit === '0' || rawSit.toUpperCase() === 'N/A') ? 'N/A' : rawSit;
-
-        const selReg = document.getElementById('select-SRIRegId');
-        if (selReg) selReg.value = regVal;
-
-        if (typeof filtrarCentrosPorRegion === 'function') {
-            filtrarCentrosPorRegion(centroVal, sitVal);
-        }
-
-        form.elements['SRIPerNumE'].value = String(emp.SRIPerNumE || '').trim();
-        if (inputNumEmp) inputNumEmp.setAttribute('readonly', true);
-
-        form.elements['SRIPerNomE'].value = String(emp.SRIPerNomE || '').trim();
-        form.elements['SRIPerNExt'].value = String(emp.SRIPerNExt || '').trim();
-        form.elements['SRIPerNCel'].value = String(emp.SRIPerNCel || '').trim();
-        form.elements['SRIPerEsco'].value = String(emp.SRIPerEsco || '').trim();
-        form.elements['SRIPerDir'].value = String(emp.SRIPerDir || '').trim();
-        form.elements['SRIPerCP'].value = String(emp.SRIPerCP || '').trim();
-        form.elements['SRIPerEml'].value = String(emp.SRIPerEml || '').trim();
-        form.elements['SRIPerRFC'].value = String(emp.SRIPerRFC || '').trim();
-        form.elements['SRIPerCd'].value = String(emp.SRIPerCd || '').trim();
-        form.elements['SRIPerEdo'].value = String(emp.SRIPerEdo || '').trim();
-
-        // Asignación síncrona/asíncrona segura de Puesto y Departamento
-        const ptoVal = String(emp.SRIPtoId || '').trim();
-        const depVal = String(emp.SRIModNomC || '').trim();
-
-        const selPto = document.getElementById('select-SRIPtoId');
-        const selDep = document.getElementById('select-SRIModNomC');
-
-        if (selPto) {
-            if (ptoVal && ![...selPto.options].some(o => o.value === ptoVal)) {
-                selPto.innerHTML += `<option value="${ptoVal}">${ptoVal}</option>`;
-            }
-            selPto.value = ptoVal;
-        }
-
-        if (selDep) {
-            if (depVal && ![...selDep.options].some(o => o.value === depVal)) {
-                selDep.innerHTML += `<option value="${depVal}">${depVal}</option>`;
-            }
-            selDep.value = depVal;
-        }
-
-        if (titulo) {
-            titulo.innerHTML = `Editando empleado: <span class="text-[#249444]">${String(emp.SRIPerNomE || '')}</span> (No. Empleado: ${String(emp.SRIPerNumE || '')})`;
-        }
-
-        formContainer.classList.remove('hidden');
-        if (gestionContainer) gestionContainer.classList.add('hidden');
-        if (listadoContainer) listadoContainer.classList.add('hidden');
-    }
-}
-
-async function cargarDatosPersonalSheets(forzar = false) {
-    const tbody = document.getElementById('tabla-personal-body');
-    if (!tbody) return;
-
-    if (!forzar && window._empleadosCache.length > 0) {
-        aplicarFiltroYRenderizar(window._empleadosCache);
-        return;
-    }
-
-    try {
-        const usuarioActivo = obtenerUsuarioSesion();
-        const params = {
-            usuario: usuarioActivo.SRIPerNumE || usuarioActivo.numEmp || usuarioActivo.usuario || '',
-            SRIRegId: usuarioActivo.SRIRegId || usuarioActivo.regId || '',
-            SRICenId: usuarioActivo.SRICenId || usuarioActivo.cenId || ''
-        };
-
-        const data = await callAppsScript('obtenerPersonalSQL', params);
-        window._empleadosCache = data || [];
-        aplicarFiltroYRenderizar(window._empleadosCache);
-    } catch (error) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500 italic">Error al conectar con la Base de Datos.</td></tr>`;
-    }
+    selSit.value = sitActual && sitActual !== '0' ? sitActual : "N/A";
 }
 
 function aplicarFiltroYRenderizar(empleados) {
     const usuarioActivo = obtenerUsuarioSesion();
-    const centroUsuario = String(usuarioActivo.SRICenId || usuarioActivo.cenId || '').trim();
+    const centroUsuario = String(usuarioActivo.SRICenId || '').trim();
     let empleadosFiltrados = empleados;
 
-    if (centroUsuario && centroUsuario !== '0' && centroUsuario !== 'undefined' && centroUsuario !== '') {
-        empleadosFiltrados = empleados.filter(emp => {
-            const centroEmp = String(emp.SRICenId || '').trim();
-            return centroEmp.includes(centroUsuario);
-        });
+    if (centroUsuario && centroUsuario !== '0' && centroUsuario !== '') {
+        empleadosFiltrados = empleados.filter(emp => String(emp.SRICenId || '').trim().includes(centroUsuario));
     }
-
     renderizarTablaPersonal(empleadosFiltrados);
 }
 
 function filtrarTablaPersonal(textoBusqueda) {
     const query = textoBusqueda.toLowerCase().trim();
-
     const usuarioActivo = obtenerUsuarioSesion();
-    const centroUsuario = String(usuarioActivo.SRICenId || usuarioActivo.cenId || '').trim();
+    const centroUsuario = String(usuarioActivo.SRICenId || '').trim();
     let baseEmpleados = window._empleadosCache;
 
-    if (centroUsuario && centroUsuario !== '0' && centroUsuario !== 'undefined') {
-        baseEmpleados = window._empleadosCache.filter(emp => String(emp.SRICenId || '').trim().includes(centroUsuario));
+    if (centroUsuario && centroUsuario !== '0') {
+        baseEmpleados = baseEmpleados.filter(emp => String(emp.SRICenId || '').trim().includes(centroUsuario));
     }
 
     if (!query) {
@@ -579,23 +372,10 @@ function filtrarTablaPersonal(textoBusqueda) {
         return;
     }
 
-    const empleadosFiltrados = baseEmpleados.filter(row => {
-        const reg = String(row.SRIRegId || "").toLowerCase();
-        const centro = String(row.SRICenId || "").toLowerCase();
-        const numEmp = String(row.SRIPerNumE || "").toLowerCase();
-        const nombre = String(row.SRIPerNomE || "").toLowerCase();
-        const puesto = String(row.SRIPtoId || "").toLowerCase();
-        const depto = String(row.SRIModNomC || "").toLowerCase();
-
-        return reg.includes(query) ||
-            centro.includes(query) ||
-            numEmp.includes(query) ||
-            nombre.includes(query) ||
-            puesto.includes(query) ||
-            depto.includes(query);
+    const filtrados = baseEmpleados.filter(row => {
+        return Object.values(row).some(val => String(val || '').toLowerCase().includes(query));
     });
-
-    renderizarTablaPersonal(empleadosFiltrados);
+    renderizarTablaPersonal(filtrados);
 }
 
 function renderizarTablaPersonal(registros) {
@@ -607,66 +387,37 @@ function renderizarTablaPersonal(registros) {
         return;
     }
 
+    // Inicializar mapas de caché rápida si no existen
     if (!window._mapRegsCache && window._catRegs) {
         window._mapRegsCache = {};
-        window._catRegs.forEach(r => {
-            const k = String(r.SRIRegId || r.claveReg || '').trim();
-            if (k) window._mapRegsCache[k] = r.SRIRegNom || r.NomCorto || r.regional || '';
-        });
+        window._catRegs.forEach(r => { window._mapRegsCache[String(r.SRIRegId).trim()] = r.SRIRegNom || ''; });
     }
-
     if (!window._mapCentrosCache && window._catCentros) {
         window._mapCentrosCache = {};
-        window._catCentros.forEach(c => {
-            const k = String(c.SRICenId || c.ClaveCentro || '').trim();
-            if (k) window._mapCentrosCache[k] = c.SRICenNom || c.Centro || '';
-        });
+        window._catCentros.forEach(c => { window._mapCentrosCache[String(c.SRICenId).trim()] = c.SRICenNom || ''; });
     }
-
-    if (!window._mapDeptosCache && window._catDepartamentos && Array.isArray(window._catDepartamentos)) {
+    if (!window._mapDeptosCache && window._catDepartamentos) {
         window._mapDeptosCache = {};
-        window._catDepartamentos.forEach(d => {
-            const k = String(d.SRIModNomC || d.SRIDepId || d.claveDep || d.id || d.Clave || '').trim();
-            const v = d.SRIModNom || d.SRIModNomC || d.nombreDep || d.nombre || d.descripcion || d.Descripcion || '';
-            if (k) window._mapDeptosCache[k] = v;
-        });
+        window._catDepartamentos.forEach(d => { window._mapDeptosCache[String(d.SRIModNomC).trim()] = d.SRIModNom || ''; });
     }
-
-    if (!window._mapPuestosCache && window._catPuestos && Array.isArray(window._catPuestos)) {
+    if (!window._mapPuestosCache && window._catPuestos) {
         window._mapPuestosCache = {};
-        window._catPuestos.forEach(p => {
-            const k = String(p.SRIPtoId || '').trim();
-            const v = p.SRIPtoDesc || p.NomPto || '';
-            if (k) window._mapPuestosCache[k] = v;
-        });
+        window._catPuestos.forEach(p => { window._mapPuestosCache[String(p.SRIPtoId).trim()] = p.SRIPtoDesc || ''; });
     }
 
-    tbody.innerHTML = registros.map((row) => {
+    tbody.innerHTML = registros.map(row => {
         const cReg = String(row.SRIRegId || '').trim();
         const cCentro = String(row.SRICenId || '').trim();
         const cNumPto = String(row.SRIPtoId || '').trim();
-        const cNomCorDep = String(row.SRIModNomC || row.departamento || row.depto || row.SRIDepId || row.ClaveDep || '').trim();
+        const cDepto = String(row.SRIModNomC || '').trim();
 
-        const nomCortoReg = (window._mapRegsCache && window._mapRegsCache[cReg]) || '';
-        const reg = nomCortoReg ? `${cReg} - ${nomCortoReg}` : cReg;
-
-        const nomCortoCentro = (window._mapCentrosCache && window._mapCentrosCache[cCentro]) || '';
-        const centro = nomCortoCentro ? `${cCentro} - ${nomCortoCentro}` : cCentro;
-
-        let puestoVisual = cNumPto;
-        if (cNumPto && window._mapPuestosCache && window._mapPuestosCache[cNumPto]) {
-            puestoVisual = window._mapPuestosCache[cNumPto];
-        }
-
-        let deptoVisual = cNomCorDep;
-        if (cNomCorDep && window._mapDeptosCache && window._mapDeptosCache[cNomCorDep]) {
-            deptoVisual = window._mapDeptosCache[cNomCorDep];
-        }
-
+        const reg = window._mapRegsCache?.[cReg] ? `${cReg} - ${window._mapRegsCache[cReg]}` : cReg;
+        const centro = window._mapCentrosCache?.[cCentro] ? `${cCentro} - ${window._mapCentrosCache[cCentro]}` : cCentro;
+        const puesto = window._mapPuestosCache?.[cNumPto] || cNumPto;
+        const depto = window._mapDeptosCache?.[cDepto] || cDepto;
         const noEmp = String(row.SRIPerNumE || '').trim();
         const nombre = row.SRIPerNomE || '';
-
-        const valNa = (v) => (!v || v === 0 || v === '0' || String(v).trim() === '') ? 'N/A' : v;
+        const valNa = (v) => (!v || v === '0' || String(v).trim() === '') ? 'N/A' : v;
 
         return `
             <tr class="border-b border-stone-100 hover:bg-stone-50 transition">
@@ -674,9 +425,21 @@ function renderizarTablaPersonal(registros) {
                 <td class="p-3 font-mono text-stone-600">${valNa(centro)}</td>
                 <td class="p-3 font-mono text-stone-600">${valNa(noEmp)}</td>
                 <td class="p-3"><button type="button" onclick="seleccionarEmpleadoParaEditar('${noEmp}')" class="font-semibold text-[#249444] hover:underline text-left">${valNa(nombre)}</button></td>
-                <td class="p-3 text-stone-600">${valNa(puestoVisual)}</td>
-                <td class="p-3 text-stone-600">${valNa(deptoVisual)}</td>
+                <td class="p-3 text-stone-600">${valNa(puesto)}</td>
+                <td class="p-3 text-stone-600">${valNa(depto)}</td>
             </tr>
         `;
     }).join('');
+}
+
+function cancelarEdicionPersonal() {
+    const formContainer = document.getElementById('contenedor-formulario-personal');
+    const gestionContainer = document.getElementById('contenedor-gestion-personal');
+    const listadoContainer = document.getElementById('contenedor-listado-personal');
+
+    if (formContainer) formContainer.classList.add('hidden');
+    if (gestionContainer) gestionContainer.classList.remove('hidden');
+    if (listadoContainer) listadoContainer.classList.remove('hidden');
+
+    if (window._empleadosCache?.length > 0) aplicarFiltroYRenderizar(window._empleadosCache);
 }
