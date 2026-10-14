@@ -278,14 +278,14 @@ function pintarSelectsCatalogos() {
     if (selDepto && window._catDepartamentos) {
         selDepto.innerHTML = '<option value="" disabled selected>Seleccione un departamento...</option>' +
             window._catDepartamentos.map(d => {
-                // Clave/Nombre Corto para guardar en SQL (ej: CIRNORH, CIRNORM)
-                let claveCorta = String(d.SRIModNomC || d.SRIDepId || d.claveDep || d.id || '').trim();
+                // Nombre Corto / Clave oficial para guardar en SQL (ej: CIRNORF, CIRNORH)
+                const claveCorta = String(d.SRIModNomC || d.claveDep || d.id || '').trim();
                 
-                // Nombre o Descripción larga para mostrar en la interfaz
-                let nomDep = String(d.SRIModNom || d.SRIDepDesc || d.nombre || d.descripcion || claveCorta).trim();
+                // Nombre largo para mostrar al usuario en la pantalla
+                const nombreLargo = String(d.SRIModNom || d.SRIDepDesc || d.nombre || claveCorta).trim();
 
-                // El "value" guarda el nombre corto, el texto visible muestra la descripción
-                return `<option value="${claveCorta}">${nomDep}</option>`;
+                // 🟢 IMPORTANTE: El value lleva la clave corta (CIRNORF), el texto visible muestra el nombre largo
+                return `<option value="${claveCorta}">${nombreLargo}</option>`;
             }).join('');
     }
 
