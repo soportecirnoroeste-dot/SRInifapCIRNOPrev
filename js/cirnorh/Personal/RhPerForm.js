@@ -30,11 +30,24 @@ async function mostrarFormularioNuevoPersonal() {
 
 function seleccionarOpcionFlexible(selectElement, valorBuscado) {
     if (!selectElement || !valorBuscado) return;
-    const limpioBuscado = String(valorBuscado).trim().toLowerCase();
+    let valorAUsar = String(valorBuscado).trim();
 
+    // 🟢 TRADUCTOR INTELIGENTE PARA DEPARTAMENTOS:
+    // Si es el selector de departamento, resolvemos si el valor guardado es largo o corto
+    if (selectElement.id === 'select-SRIModNomC' && window._catDepartamentos) {
+        const depEncontrado = window._catDepartamentos.find(d => 
+            String(d.SRIModNomC || '').trim().toLowerCase() === valorAUsar.toLowerCase() ||
+            String(d.SRIModNom || '').trim().toLowerCase() === valorAUsar.toLowerCase()
+        );
+        if (depEncontrado && depEncontrado.SRIModNomC) {
+            valorAUsar = String(depEncontrado.SRIModNomC).trim();
+        }
+    }
+
+    const limpioBuscado = valorAUsar.toLowerCase();
     let encontrado = false;
 
-    // 1. Intentar hacer match directo con el value o con el texto exacto
+    // 1. Coincidencia exacta con el valor (value) o el texto visible
     for (let option of selectElement.options) {
         const valOpt = String(option.value || '').trim().toLowerCase();
         const txtOpt = String(option.text || '').trim().toLowerCase();
@@ -47,7 +60,7 @@ function seleccionarOpcionFlexible(selectElement, valorBuscado) {
         }
     }
 
-    // 2. PLAN DE RESPALDO: Si no encontró coincidencia exacta, buscamos coincidencia parcial
+    // 2. Coincidencia parcial de respaldo
     if (!encontrado) {
         for (let option of selectElement.options) {
             const valOpt = String(option.value || '').trim().toLowerCase();
@@ -61,6 +74,7 @@ function seleccionarOpcionFlexible(selectElement, valorBuscado) {
         }
     }
 }
+
 async function seleccionarEmpleadoParaEditar(numEmpParam) {
     if (!window._empleadosCache || window._empleadosCache.length === 0) {
         try {
