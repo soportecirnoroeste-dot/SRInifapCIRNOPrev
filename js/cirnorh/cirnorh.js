@@ -275,6 +275,31 @@ window.addEventListener('popstate', (event) => {
     procesarCargaInicialSeccionRh(event);
 });
 
+// Inicialización segura con reintento automático para la primera carga
+document.addEventListener('DOMContentLoaded', async () => {
+    await cargarDatosDelSistema();
+
+    // Pequeño ciclo de espera inteligente para garantizar que AppConfigUtils pinte los submódulos reales a la primera
+    let intentos = 0;
+    const maxIntentos = 10; // Máximo 1 segundo de espera total (10 x 100ms)
+    
+    const verificarYRenderizar = async () => {
+        const opcionesDinamicas = window.cirnorhConfig.options;
+        if ((opcionesDinamicas && opcionesDinamicas.length > 0) || intentos >= maxIntentos) {
+            await procesarCargaInicialSeccionRh();
+        } else {
+            intentos++;
+            setTimeout(verificarYRenderizar, 100);
+        }
+    };
+
+    verificarYRenderizar();
+});
+
+window.addEventListener('popstate', (event) => {
+    procesarCargaInicialSeccionRh(event);
+});
+
 document.addEventListener('DOMContentLoaded', async () => {
     // Intentamos cargar los datos y asegurarnos de que la caché o la red respondan
     await cargarDatosDelSistema();
