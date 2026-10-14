@@ -402,7 +402,13 @@ function renderizarTablaPersonal(registros) {
     }
     if (!window._mapPuestosCache && window._catPuestos) {
         window._mapPuestosCache = {};
-        window._catPuestos.forEach(p => { window._mapPuestosCache[String(p.SRIPtoId).trim()] = p.SRIPtoDesc || ''; });
+        window._catPuestos.forEach(p => {
+            // Buscamos la clave del puesto con sus posibles variantes
+            const k = String(p.SRIPrtoId || p.SRIPtoId || p.SRIPuestoId || p.clave || '').trim();
+            // Buscamos la descripción del puesto con sus posibles variantes
+            const v = String(p.SRIPtoDesc || p.SRIPuestoDesc || p.NomPto || p.nombre || p.descripcion || '').trim();
+            if (k) window._mapPuestosCache[k] = v;
+        });
     }
 
     tbody.innerHTML = registros.map(row => {
@@ -413,7 +419,11 @@ function renderizarTablaPersonal(registros) {
 
         const reg = window._mapRegsCache?.[cReg] ? `${cReg} - ${window._mapRegsCache[cReg]}` : cReg;
         const centro = window._mapCentrosCache?.[cCentro] ? `${cCentro} - ${window._mapCentrosCache[cCentro]}` : cCentro;
-        const puesto = window._mapPuestosCache?.[cNumPto] || cNumPto;
+
+        // 🟢 Buscamos explícitamente la descripción en el caché del puesto. Si no existe, usamos el valor original.
+        const descPuesto = window._mapPuestosCache?.[cNumPto];
+        const puesto = (descPuesto && descPuesto !== '' && descPuesto !== 'undefined') ? descPuesto : cNumPto;
+
         const depto = window._mapDeptosCache?.[cDepto] || cDepto;
         const noEmp = String(row.SRIPerNumE || '').trim();
         const nombre = row.SRIPerNomE || '';
