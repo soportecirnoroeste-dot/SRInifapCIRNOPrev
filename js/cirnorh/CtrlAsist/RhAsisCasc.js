@@ -229,17 +229,23 @@ window.RhAsisCasc = {
             const primerId = Object.keys(RhAsisForm.groupedData)[0];
             if (primerId && RhAsisForm.groupedData[primerId].rows && RhAsisForm.groupedData[primerId].rows.length > 0) {
                 const primeraFila = RhAsisForm.groupedData[primerId].rows[0];
-                primerNumEmp = primeraFila[0] || "";
-                rawFecha = primeraFila[8] || primeraFila[7] || "";
-            }
-
-            if (!rawFecha) {
-                alert("⚠️ No se pudo detectar la fecha en el archivo.");
-                window.RhAsisForm.groupedData = {};
-                return;
+                primerNumEmp = primeraFila[0] || primeraFila[1] || "";
+                // Búsqueda flexible de fecha en cualquier celda de la fila que contenga un string largo o formato
+                for (let c = 0; c < primeraFila.length; c++) {
+                    const val = String(primeraFila[c] || "");
+                    if (val.includes('-') || val.includes('/') || val.length >= 8) {
+                        rawFecha = val;
+                        break;
+                    }
+                }
+                if (!rawFecha) rawFecha = primeraFila[6] || new Date().toISOString();
             }
 
             let fechaNormalizada = RhAsisCasc.normalizarFechaFiltro(rawFecha);
+            if (!fechaNormalizada) {
+                fechaNormalizada = new Date().toISOString().split('T')[0];
+            }
+
             if (textCarga) textCarga.innerText = "Verificando...";
 
             let claveCentroSeleccionado = RhAsisCasc.obtenerClaveCentroActual();
