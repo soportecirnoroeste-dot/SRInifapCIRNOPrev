@@ -33,69 +33,56 @@ window.RhAsisForm = {
 
     processData: function(rows) {
         RhAsisForm.groupedData = {};
-        let headerIndex = -1;
+        
+        if (!rows || rows.length === 0) return;
 
-        // 1. Buscamos de forma flexible la fila de encabezados o la primera fila de datos reales
+        let headerIndex = -1;
         for (let i = 0; i < rows.length; i++) {
             const row = rows[i];
             if (!row || row.length === 0) continue;
-
             const rowStr = row.join(" ").toLowerCase();
-            // Identificamos por palabras clave del reporte biométrico o si encontramos celdas numéricas en las primeras columnas
-            if (rowStr.includes('centro') || rowStr.includes('num') || rowStr.includes('entrada') || rowStr.includes('salida')) {
+            if (rowStr.includes('centro') || rowStr.includes('num') || rowStr.includes('emp') || rowStr.includes('entrada') || rowStr.includes('salida') || rowStr.includes('fecha')) {
                 headerIndex = i;
                 RhAsisForm.rawHeader = row;
                 break;
             }
         }
 
-        // Si no se detectó por texto, buscamos la primera fila que contenga un número de empleado válido
         if (headerIndex === -1) {
-            for (let i = 0; i < rows.length; i++) {
-                const row = rows[i];
-                if (row && (row[0] !== "" || row[1] !== "")) {
-                    const valCheck = row[0] !== "" ? row[0] : row[1];
-                    if (!isNaN(valCheck) && String(valCheck).trim() !== "") {
-                        headerIndex = i - 1;
-                        break;
-                    }
-                }
-            }
-        }
-
-        // Si aún no se localiza, asignamos la cabecera estándar por defecto del sistema
-        if (headerIndex === -1 || headerIndex >= rows.length) {
-            headerIndex = 6; // Valor estándar para reportes con 6 líneas institucionales arriba
-            RhAsisForm.rawHeader = [
-                "Centro", "Núm. Emp", "Hra.Entrada", "Hra. Salida",
-                "Hra.Registro", "Registro", "Fecha Reg.", "Día Reg.",
-                "Retardo Men.", "Retardo Med.", "Retardo May.", "Falta"
-            ];
-        } else if (!RhAsisForm.rawHeader || RhAsisForm.rawHeader.length === 0) {
-            RhAsisForm.rawHeader = rows[headerIndex] || [
+            headerIndex = 0;
+            RhAsisForm.rawHeader = rows[0] && rows[0].length >= 12 ? rows[0] : [
                 "Centro", "Núm. Emp", "Hra.Entrada", "Hra. Salida",
                 "Hra.Registro", "Registro", "Fecha Reg.", "Día Reg.",
                 "Retardo Men.", "Retardo Med.", "Retardo May.", "Falta"
             ];
         }
 
-        // 2. Procesar las filas de datos a partir del índice detectado
+        let startRow = headerIndex !== -1 ? headerIndex + 1 : 0;
         let countValidos = 0;
-        for (let i = headerIndex + 1; i < rows.length; i++) {
+
+        for (let i = startRow; i < rows.length; i++) {
             const row = rows[i];
             if (!row || row.length === 0) continue;
 
-            let empId = String(row[0] || row[1] || "").trim();
-            if (!empId || empId === "undefined" || empId.toLowerCase().includes('total') || empId.toLowerCase().includes('suma')) continue;
+            let empId = "";
+            for (let c = 0; c < row.length; c++) {
+                if (row[c] !== "" && row[c] !== null && row[c] !== undefined) {
+                    empId = String(row[c]).trim();
+                    break;
+                }
+            }
+
+            if (!empId || empId.toLowerCase().includes('total') || empId.toLowerCase().includes('suma') || empId.toLowerCase().includes('instituto')) {
+                continue;
+            }
 
             if (!RhAsisForm.groupedData[empId]) {
                 RhAsisForm.groupedData[empId] = { 
-                    nombre: String(row[2] || "Empleado").trim(), 
+                    nombre: String(row[2] || row[1] || "Empleado").trim(), 
                     rows: [] 
                 };
             }
 
-            // Aseguramos que la fila tenga celdas suficientes (mínimo 12 para la tabla SQL SRICtrlAsi)
             while (row.length < 12) {
                 row.push("");
             }
@@ -104,7 +91,22 @@ window.RhAsisForm = {
             countValidos++;
         }
 
-        console.log(`📊 Datos procesados correctamente: ${countValidos} registros válidos para ${Object.keys(RhAsisForm.groupedData).length} empleados.`);
+        // Respaldo por si el archivo viene sin estructura estándar
+        if (Object.keys(RhAsisForm.groupedData).length === 0) {
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                if (!row || row.length === 0 || row.every(cell => cell === "")) continue;
+                let empId = "GENERAL";
+                if (!RhAsisForm.groupedData[empId]) {
+                    RhAsisForm.groupedData[empId] = { nombre: "General", rows: [] };
+                }
+                while (row.length < 12) { row.push(""); }
+                RhAsisForm.groupedData[empId].rows.push(row);
+                countValidos++;
+            }
+        }
+
+        console.log(`📊 Procesamiento flexible completado: ${countValidos} filas válidas para ${Object.keys(RhAsisForm.groupedData).length} grupos.`);
     },
 
     guardarDatosProcesados: function() {
@@ -122,7 +124,7 @@ window.RhAsisForm = {
         }
     },
 
-    generateWorkbook: function() {
+    exportarExcel: function() {
         const wb = XLSX.utils.book_new();
         const fondoHoja = "E9F5E9";
         const MaxFila = 200;
