@@ -102,9 +102,14 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
         form.elements['SRIPerCd'].value = limpiarValor(emp.SRIPerCd);
         form.elements['SRIPerEdo'].value = limpiarValor(emp.SRIPerEdo);
 
+        // 3. Selección flexible y segura del Puesto y Departamento
         setTimeout(() => {
             seleccionarOpcionFlexible(form.elements['SRIPtoId'], emp.SRIPtoId);
-            seleccionarOpcionFlexible(form.elements['SRIModNomC'], depVal);
+            
+            // 🟢 Búsqueda flexible para el Departamento (soporta tanto nombre corto como largo)
+            if (form.elements['SRIModNomC']) {
+                seleccionarOpcionFlexible(form.elements['SRIModNomC'], emp.SRIModNomC);
+            }
         }, 50);
 
         if (titulo) {
