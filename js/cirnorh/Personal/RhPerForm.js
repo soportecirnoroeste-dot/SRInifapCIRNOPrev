@@ -30,29 +30,17 @@ async function mostrarFormularioNuevoPersonal() {
 
 function seleccionarOpcionFlexible(selectElement, valorBuscado) {
     if (!selectElement || !valorBuscado) return;
-    let valorAUsar = String(valorBuscado).trim();
+    const valorBuscadoStr = String(valorBuscado).trim().toLowerCase();
 
-    // 🟢 TRADUCTOR INTELIGENTE PARA DEPARTAMENTOS:
-    // Si es el selector de departamento, resolvemos si el valor guardado es largo o corto
-    if (selectElement.id === 'select-SRIModNomC' && window._catDepartamentos) {
-        const depEncontrado = window._catDepartamentos.find(d => 
-            String(d.SRIModNomC || '').trim().toLowerCase() === valorAUsar.toLowerCase() ||
-            String(d.SRIModNom || '').trim().toLowerCase() === valorAUsar.toLowerCase()
-        );
-        if (depEncontrado && depEncontrado.SRIModNomC) {
-            valorAUsar = String(depEncontrado.SRIModNomC).trim();
-        }
-    }
-
-    const limpioBuscado = valorAUsar.toLowerCase();
     let encontrado = false;
 
-    // 1. Coincidencia exacta con el valor (value) o el texto visible
+    // Recorremos todas las opciones del select buscando coincidencias por value o por texto visible
     for (let option of selectElement.options) {
         const valOpt = String(option.value || '').trim().toLowerCase();
         const txtOpt = String(option.text || '').trim().toLowerCase();
 
-        if (valOpt === limpioBuscado || txtOpt === limpioBuscado || txtOpt.startsWith(limpioBuscado + ' -')) {
+        // Comparamos si el valor buscado coincide con el value, o si el texto incluye el valor buscado (o al revés)
+        if (valOpt === valorBuscadoStr || txtOpt === valorBuscadoStr || txtOpt.includes(valorBuscadoStr) || valorBuscadoStr.includes(valOpt)) {
             selectElement.value = option.value;
             selectElement.dispatchEvent(new Event('change'));
             encontrado = true;
@@ -60,17 +48,15 @@ function seleccionarOpcionFlexible(selectElement, valorBuscado) {
         }
     }
 
-    // 2. Coincidencia parcial de respaldo
-    if (!encontrado) {
-        for (let option of selectElement.options) {
-            const valOpt = String(option.value || '').trim().toLowerCase();
-            const txtOpt = String(option.text || '').trim().toLowerCase();
-
-            if (valOpt.includes(limpioBuscado) || limpioBuscado.includes(valOpt) || txtOpt.includes(limpioBuscado)) {
-                selectElement.value = option.value;
-                selectElement.dispatchEvent(new Event('change'));
-                break;
-            }
+    // PLAN DE RESPALDO PARA DEPARTAMENTOS: Si viene el nombre largo y no hizo match, buscamos en el catálogo global
+    if (!encontrado && selectElement.id === 'select-SRIModNomC' && window._catDepartamentos) {
+        const depMatch = window._catDepartamentos.find(d => 
+            String(d.SRIModNom || '').trim().toLowerCase() === valorBuscadoStr ||
+            String(d.SRIModNomC || '').trim().toLowerCase() === valorBuscadoStr
+        );
+        if (depMatch && depMatch.SRIModNomC) {
+            selectElement.value = String(depMatch.SRIModNomC).trim();
+            selectElement.dispatchEvent(new Event('change'));
         }
     }
 }
