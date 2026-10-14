@@ -38,18 +38,28 @@ function poblarSelectoresCascada(regSeleccionada = '', centroSeleccionado = '', 
             return `<option value="${idR}">${idR} - ${nomR}</option>`;
         }).join('');
 
-    // 2. Llenar Departamentos si existe el selector
+    // 2. Llenar Departamentos si existe el selector usando el nombre corto como valor
     if (selectDepto) {
         const deptosArray = Array.isArray(window._catDepartamentos) ? window._catDepartamentos : [];
         selectDepto.innerHTML = '<option value="" disabled selected>Seleccione un departamento...</option>' +
             deptosArray.map(d => {
-                // Mostramos únicamente el nombre completo limpio
-                const nomDep = String(d.SRIModNom || d.SRIModNomC || d.nomDep || d.nombre || '').trim();
-                return `<option value="${nomDep}">${nomDep}</option>`;
+                const claveCorta = String(d.SRIModNomC || d.claveDep || d.id || '').trim();
+                const nombreLargo = String(d.SRIModNom || d.SRIDepDesc || d.nombre || claveCorta).trim();
+                
+                return `<option value="${claveCorta}">${nombreLargo}</option>`;
             }).join('');
 
         if (deptoSeleccionado) {
-            selectDepto.value = deptoSeleccionado;
+            // Buscamos coincidencia flexible por si viene en nombre largo o corto
+            const matchDep = deptosArray.find(d => 
+                String(d.SRIModNomC || '').trim().toLowerCase() === String(deptoSeleccionado).trim().toLowerCase() ||
+                String(d.SRIModNom || '').trim().toLowerCase() === String(deptoSeleccionado).trim().toLowerCase()
+            );
+            if (matchDep && matchDep.SRIModNomC) {
+                selectDepto.value = String(matchDep.SRIModNomC).trim();
+            } else {
+                selectDepto.value = deptoSeleccionado;
+            }
         }
     }
 
