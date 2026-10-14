@@ -127,9 +127,19 @@ async function guardarOActualizarPersonal(event) {
         datosEmpleado.SRISitId = '0';
     }
 
-    // 🟢 Extraemos únicamente la clave o nombre corto del departamento si viene formateado
-    if (datosEmpleado.SRIModNomC) {
-        datosEmpleado.SRIModNomC = extraerClave(datosEmpleado.SRIModNomC);
+    // 🟢 TRADUCTOR DE RESPALDO: Garantizamos que en SRIModNomC viaje SIEMPRE el nombre corto
+    if (datosEmpleado.SRIModNomC && window._catDepartamentos) {
+        const valActual = String(datosEmpleado.SRIModNomC).trim().toLowerCase();
+        
+        // Buscamos el departamento coincidente en el catálogo
+        const deptoEncontrado = window._catDepartamentos.find(d => 
+            String(d.SRIModNomC || '').trim().toLowerCase() === valActual ||
+            String(d.SRIModNom || '').trim().toLowerCase() === valActual
+        );
+
+        if (deptoEncontrado && deptoEncontrado.SRIModNomC) {
+            datosEmpleado.SRIModNomC = String(deptoEncontrado.SRIModNomC).trim();
+        }
     }
 
     const existe = window._empleadosCache.some(e => String(e.SRIPerNumE).trim() === String(datosEmpleado.SRIPerNumE).trim());
