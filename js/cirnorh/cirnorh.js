@@ -251,6 +251,11 @@ window.addEventListener('popstate', (event) => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Intentamos cargar los datos y asegurarnos de que la caché o la red respondan
     await cargarDatosDelSistema();
-    await procesarCargaInicialSeccionRh();
+    
+    // Damos un respiro de 150ms para que el DOM y las dependencias globales terminen de enlazarse
+    setTimeout(async () => {
+        await procesarCargaInicialSeccionRh();
+    }, 150);
 });
