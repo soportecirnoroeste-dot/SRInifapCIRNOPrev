@@ -110,30 +110,30 @@ window.RhAsisCasc = {
                             </h4>
 
                             <div class="flex flex-wrap items-end gap-3">
-                                    <div class="flex flex-col gap-1">
-                                        <label for="filtroFechaDesde" class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">De</label>
-                                        <input type="date" id="filtroFechaDesde" onchange="RhAsisCasc.aplicarFiltrosCombinados()"
-                                            class="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] text-stone-700 shadow-xs cursor-pointer">
-                                    </div>
-
-                                    <div class="flex flex-col gap-1">
-                                        <label for="filtroFechaHasta" class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Hasta</label>
-                                        <input type="date" id="filtroFechaHasta" onchange="RhAsisCasc.aplicarFiltrosCombinados()"
-                                            class="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] text-stone-700 shadow-xs cursor-pointer">
-                                    </div>
-
-                                    <div class="flex flex-col gap-1">
-                                        <label for="filtroCentroBio" class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Centro</label>
-                                        <input type="text" id="filtroCentroBio" oninput="RhAsisCasc.aplicarFiltrosCombinados()" placeholder="Centro..."
-                                            class="w-32 px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] transition-all shadow-xs text-stone-700">
-                                    </div>
-
-                                    <div class="flex flex-col gap-1">
-                                        <label for="filtroNumEmpBio" class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">N° Empleado</label>
-                                        <input type="text" id="filtroNumEmpBio" oninput="RhAsisCasc.aplicarFiltrosCombinados()" placeholder="Núm..."
-                                            class="w-32 px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] transition-all shadow-xs text-stone-700">
-                                    </div>
+                                <div class="flex flex-col gap-1">
+                                    <label for="filtroFechaDesde" class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">De</label>
+                                    <input type="date" id="filtroFechaDesde" onchange="RhAsisCasc.aplicarFiltrosCombinados()"
+                                        class="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] text-stone-700 shadow-xs cursor-pointer">
                                 </div>
+
+                                <div class="flex flex-col gap-1">
+                                    <label for="filtroFechaHasta" class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Hasta</label>
+                                    <input type="date" id="filtroFechaHasta" onchange="RhAsisCasc.aplicarFiltrosCombinados()"
+                                        class="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] text-stone-700 shadow-xs cursor-pointer">
+                                </div>
+
+                                <div class="flex flex-col gap-1">
+                                    <label for="filtroCentroBio" class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Centro</label>
+                                    <input type="text" id="filtroCentroBio" oninput="RhAsisCasc.aplicarFiltrosCombinados()" placeholder="Centro..."
+                                        class="w-32 px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] transition-all shadow-xs text-stone-700">
+                                </div>
+
+                                <div class="flex flex-col gap-1">
+                                    <label for="filtroNumEmpBio" class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">N° Empleado</label>
+                                    <input type="text" id="filtroNumEmpBio" oninput="RhAsisCasc.aplicarFiltrosCombinados()" placeholder="Núm..."
+                                        class="w-32 px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] transition-all shadow-xs text-stone-700">
+                                </div>
+                            </div>
                         </div>
 
                         <div id="gridContentBio" class="max-h-[500px] overflow-y-auto overflow-x-auto custom-scrollbar">
@@ -155,8 +155,8 @@ window.RhAsisCasc = {
             </div>
         `;
 
-        if (window.RhAsisFBio) {
-            window.RhAsisFBio.groupedData = {};
+        if (window.RhAsisForm) {
+            window.RhAsisForm.groupedData = {};
         }
         RhAsisCasc.registrosBiometrico = [];
 
@@ -165,33 +165,35 @@ window.RhAsisCasc = {
 
     cargarDatosDesdeSheets: async function () {
         try {
-            if (typeof FetchAPI !== 'function') return;
+            const apiCall = window.callAppsScript || window.FetchAPI;
+            if (!apiCall) return;
 
             const claveCentroActivo = RhAsisCasc.obtenerClaveCentroActual ? String(RhAsisCasc.obtenerClaveCentroActual()).trim() : "";
             const cacheKey = `biometrico_registros_${claveCentroActivo || 'general'}`;
 
             const datosEnCache = sessionStorage.getItem(cacheKey);
             if (datosEnCache) {
-                console.log("⚡ Cargando datos del biométrico desde la caché en memoria...");
                 RhAsisCasc.registrosBiometrico = JSON.parse(datosEnCache);
                 RhAsisCasc.renderGrid(RhAsisCasc.registrosBiometrico);
                 return;
             }
 
-            const res = await FetchAPI("obtenerTodosLosRegistrosPlano", {
+            const res = await apiCall("obtenerTodosLosRegistrosPlano", {
                 claveCentro: claveCentroActivo,
                 centro: claveCentroActivo
             });
 
-            if (res && res.success && Array.isArray(res.registros)) {
-                RhAsisCasc.registrosBiometrico = res.registros;
-                sessionStorage.setItem(cacheKey, JSON.stringify(res.registros));
+            if (res && (res.success || Array.isArray(res))) {
+                const registrosData = Array.isArray(res) ? res : (res.registros || res.data || []);
+                RhAsisCasc.registrosBiometrico = registrosData;
+                sessionStorage.setItem(cacheKey, JSON.stringify(registrosData));
                 RhAsisCasc.renderGrid(RhAsisCasc.registrosBiometrico);
             } else {
                 RhAsisCasc.registrosBiometrico = [];
                 RhAsisCasc.renderGrid([]);
             }
         } catch (e) {
+            console.error("Error al cargar biométrico:", e);
             RhAsisCasc.registrosBiometrico = [];
             RhAsisCasc.renderGrid([]);
         }
@@ -203,23 +205,20 @@ window.RhAsisCasc = {
 
         const labelCarga = document.getElementById('labelCargaDatos');
         const textCarga = document.getElementById('textoCargaBtn');
+        const apiCall = window.callAppsScript || window.FetchAPI;
 
         try {
             if (labelCarga) {
                 labelCarga.classList.remove('cursor-pointer', 'bg-[#249444]', 'hover:bg-[#1e7a37]');
                 labelCarga.classList.add('bg-stone-400', 'cursor-wait');
             }
-            if (textCarga) {
-                textCarga.innerText = "Analizando...";
+            if (textCarga) textCarga.innerText = "Analizando...";
+
+            if (window.RhAsisForm && typeof RhAsisForm.manejarCargaArchivo === 'function') {
+                await RhAsisForm.manejarCargaArchivo(input);
             }
 
-            if (window.RhAsisFBio && typeof RhAsisFBio.manejarCargaArchivo === 'function') {
-                await RhAsisFBio.manejarCargaArchivo(input);
-            } else if (window.RhAsisFBio && typeof RhAsisFBio.procesarArchivoBiometrico === 'function') {
-                await RhAsisFBio.procesarArchivoBiometrico(file);
-            }
-
-            if (!window.RhAsisFBio || !window.RhAsisFBio.groupedData || Object.keys(window.RhAsisFBio.groupedData).length === 0) {
+            if (!window.RhAsisForm || !window.RhAsisForm.groupedData || Object.keys(window.RhAsisForm.groupedData).length === 0) {
                 alert("El archivo se leyó pero no se encontraron datos válidos.");
                 return;
             }
@@ -227,24 +226,21 @@ window.RhAsisCasc = {
             let primerNumEmp = "";
             let rawFecha = "";
 
-            const primerId = Object.keys(RhAsisFBio.groupedData)[0];
-            if (primerId && RhAsisFBio.groupedData[primerId].rows && RhAsisFBio.groupedData[primerId].rows.length > 0) {
-                const primeraFila = RhAsisFBio.groupedData[primerId].rows[0];
+            const primerId = Object.keys(RhAsisForm.groupedData)[0];
+            if (primerId && RhAsisForm.groupedData[primerId].rows && RhAsisForm.groupedData[primerId].rows.length > 0) {
+                const primeraFila = RhAsisForm.groupedData[primerId].rows[0];
                 primerNumEmp = primeraFila[0] || "";
                 rawFecha = primeraFila[8] || primeraFila[7] || "";
             }
 
             if (!rawFecha) {
                 alert("⚠️ No se pudo detectar la fecha en el archivo.");
-                window.RhAsisFBio.groupedData = {};
+                window.RhAsisForm.groupedData = {};
                 return;
             }
 
             let fechaNormalizada = RhAsisCasc.normalizarFechaFiltro(rawFecha);
-
-            if (textCarga) {
-                textCarga.innerText = "Verificando...";
-            }
+            if (textCarga) textCarga.innerText = "Verificando...";
 
             let claveCentroSeleccionado = RhAsisCasc.obtenerClaveCentroActual();
             if (!claveCentroSeleccionado) {
@@ -254,33 +250,30 @@ window.RhAsisCasc = {
 
             if (!claveCentroSeleccionado) {
                 alert("⚠️ Por favor selecciona un Centro de Trabajo válido en el panel principal antes de continuar.");
-                window.RhAsisFBio.groupedData = {};
+                window.RhAsisForm.groupedData = {};
                 return;
             }
 
-            if (typeof FetchAPI === 'function') {
-                const verificacion = await FetchAPI("verificarFechaBiometrico", {
-                    action: "verificarFechaBiometrico",
+            if (apiCall) {
+                const verificacion = await apiCall("verificarFechaBiometrico", {
                     numEmp: primerNumEmp,
                     fecha: fechaNormalizada
                 });
                 const yaExiste = verificacion && (verificacion.existe === true || verificacion.existe === "true");
 
                 if (yaExiste) {
-                    window.RhAsisFBio.groupedData = {};
-                    alert(`🛑 Los datos de los empleados para el periodo del formato ya fueron cargados anteriormente.`);
+                    window.RhAsisForm.groupedData = {};
+                    alert(`🛑 Los datos para este periodo ya fueron cargados anteriormente.`);
                     return;
                 } else {
-                    if (textCarga) {
-                        textCarga.innerText = "Guardando...";
-                    }
+                    if (textCarga) textCarga.innerText = "Guardando...";
 
-                    const rowsParaSheets = [];
-                    Object.keys(RhAsisFBio.groupedData).forEach(id => {
-                        const empleado = RhAsisFBio.groupedData[id];
+                    const rowsParaSql = [];
+                    Object.keys(RhAsisForm.groupedData).forEach(id => {
+                        const empleado = RhAsisForm.groupedData[id];
                         if (empleado && Array.isArray(empleado.rows)) {
                             empleado.rows.forEach(row => {
-                                rowsParaSheets.push([
+                                rowsParaSql.push([
                                     claveCentroSeleccionado,
                                     row[0] || "",
                                     row[4] || "",
@@ -298,33 +291,31 @@ window.RhAsisCasc = {
                         }
                     });
 
-                    const resultado = await FetchAPI("guardarBiometrico", {
-                        filas: rowsParaSheets
+                    const resultado = await apiCall("guardarBiometrico", {
+                        filas: rowsParaSql
                     });
 
                     if (resultado && resultado.success) {
                         sessionStorage.removeItem(`biometrico_registros_${claveCentroSeleccionado}`);
                         sessionStorage.removeItem(`biometrico_registros_general`);
 
-                        alert(`✅ ¡Datos cargados y guardados exitosamente para el centro ${claveCentroSeleccionado} (${rowsParaSheets.length} registros)!`);
+                        alert(`✅ ¡Datos cargados y guardados exitosamente en SQL Server (${rowsParaSql.length} registros)!`);
                         await RhAsisCasc.cargarDatosDesdeSheets();
                     } else {
-                        alert("⚠️ Aviso al guardar en Sheets: " + (resultado ? resultado.message : "Desconocido"));
+                        alert("⚠️ Aviso al guardar: " + (resultado ? resultado.message : "Desconocido"));
                     }
                 }
             }
-
         } catch (error) {
+            console.error(error);
             alert("❌ Ocurrió un error al procesar la validación y carga.");
-            if (window.RhAsisFBio) window.RhAsisFBio.groupedData = {};
+            if (window.RhAsisForm) window.RhAsisForm.groupedData = {};
         } finally {
             if (labelCarga) {
                 labelCarga.classList.remove('bg-stone-400', 'cursor-wait');
-                labelCarga.classList.add('bg-[#249444]', 'hover:bg-[#1b7033]', 'cursor-pointer');
+                labelCarga.classList.add('bg-[#249444]', 'hover:bg-[#1e7a37]', 'cursor-pointer');
             }
-            if (textCarga) {
-                textCarga.innerText = "Carga de Datos";
-            }
+            if (textCarga) textCarga.innerText = "Carga de Datos";
             input.value = "";
         }
     },
@@ -335,7 +326,6 @@ window.RhAsisCasc = {
         const contador = document.getElementById('contadorRegistrosBio');
 
         if (!gridContent) return;
-
         const headers = RhAsisCasc.rawHeaderGlobal;
 
         if (!listaRegistros || listaRegistros.length === 0) {
@@ -367,9 +357,7 @@ window.RhAsisCasc = {
             exportBtn.className = "px-4 py-2 bg-[#249444] hover:bg-[#1e7a37] text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer h-[34px]";
         }
 
-        if (contador) {
-            contador.innerText = `${listaRegistros.length}`;
-        }
+        if (contador) contador.innerText = `${listaRegistros.length}`;
 
         gridContent.innerHTML = `
             <table class="w-full text-[11px] text-left border-collapse min-w-[950px]">
@@ -378,29 +366,21 @@ window.RhAsisCasc = {
                 </thead>
                 <tbody class="divide-y divide-stone-100">
                     ${listaRegistros.map(r => {
-            const celdas = Array.isArray(r) ? [...r.slice(0, 12)] : headers.map(h => r[h] || "");
-
-            return `
-                        <tr class="bg-white hover:bg-stone-50 transition text-stone-700">
-                            ${celdas.map((c, index) => {
-                let val = c;
-
-                if (index === 2 || index === 3) {
-                    val = RhAsisCasc.extraerHoraLegible(val, false);
-                } else if (index === 4) {
-                    val = RhAsisCasc.extraerHoraLegible(val, true);
-                } else if (val instanceof Date) {
-                    val = val.toLocaleDateString();
-                } else if (typeof val === 'string' && val.includes('T') && val.length > 18 && !val.includes('1899-12-30')) {
-                    const d = new Date(val);
-                    if (!isNaN(d)) val = d.toLocaleDateString();
-                }
-
-                return `<td class="p-2.5 border-b border-stone-100 text-center whitespace-nowrap">${val !== null && val !== undefined && String(val).trim() !== '' ? val : ''}</td>`;
-            }).join('')}
-                        </tr>
-                    `;
-        }).join('')}
+                        const celdas = Array.isArray(r) ? [...r.slice(0, 12)] : headers.map(h => r[h] || "");
+                        return `
+                            <tr class="bg-white hover:bg-stone-50 transition text-stone-700">
+                                ${celdas.map((c, index) => {
+                                    let val = c;
+                                    if (index === 2 || index === 3) {
+                                        val = RhAsisCasc.extraerHoraLegible(val, false);
+                                    } else if (index === 4) {
+                                        val = RhAsisCasc.extraerHoraLegible(val, true);
+                                    }
+                                    return `<td class="p-2.5 border-b border-stone-100 text-center whitespace-nowrap">${val !== null && val !== undefined && String(val).trim() !== '' ? val : ''}</td>`;
+                                }).join('')}
+                            </tr>
+                        `;
+                    }).join('')}
                 </tbody>
             </table>
         `;
@@ -408,37 +388,21 @@ window.RhAsisCasc = {
 
     obtenerClaveCentroActual: function () {
         let clave = "";
-        const selectCentro = document.getElementById('filtro-campos-regional') || document.querySelector('select') || document.querySelector('[role="combobox"]');
+        const selectCentro = document.getElementById('filtro-campos-regional') || document.querySelector('select');
         if (selectCentro && selectCentro.value) {
             const matchVal = selectCentro.value.match(/^(\d+)/);
             clave = matchVal ? matchVal[1] : selectCentro.value;
         }
-
         if (!clave) {
-            clave = localStorage.getItem('centro_activo_actual') || localStorage.getItem('depto_activo_actual') || "";
+            clave = localStorage.getItem('centro_activo_actual') || "";
         }
-
         return String(clave).trim();
     },
 
     normalizarFechaFiltro: function (fechaStr) {
         if (!fechaStr) return "";
-        if (fechaStr instanceof Date) {
-            return fechaStr.toISOString().split('T')[0];
-        }
         let str = String(fechaStr).trim();
-        if (str.includes('T')) {
-            str = str.split('T')[0];
-        } else if (str.includes(' ')) {
-            str = str.split(' ')[0];
-        }
-        if (str.includes('/')) {
-            str = str.split(' ')[0];
-            const partes = str.split('/');
-            if (partes.length === 3) {
-                return `${partes[2]}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}`;
-            }
-        }
+        if (str.includes('T')) str = str.split('T')[0];
         return str;
     },
 
@@ -450,15 +414,13 @@ window.RhAsisCasc = {
 
         const filtrados = RhAsisCasc.registrosBiometrico.filter(row => {
             if (!Array.isArray(row)) return false;
-
             const centro = String(row[0] || "").toLowerCase();
             const numEmp = String(row[1] || "").toLowerCase();
             const fechaRegRaw = String(row[6] || "").trim();
-            const fechaRegNorm = RhAsisCasc.normalizarFiltroFecha ? RhAsisCasc.normalizarFiltroFecha(fechaRegRaw) : RhAsisCasc.normalizarFechaFiltro(fechaRegRaw);
+            const fechaRegNorm = RhAsisCasc.normalizarFechaFiltro(fechaRegRaw);
 
             if (centroFiltro && !centro.includes(centroFiltro)) return false;
             if (numEmpFiltro && !numEmp.includes(numEmpFiltro)) return false;
-
             if (fechaDesde && fechaRegNorm < fechaDesde) return false;
             if (fechaHasta && fechaRegNorm > fechaHasta) return false;
 
@@ -469,312 +431,14 @@ window.RhAsisCasc = {
     },
 
     obtenerRegistrosFiltradosActuales: function () {
-        const fechaDesdeInput = document.getElementById('filtroFechaDesde')?.value || "";
-        const fechaHastaInput = document.getElementById('filtroFechaHasta')?.value || "";
-        const numEmpFiltro = document.getElementById('filtroNumEmpBio')?.value.toLowerCase().trim() || "";
-        const centroFiltro = document.getElementById('filtroCentroBio')?.value.toLowerCase().trim() || "";
-
-        const valDesde = fechaDesdeInput ? parseInt(fechaDesdeInput.replace(/-/g, ''), 10) : null;
-        const valHasta = fechaHastaInput ? parseInt(fechaHastaInput.replace(/-/g, ''), 10) : null;
-
-        return RhAsisCasc.registrosBiometrico.filter(row => {
-            if (!Array.isArray(row)) return false;
-
-            const centro = String(row[0] || "").toLowerCase();
-            const numEmp = String(row[1] || "").toLowerCase();
-            const fechaRegRaw = String(row[6] || "").trim();
-
-            if (centroFiltro && !centro.includes(centroFiltro)) return false;
-            if (numEmpFiltro && !numEmp.includes(numEmpFiltro)) return false;
-
-            if (valDesde !== null || valHasta !== null) {
-                let fechaNum = null;
-                if (fechaRegRaw.includes('/')) {
-                    const partes = fechaRegRaw.split('/');
-                    if (partes.length === 3) {
-                        const d = partes[0].padStart(2, '0');
-                        const m = partes[1].padStart(2, '0');
-                        const y = partes[2];
-                        fechaNum = parseInt(`${y}${m}${d}`, 10);
-                    }
-                } else if (fechaRegRaw.includes('-')) {
-                    fechaNum = parseInt(fechaRegRaw.replace(/-/g, ''), 10);
-                }
-
-                if (fechaNum !== null) {
-                    if (valDesde !== null && fechaNum < valDesde) return false;
-                    if (valHasta !== null && fechaNum > valHasta) return false;
-                }
-            }
-
-            return true;
-        });
-    },
-
-    obtenerPersonalAsync: function () {
-        return new Promise(async (resolve) => {
-            if (typeof FetchAPI !== 'function') {
-                resolve([]);
-                return;
-            }
-
-            const posiblesAcciones = ["obtenerPersonalSheets", "obtenerPersonal", "obtenerEmpleados", "catalogoPersonal"];
-
-            for (const accion of posiblesAcciones) {
-                try {
-                    const res = await FetchAPI(accion, {});
-                    if (res && (res.success === true || Array.isArray(res))) {
-                        const lista = Array.isArray(res) ? res : (res.personal || res.registros || res.data || res.empleados || []);
-                        resolve(lista);
-                        return;
-                    }
-                } catch (e) {}
-            }
-
-            resolve([]);
-        });
+        return RhAsisCasc.registrosBiometrico;
     },
 
     exportarExcelCasc: async function () {
-        const exportBtn = document.getElementById('exportBtn');
-        const exportText = document.getElementById('exportText');
-        const exportIcon = document.getElementById('exportIcon');
-
-        try {
-            if (exportBtn) {
-                exportBtn.disabled = true;
-                exportBtn.classList.add('bg-stone-400', 'cursor-wait', 'opacity-80');
-                exportBtn.classList.remove('bg-[#249444]', 'hover:bg-[#1e7a37]', 'cursor-pointer');
-            }
-            if (exportText) {
-                exportText.innerText = "Generando archivo...";
-            }
-            if (exportIcon) {
-                exportIcon.outerHTML = `
-                    <svg id="exportIcon" class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
-                    </svg>
-                `;
-            }
-
-            const registrosAExportar = RhAsisCasc.obtenerRegistrosFiltradosActuales();
-            const numEmpFiltro = document.getElementById('filtroNumEmpBio')?.value.trim() || "";
-            const centroActual = RhAsisCasc.obtenerClaveCentroActual() || "General";
-
-            if (typeof ExcelJS === 'undefined') {
-                alert("❌ Error: La librería ExcelJS no está cargada en el HTML.");
-                return;
-            }
-
-            if (!RhAsisCasc.personalGlobal || RhAsisCasc.personalGlobal.length === 0) {
-                try {
-                    RhAsisCasc.personalGlobal = await RhAsisCasc.obtenerPersonalAsync();
-                } catch (err) {}
-            }
-
-            let imageBuffer = null;
-            try {
-                const response = await fetch('Logo.png');
-                if (response.ok) {
-                    imageBuffer = await response.arrayBuffer();
-                }
-            } catch (err) {}
-
-            const mapearRegistros = (lista) => {
-                return lista.map(r => {
-                    const celdas = Array.isArray(r) ? [...r] : RhAsisCasc.rawHeaderGlobal.map(h => r[h] || "");
-                    return celdas.map((c, index) => {
-                        let val = c;
-                        if (index === 2 || index === 3) {
-                            val = RhAsisCasc.extraerHoraLegible(val, false);
-                        } else if (index === 4) {
-                            val = RhAsisCasc.extraerHoraLegible(val, true);
-                        } else if (val instanceof Date) {
-                            val = val.toLocaleDateString();
-                        } else if (typeof val === 'string' && val.includes('T') && val.length > 18 && !val.includes('1899-12-30')) {
-                            const d = new Date(val);
-                            if (!isNaN(d)) val = d.toLocaleDateString();
-                        }
-                        return val !== null && val !== undefined ? val : "";
-                    });
-                });
-            };
-
-            let gruposAProcesar = {};
-            if (!numEmpFiltro) {
-                registrosAExportar.forEach(row => {
-                    const empId = String(row[1] || "S_N").trim();
-                    if (!gruposAProcesar[empId]) gruposAProcesar[empId] = [];
-                    gruposAProcesar[empId].push(row);
-                });
-            } else {
-                gruposAProcesar[`Emp_${numEmpFiltro}`] = registrosAExportar;
-            }
-
-            const chavesGrupos = Object.keys(gruposAProcesar);
-            if (chavesGrupos.length === 0) {
-                alert("No hay registros para exportar con los filtros actuales.");
-                return;
-            }
-
-            const wb = new ExcelJS.Workbook();
-            const fondoHoja = "FFFFFF";
-
-            for (const key of chavesGrupos) {
-                const rowsMapeadas = mapearRegistros(gruposAProcesar[key]);
-                let etiquetaEmp = numEmpFiltro ? numEmpFiltro : key.replace(/^Emp_/, '');
-
-                let nombreEmpleadoEncontrado = "";
-                const catalogoPersonal = RhAsisCasc.personalGlobal || [];
-
-                if (catalogoPersonal && catalogoPersonal.length > 0) {
-                    const empleadoMatch = catalogoPersonal.find(emp => {
-                        let numEmpFila = "";
-                        if (Array.isArray(emp)) {
-                            numEmpFila = String(emp[0] || emp[1] || "").trim();
-                        } else if (emp && typeof emp === 'object') {
-                            numEmpFila = String(emp.numEmp || emp.claveReg || emp.num_emp || "").trim();
-                        }
-                        const numEmpBuscado = etiquetaEmp !== undefined && etiquetaEmp !== null ? String(etiquetaEmp).trim() : "";
-                        return numEmpFila === numEmpBuscado;
-                    });
-
-                    if (empleadoMatch) {
-                        if (Array.isArray(empleadoMatch)) {
-                            nombreEmpleadoEncontrado = String(empleadoMatch[1] || empleadoMatch[2] || "").trim();
-                        } else {
-                            nombreEmpleadoEncontrado = String(empleadoMatch.nombre || empleadoMatch.nombreEmpleado || "").trim();
-                        }
-                    }
-                }
-
-                const textoIncidencias = nombreEmpleadoEncontrado
-                    ? `INCIDENCIAS DEL EMPLEADO: ${etiquetaEmp} - ${nombreEmpleadoEncontrado}`
-                    : `INCIDENCIAS DEL EMPLEADO: ${etiquetaEmp}`;
-
-                const nombrePestana = `${etiquetaEmp}`.replace(/[*?/\\[]]/g, '').substring(0, 31);
-
-                const ws = wb.addWorksheet(nombrePestana);
-                ws.views = [{ showGridLines: false }];
-
-                if (imageBuffer) {
-                    const imageId = wb.addImage({
-                        buffer: imageBuffer,
-                        extension: 'png',
-                    });
-
-                    ws.addImage(imageId, {
-                        tl: { col: 0, row: 0 },
-                        br: { col: 2, row: 4 }
-                    });
-                }
-
-                ws.mergeCells('C1:J1');
-                ws.getCell('C1').value = "INSTITUTO NACIONAL DE INVESTIGACIONES FORESTALES AGRÍCOLAS Y PECUARIAS";
-                ws.getCell('C1').font = { name: 'Arial', sz: 9, bold: true, color: { argb: '000000' } };
-                ws.getCell('C1').alignment = { vertical: 'middle', horizontal: 'center' };
-
-                ws.mergeCells('C2:J2');
-                ws.getCell('C2').value = "COORDINACIÓN DE ADMINISTRACIÓN Y SISTEMAS";
-                ws.getCell('C2').font = { name: 'Arial', sz: 8.5, bold: true, color: { argb: '000000' } };
-                ws.getCell('C2').alignment = { vertical: 'middle', horizontal: 'center' };
-
-                ws.mergeCells('C3:J3');
-                ws.getCell('C3').value = "DIRECCIÓN DE DESARROLLO HUMANO Y PROFESIONALIZACIÓN";
-                ws.getCell('C3').font = { name: 'Arial', sz: 8.5, bold: true, color: { argb: '000000' } };
-                ws.getCell('C3').alignment = { vertical: 'middle', horizontal: 'center' };
-
-                ws.mergeCells('C4:J4');
-                ws.getCell('C4').value = textoIncidencias;
-                ws.getCell('C4').font = { name: 'Arial', sz: 8.5, bold: true, color: { argb: '000000' } };
-                ws.getCell('C4').alignment = { vertical: 'middle', horizontal: 'center' };
-
-                ws.mergeCells('C5:J5');
-                ws.getCell('C5').value = "Reporte: RH_CONTROL_ASISTENCIA_CASC";
-                ws.getCell('C5').font = { name: 'Arial', sz: 8.5, bold: true, color: { argb: '000000' } };
-                ws.getCell('C5').alignment = { vertical: 'middle', horizontal: 'center' };
-
-                const headerRowIndex = 7;
-                ws.getRow(headerRowIndex).values = RhAsisCasc.rawHeaderGlobal;
-
-                ws.getRow(headerRowIndex).eachCell((cell) => {
-                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D9D9D9' } };
-                    cell.font = { name: 'Arial', sz: 9, bold: true, color: { argb: '000000' } };
-                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
-                    cell.border = { top: { style: 'thin', color: { argb: 'B0B0B0' } }, bottom: { style: 'thin', color: { argb: 'B0B0B0' } }, left: { style: 'thin', color: { argb: 'B0B0B0' } }, right: { style: 'thin', color: { argb: 'B0B0B0' } } };
-                });
-
-                rowsMapeadas.forEach((dRow, idx) => {
-                    const rowIndex = headerRowIndex + 1 + idx;
-                    const row = ws.getRow(rowIndex);
-                    row.values = dRow;
-
-                    let bgColor = fondoHoja;
-                    let fontColor = "000000";
-                    let isBold = false;
-
-                    if (dRow[11]) {
-                        bgColor = "FF0000"; fontColor = "FFFFFF"; isBold = true;
-                    } else if (dRow[10]) {
-                        bgColor = "E46C0A"; fontColor = "FFFFFF"; isBold = true;
-                    } else if (dRow[9]) {
-                        bgColor = "FFC000"; isBold = true;
-                    } else if (dRow[8]) {
-                        bgColor = "FFFF00"; isBold = true;
-                    }
-
-                    row.eachCell((cell) => {
-                        cell.font = { name: 'Arial', sz: 9, bold: isBold, color: { argb: fontColor } };
-                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
-                        cell.alignment = { vertical: 'middle', horizontal: 'center' };
-                        cell.border = { top: { style: 'thin', color: { argb: 'E0E0E0' } }, bottom: { style: 'thin', color: { argb: 'E0E0E0' } }, left: { style: 'thin', color: { argb: 'E0E0E0' } }, right: { style: 'thin', color: { argb: 'E0E0E0' } } };
-                    });
-                });
-
-                ws.columns.forEach((column, colIndex) => {
-                    if (colIndex === 0) { column.width = 16; return; }
-                    if (colIndex === 1) { column.width = 16; return; }
-                    let maxLength = 10;
-                    column.eachCell({ includeEmpty: false }, (cell, rowNum) => {
-                        if (rowNum >= 7) {
-                            const columnLength = cell.value ? String(cell.value).length : 10;
-                            if (columnLength > maxLength) maxLength = columnLength;
-                        }
-                    });
-                    column.width = maxLength + 3;
-                });
-            }
-
-            const buffer = await wb.xlsx.writeBuffer();
-            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            const url = window.URL.createObjectURL(blob);
-
-            const anchor = document.createElement('a');
-            anchor.href = url;
-            anchor.download = `RepBiometrico_${centroActual}_${numEmpFiltro ? `${numEmpFiltro}` : "General"}.xlsx`;
-
-            document.body.appendChild(anchor);
-            anchor.click();
-            document.body.removeChild(anchor);
-
-            window.URL.revokeObjectURL(url);
-        } catch (err) {
-            alert("Ocurrió un error al compilar el archivo .xlsx: " + err.message);
-        } finally {
-            if (exportBtn) {
-                exportBtn.disabled = false;
-                exportBtn.classList.remove('bg-stone-400', 'cursor-wait', 'opacity-80');
-                exportBtn.classList.add('bg-[#249444]', 'hover:bg-[#1e7a37]', 'cursor-pointer');
-            }
-            if (exportText) {
-                exportText.innerText = "Exportar Información";
-            }
-            const currentIcon = document.getElementById('exportIcon');
-            if (currentIcon) {
-                currentIcon.outerHTML = `
-                    <svg id="exportIcon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-down"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg>
-                `;
-            }
+        if (typeof RhAsisForm !== 'undefined' && typeof RhAsisForm.exportarExcel === 'function') {
+            RhAsisForm.exportarExcel();
+        } else {
+            alert("Módulo de exportación Excel no disponible.");
         }
     }
 };
