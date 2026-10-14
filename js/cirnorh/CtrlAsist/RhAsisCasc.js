@@ -155,11 +155,7 @@ window.RhAsisCasc = {
             </div>
         `;
 
-        if (window.RhAsisForm) {
-            window.RhAsisForm.groupedData = {};
-        }
         RhAsisCasc.registrosBiometrico = [];
-
         await RhAsisCasc.cargarDatosDesdeSheets();
     },
 
@@ -212,39 +208,80 @@ window.RhAsisCasc = {
                 labelCarga.classList.remove('cursor-pointer', 'bg-[#249444]', 'hover:bg-[#1e7a37]');
                 labelCarga.classList.add('bg-stone-400', 'cursor-wait');
             }
-            if (textCarga) textCarga.innerText = "Analizando...";
+            if (textCarga) textCarga.innerText = "Leyendo archivo...";
 
-            if (window.RhAsisForm && typeof RhAsisForm.manejarCargaArchivo === 'function') {
-                await RhAsisForm.manejarCargaArchivo(input);
+            // 🟢 Lectura directa y robusta del Excel aquí mismo
+            const rows = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const data = new Uint8Array(evt.target.result);
+                        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const parsedRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+                        resolve(parsedRows);
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.onerror = (error) => reject(error);
+                reader.readAsArrayBuffer(file);
+            });
+
+            if (!rows || rows.length === 0) {
+                alert("El archivo Excel está vacío.");
+                return;
             }
 
-            if (!window.RhAsisForm || !window.RhAsisForm.groupedData || Object.keys(window.RhAsisForm.groupedData).length === 0) {
+            // Filtrar y extraer filas de datos válidas ignorando encabezados vacíos o texto institucional
+            const filasValidas = [];
+            let rawFechaDetectada = "";
+
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                if (!row || row.length === 0 || row.every(c => c === "")) continue;
+
+                // Detectar si es una línea con datos (si tiene texto o números en las primeras columnas)
+                const col0 = String(row[0] || "").trim();
+                const col1 = String(row[1] || "").trim();
+
+                // Ignorar filas de títulos institucionales
+                const rowText = row.join(" ").toLowerCase();
+                if (rowText.includes('instituto') || rowText.includes('coordinación') || rowText.includes('dirección') || rowText.includes('reporte') || rowText.includes('núm. emp')) {
+                    continue;
+                }
+
+                if (col0 !== "" || col1 !== "") {
+                    // Asegurar que tenga al menos 12 columnas para la tabla SRICtrlAsi
+                    while (row.length < 12) {
+                        row.push("");
+                    }
+                    filasValidas.push(row);
+
+                    // Intentar capturar una fecha de referencia
+                    if (!rawFechaDetectada) {
+                        for (let c = 0; c < row.length; c++) {
+                            const val = String(row[c] || "");
+                            if (val.includes('-') || val.includes('/') || val.length >= 8) {
+                                rawFechaDetectada = val;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (filasValidas.length === 0) {
                 alert("El archivo se leyó pero no se encontraron datos válidos.");
                 return;
             }
 
-            let primerNumEmp = "";
-            let rawFecha = "";
-
-            const primerId = Object.keys(RhAsisForm.groupedData)[0];
-            if (primerId && RhAsisForm.groupedData[primerId].rows && RhAsisForm.groupedData[primerId].rows.length > 0) {
-                const primeraFila = RhAsisForm.groupedData[primerId].rows[0];
-                primerNumEmp = primeraFila[0] || primeraFila[1] || "";
-                // Búsqueda flexible de fecha en cualquier celda de la fila que contenga un string largo o formato
-                for (let c = 0; c < primeraFila.length; c++) {
-                    const val = String(primeraFila[c] || "");
-                    if (val.includes('-') || val.includes('/') || val.length >= 8) {
-                        rawFecha = val;
-                        break;
-                    }
-                }
-                if (!rawFecha) rawFecha = primeraFila[6] || new Date().toISOString();
+            if (!rawFechaDetectada) {
+                rawFechaDetectada = new Date().toISOString().split('T')[0];
             }
 
-            let fechaNormalizada = RhAsisCasc.normalizarFechaFiltro(rawFecha);
-            if (!fechaNormalizada) {
-                fechaNormalizada = new Date().toISOString().split('T')[0];
-            }
+            let fechaNormalizada = RhAsisCasc.normalizarFechaFiltro(rawFechaDetectada);
+            let primerNumEmp = String(filasValidas[0][0] || filasValidas[0][1] || "0").trim();
 
             if (textCarga) textCarga.innerText = "Verificando...";
 
@@ -256,7 +293,6 @@ window.RhAsisCasc = {
 
             if (!claveCentroSeleccionado) {
                 alert("⚠️ Por favor selecciona un Centro de Trabajo válido en el panel principal antes de continuar.");
-                window.RhAsisForm.groupedData = {};
                 return;
             }
 
@@ -268,34 +304,25 @@ window.RhAsisCasc = {
                 const yaExiste = verificacion && (verificacion.existe === true || verificacion.existe === "true");
 
                 if (yaExiste) {
-                    window.RhAsisForm.groupedData = {};
                     alert(`🛑 Los datos para este periodo ya fueron cargados anteriormente.`);
                     return;
                 } else {
                     if (textCarga) textCarga.innerText = "Guardando...";
 
-                    const rowsParaSql = [];
-                    Object.keys(RhAsisForm.groupedData).forEach(id => {
-                        const empleado = RhAsisForm.groupedData[id];
-                        if (empleado && Array.isArray(empleado.rows)) {
-                            empleado.rows.forEach(row => {
-                                rowsParaSql.push([
-                                    claveCentroSeleccionado,
-                                    row[0] || "",
-                                    row[4] || "",
-                                    row[5] || "",
-                                    row[6] || "",
-                                    row[7] || "",
-                                    row[8] || "",
-                                    row[9] || "",
-                                    row[10] || "",
-                                    row[11] || "",
-                                    row[12] || "",
-                                    row[13] || ""
-                                ]);
-                            });
-                        }
-                    });
+                    const rowsParaSql = filasValidas.map(row => [
+                        claveCentroSeleccionado,
+                        row[0] || "",
+                        row[4] || "",
+                        row[5] || "",
+                        row[6] || "",
+                        row[7] || "",
+                        row[8] || "",
+                        row[9] || "",
+                        row[10] || "",
+                        row[11] || "",
+                        row[12] || "",
+                        row[13] || ""
+                    ]);
 
                     const resultado = await apiCall("guardarBiometrico", {
                         filas: rowsParaSql
@@ -314,8 +341,7 @@ window.RhAsisCasc = {
             }
         } catch (error) {
             console.error(error);
-            alert("❌ Ocurrió un error al procesar la validación y carga.");
-            if (window.RhAsisForm) window.RhAsisForm.groupedData = {};
+            alert("❌ Ocurrió un error al procesar la validación y carga del archivo.");
         } finally {
             if (labelCarga) {
                 labelCarga.classList.remove('bg-stone-400', 'cursor-wait');
