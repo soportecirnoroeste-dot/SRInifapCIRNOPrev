@@ -34,7 +34,6 @@ async function cargarDatosDelSistema() {
             };
             window.allSubModulosData = listaSubmodulos;
 
-            // Guardamos automáticamente en el localStorage para futuras recargas fluidas
             try {
                 localStorage.setItem('sistema_cache_datos', JSON.stringify(respuesta));
             } catch (err) {
@@ -69,7 +68,6 @@ async function cargarDatosDelSistema() {
         console.error("❌ Error al leer la caché local:", err);
     }
 
-    // Si de plano no hay nada en ningún lado
     return { success: false, submodulos: [] };
 }
 
@@ -118,7 +116,6 @@ function ejecutarCargaSeccionRh(idOpt) {
     const opciones = configDepto.options || [];
     let optEncontrada = opciones.find(o => o.id === String(idOpt));
 
-    // PLAN DE RESPALDO: Si no se encuentra en las opciones dinámicas, buscamos por nombre genérico o ID común
     if (!optEncontrada && window.allSubModulosData && Array.isArray(window.allSubModulosData)) {
         const subModEncontrado = window.allSubModulosData.find(s => String(s.id || s.clave || s.seccion) === String(idOpt));
         if (subModEncontrado) {
@@ -126,7 +123,6 @@ function ejecutarCargaSeccionRh(idOpt) {
         }
     }
 
-    // Títulos predeterminados robustos según el ID o sección si todo lo demás falla
     let tituloFallback = "Módulo de Recursos Humanos";
     const idMinus = String(idOpt).toLowerCase();
     if (idMinus.includes('personal') || idMinus === 'per' || idMinus === '1') {
@@ -204,7 +200,7 @@ function renderizarVistaModuloRh(idOpt, tituloModulo) {
 }
 
 // ==========================================
-// CONTROLADOR MAESTRO DE NAVEGACIÓN E HISTORIAL (AJUSTADO)
+// CONTROLADOR MAESTRO DE NAVEGACIÓN E HISTORIAL (ÚNICO Y LIMPIO)
 // ==========================================
 async function procesarCargaInicialSeccionRh(event) {
     const urlParams = new URLSearchParams(window.location.search);
@@ -250,62 +246,12 @@ window.addEventListener('popstate', (event) => {
     procesarCargaInicialSeccionRh(event);
 });
 
-// Inicialización segura con reintento automático para la primera carga
-document.addEventListener('DOMContentLoaded', async () => {
-    await cargarDatosDelSistema();
-
-    // Pequeño ciclo de espera inteligente para garantizar que AppConfigUtils pinte los submódulos reales a la primera
-    let intentos = 0;
-    const maxIntentos = 10; // Máximo 1 segundo de espera total (10 x 100ms)
-    
-    const verificarYRenderizar = async () => {
-        const opcionesDinamicas = window.cirnorhConfig.options;
-        if ((opcionesDinamicas && opcionesDinamicas.length > 0) || intentos >= maxIntentos) {
-            await procesarCargaInicialSeccionRh();
-        } else {
-            intentos++;
-            setTimeout(verificarYRenderizar, 100);
-        }
-    };
-
-    verificarYRenderizar();
-});
-
-window.addEventListener('popstate', (event) => {
-    procesarCargaInicialSeccionRh(event);
-});
-
-// Inicialización segura con reintento automático para la primera carga
-document.addEventListener('DOMContentLoaded', async () => {
-    await cargarDatosDelSistema();
-
-    // Pequeño ciclo de espera inteligente para garantizar que AppConfigUtils pinte los submódulos reales a la primera
-    let intentos = 0;
-    const maxIntentos = 10; // Máximo 1 segundo de espera total (10 x 100ms)
-    
-    const verificarYRenderizar = async () => {
-        const opcionesDinamicas = window.cirnorhConfig.options;
-        if ((opcionesDinamicas && opcionesDinamicas.length > 0) || intentos >= maxIntentos) {
-            await procesarCargaInicialSeccionRh();
-        } else {
-            intentos++;
-            setTimeout(verificarYRenderizar, 100);
-        }
-    };
-
-    verificarYRenderizar();
-});
-
-window.addEventListener('popstate', (event) => {
-    procesarCargaInicialSeccionRh(event);
-});
-
-// Inicialización segura con reintento automático para la primera carga
+// Inicialización segura única con reintento automático para la primera carga
 document.addEventListener('DOMContentLoaded', async () => {
     await cargarDatosDelSistema();
 
     let intentos = 0;
-    const maxIntentos = 10; // Máximo 1 segundo de espera total (10 x 100ms)
+    const maxIntentos = 15; // 15 intentos x 100ms = hasta 1.5 segundos de espera inteligente
     
     const verificarYRenderizar = async () => {
         const opcionesDinamicas = window.cirnorhConfig.options;
