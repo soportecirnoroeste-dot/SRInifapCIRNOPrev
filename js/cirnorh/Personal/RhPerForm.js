@@ -127,6 +127,11 @@ async function guardarOActualizarPersonal(event) {
         datosEmpleado.SRISitId = '0';
     }
 
+    // 🟢 Extraemos únicamente la clave o nombre corto del departamento si viene formateado
+    if (datosEmpleado.SRIModNomC) {
+        datosEmpleado.SRIModNomC = extraerClave(datosEmpleado.SRIModNomC);
+    }
+
     const existe = window._empleadosCache.some(e => String(e.SRIPerNumE).trim() === String(datosEmpleado.SRIPerNumE).trim());
     const actionName = existe ? 'actualizarPersonal' : 'guardarPersonal';
     const btnSubmit = form.querySelector('button[type="submit"]');
