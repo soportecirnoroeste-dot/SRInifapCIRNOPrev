@@ -30,13 +30,14 @@ async function mostrarFormularioNuevoPersonal() {
 
 function seleccionarOpcionFlexible(selectElement, valorBuscado) {
     if (!selectElement || !valorBuscado) return;
-    const limpioBuscado = extraerClave(valorBuscado);
+    const limpioBuscado = String(valorBuscado).trim().toLowerCase();
 
     for (let option of selectElement.options) {
-        const valorOpt = extraerClave(option.value);
-        const textoOpt = extraerClave(option.text);
+        const valOpt = String(option.value || '').trim().toLowerCase();
+        const txtOpt = String(option.text || '').trim().toLowerCase();
 
-        if (matchClave(valorOpt, limpioBuscado) || matchClave(textoOpt, limpioBuscado) || matchClave(option.value, valorBuscado)) {
+        // Compara si coincide el valor corto (value) o el texto visible
+        if (valOpt === limpioBuscado || txtOpt.includes(limpiuBuscado) || limpioBuscado.includes(valOpt)) {
             selectElement.value = option.value;
             selectElement.dispatchEvent(new Event('change'));
             return;
