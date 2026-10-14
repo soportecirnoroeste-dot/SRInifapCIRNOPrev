@@ -20,7 +20,7 @@ async function mostrarFormularioNuevoPersonal() {
 
         if (inputNumEmp) inputNumEmp.removeAttribute('readonly');
         if (titulo) titulo.innerHTML = `Capturar Nuevo Empleado`;
-
+        
         formContainer.classList.remove('hidden');
         if (gestionContainer) gestionContainer.classList.add('hidden');
         if (listadoContainer) listadoContainer.classList.add('hidden');
@@ -55,11 +55,11 @@ function cancelarEdicionPersonal() {
 function seleccionarOpcionFlexible(selectElement, valorBuscado) {
     if (!selectElement || !valorBuscado) return;
     const limpioBuscado = extraerClave(valorBuscado);
-
+    
     for (let option of selectElement.options) {
         const valorOpt = extraerClave(option.value);
         const textoOpt = extraerClave(option.text);
-
+        
         // Compara si coincide la clave numérica, el texto o el valor completo
         if (matchClave(valorOpt, limpioBuscado) || matchClave(textoOpt, limpioBuscado) || matchClave(option.value, valorBuscado)) {
             selectElement.value = option.value;
@@ -108,7 +108,7 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
         const centroVal = extraerClave(emp.SRICenId);
         let rawSit = extraerClave(emp.SRISitId);
         const sitVal = (!rawSit || rawSit === 0 || rawSit === '0' || String(rawSit).trim().toUpperCase() === 'N/A') ? 'N/A' : rawSit;
-
+        
         // Obtenemos el valor del departamento del empleado
         const depVal = String(emp.SRIModNomC || '').trim();
 
@@ -119,7 +119,7 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
 
         form.elements['SRIPerNumE'].value = limpiarValor(emp.SRIPerNumE);
         if (inputNumEmp) inputNumEmp.setAttribute('readonly', true);
-
+        
         form.elements['SRIPerNomE'].value = limpiarValor(emp.SRIPerNomE);
         form.elements['SRIPerNExt'].value = limpiarValor(emp.SRIPerNExt);
         form.elements['SRIPerNCel'].value = limpiarValor(emp.SRIPerNCel);
@@ -128,7 +128,7 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
         form.elements['SRIPerCP'].value = limpiarValor(emp.SRIPerCP);
         form.elements['SRIPerEml'].value = limpiarValor(emp.SRIPerEml);
         form.elements['SRIPerRFC'].value = limpiarValor(emp.SRIPerRFC);
-
+        
         // 3. Forzar selección explícita del puesto y departamento con un pequeño respiro (setTimeout)
         // Esto garantiza que el navegador haya terminado de renderizar las opciones del <select>
         setTimeout(() => {
@@ -163,7 +163,7 @@ async function guardarOActualizarPersonal(event) {
     }
 
     const existe = window._empleadosCache.some(e => String(e.SRIPerNumE).trim() === String(datosEmpleado.SRIPerNumE).trim());
-    const actionName = existe ? 'actualizarPersonal' : 'guardarPersonal';
+const actionName = existe ? 'actualizarPersonal' : 'guardarPersonal';
 
     const btnSubmit = form.querySelector('button[type="submit"]');
     if (btnSubmit) btnSubmit.disabled = true;
@@ -171,7 +171,7 @@ async function guardarOActualizarPersonal(event) {
     try {
         // CORRECCIÓN: Usamos callAppsScript en lugar de FetchAPI
         const res = await callAppsScript(actionName, datosEmpleado);
-
+        
         alert(res.message || "Guardado exitoso");
         ocultarFormularioPersonal();
         cargarDatosGenerales(true);
