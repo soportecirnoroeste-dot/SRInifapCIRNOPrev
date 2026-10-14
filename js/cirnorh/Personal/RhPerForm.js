@@ -169,8 +169,8 @@ async function guardarOActualizarPersonal(event) {
     if (btnSubmit) btnSubmit.disabled = true;
 
     try {
-        // CORRECCIÓN: Enviamos el objeto plano 'datosEmpleado' en lugar de FormData
-        const res = await FetchAPI(actionName, datosEmpleado);
+        // CORRECCIÓN: Usamos callAppsScript en lugar de FetchAPI
+        const res = await callAppsScript(actionName, datosEmpleado);
         
         alert(res.message || "Guardado exitoso");
         ocultarFormularioPersonal();
