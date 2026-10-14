@@ -85,7 +85,8 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
         return;
     }
 
-    await cargarCatalogosSheets();
+    // 1. Forzar la carga y renderizado de catálogos para asegurar que existan opciones en los selects
+    await cargarCatalogosSheets(true);
 
     const form = document.getElementById('form-nuevo-personal');
     const formContainer = document.getElementById('contenedor-formulario-personal');
@@ -99,7 +100,9 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
         const centroVal = extraerClave(emp.SRICenId);
         let rawSit = extraerClave(emp.SRISitId);
         const sitVal = (!rawSit || rawSit === '0' || String(rawSit).trim().toUpperCase() === 'N/A') ? 'N/A' : rawSit;
+        
         const depVal = String(emp.SRIModNomC || '').trim();
+        const ptoVal = String(emp.SRIPtoId || '').trim();
 
         if (typeof poblarSelectoresCascada === 'function') {
             poblarSelectoresCascada(regVal, centroVal, sitVal, depVal);
@@ -119,15 +122,29 @@ async function seleccionarEmpleadoParaEditar(numEmpParam) {
         form.elements['SRIPerCd'].value = limpiarValor(emp.SRIPerCd);
         form.elements['SRIPerEdo'].value = limpiarValor(emp.SRIPerEdo);
 
-        // 3. Selección segura con un pequeño margen de tiempo para el renderizado del DOM
+        // 2. Asignación directa y segura para Puesto y Departamento con un tiempo prudente
         setTimeout(() => {
-            if (form.elements['SRIPtoId']) {
-                seleccionarOpcionFlexible(form.elements['SRIPtoId'], emp.SRIPtoId);
+            const selPto = document.getElementById('select-SRIPtoId');
+            if (selPto && ptoVal) {
+                selPto.value = ptoVal;
+                if (selPto.value !== ptoVal) {
+                    seleccionarOpcionFlexible(selPto, ptoVal);
+                }
             }
-            if (form.elements['SRIModNomC']) {
-                seleccionarOpcionFlexible(form.elements['SRIModNomC'], emp.SRIModNomC);
+
+            const selDep = document.getElementById('select-SRIModNomC');
+            if (selDep && depVal) {
+                const matchDep = window._catDepartamentos?.find(d => 
+                    String(d.SRIModNomC || '').trim().toLowerCase() === depVal.toLowerCase() ||
+                    String(d.SRIModNom || '').trim().toLowerCase() === depVal.toLowerCase()
+                );
+                if (matchDep && matchDep.SRIModNomC) {
+                    selDep.value = String(matchDep.SRIModNomC).trim();
+                } else {
+                    selDep.value = depVal;
+                }
             }
-        }, 100);
+        }, 150);
 
         if (titulo) {
             titulo.innerHTML = `Editando empleado: <span class="text-[#249444]">${limpiarValor(emp.SRIPerNomE)}</span>`;
