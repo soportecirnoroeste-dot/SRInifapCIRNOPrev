@@ -5,43 +5,98 @@ window.RhAsisForm = {
     rawHeader: [],
 
     manejarCargaArchivo: function(input) {
-        const file = input.files[0];
-        if (!file) return;
+        return new Promise((resolve, reject) => {
+            const file = input.files[0];
+            if (!file) {
+                reject("No se seleccionó ningún archivo.");
+                return;
+            }
 
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            const data = new Uint8Array(evt.target.result);
-            const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-            RhAsisForm.processData(rows);
-        };
-        reader.readAsArrayBuffer(file);
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+                    
+                    RhAsisForm.processData(rows);
+                    resolve(true);
+                } catch (err) {
+                    reject(err);
+                }
+            };
+            reader.onerror = (error) => reject(error);
+            reader.readAsArrayBuffer(file);
+        });
     },
 
     processData: function(rows) {
         RhAsisForm.groupedData = {};
-        let dataStarted = false;
+        let headerIndex = -1;
 
-        rows.forEach((row, index) => {
-            if (!dataStarted) {
-                if (row[0] !== "" && !isNaN(row[0]) && row[0] !== null) {
-                    dataStarted = true;
-                    RhAsisForm.rawHeader = rows[index - 1] || [];
-                } else return;
+        // Buscamos de manera inteligente la fila de encabezados o donde empiezan los datos reales
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            // Buscamos una fila que tenga datos en las primeras columnas (ej. Número de empleado)
+            if (row && row.length > 1 && row[0] !== "" && row[0] !== null) {
+                // Verificamos si es la cabecera o una fila de datos
+                const primerVal = String(row[0]).trim().toLowerCase();
+                if (primerVal.includes('num') || primerVal.includes('empleado') || primerVal.includes('centro') || !isNaN(row[0])) {
+                    if (!isNaN(row[0])) {
+                        // Es una fila de datos directamente
+                        headerIndex = i - 1;
+                        break;
+                    }
+                }
             }
-            const empId = String(row[0]).trim();
-            if (!empId || empId === "undefined") return;
+        }
+
+        // Si no encontró por texto, buscamos la primera fila numérica en la columna 0 o 1
+        if (headerIndex === -1) {
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                if (row && (row[0] !== "" || row[1] !== "")) {
+                    const valCheck = row[0] !== "" ? row[0] : row[1];
+                    if (!isNaN(valCheck) && String(valCheck).trim() !== "") {
+                        headerIndex = i - 1;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (headerIndex >= 0 && headerIndex < rows.length) {
+            RhAsisForm.rawHeader = rows[headerIndex] || [
+                "Centro", "Núm. Emp", "Hra.Entrada", "Hra. Salida",
+                "Hra.Registro", "Registro", "Fecha Reg.", "Día Reg.",
+                "Retardo Men.", "Retardo Med.", "Retardo May.", "Falta"
+            ];
+        } else {
+            RhAsisForm.rawHeader = [
+                "Centro", "Núm. Emp", "Hra.Entrada", "Hra. Salida",
+                "Hra.Registro", "Registro", "Fecha Reg.", "Día Reg.",
+                "Retardo Men.", "Retardo Med.", "Retardo May.", "Falta"
+            ];
+            headerIndex = 0;
+        }
+
+        // Procesar las filas de datos a partir del índice encontrado
+        for (let i = headerIndex + 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || row.length === 0) continue;
+
+            // Intentar ubicar el número de empleado (columna 0 o 1)
+            let empId = String(row[0] || row[1] || "").trim();
+            if (!empId || empId === "undefined" || empId.toLowerCase().includes('total') || empId.toLowerCase().includes('suma')) continue;
+
             if (!RhAsisForm.groupedData[empId]) {
-                RhAsisForm.groupedData[empId] = { nombre: (row[2] || "Empleado").trim(), rows: [] };
+                RhAsisForm.groupedData[empId] = { nombre: String(row[2] || "Empleado").trim(), rows: [] };
             }
             RhAsisForm.groupedData[empId].rows.push(row);
-        });
-
-        if (Object.keys(RhAsisForm.groupedData).length > 0) {
-            document.getElementById('statsCounter').innerHTML = `Total: <span class="text-[#249444] font-bold">${Object.keys(RhAsisForm.groupedData).length} empleados</span> detectados`;
-            RhAsisCasc.renderTabs();
         }
+
+        console.log("📊 Datos procesados correctamente:", Object.keys(RhAsisForm.groupedData).length, "empleados detectados.");
     },
 
     guardarDatosProcesados: function() {
@@ -50,10 +105,9 @@ window.RhAsisForm = {
             return;
         }
 
-        // Guardamos una copia en localStorage para persistencia interna del sistema CIRNORH
         try {
             localStorage.setItem('cirnorh_asistencia_biometrico', JSON.stringify(RhAsisForm.groupedData));
-            alert("✅ ¡Datos del biométrico guardados y sincronizados correctamente con el sistema de Recursos Humanos!");
+            alert("✅ ¡Datos del biométrico guardados y sincronizados correctamente!");
         } catch (e) {
             console.error(e);
             alert("Error al guardar localmente los datos.");
