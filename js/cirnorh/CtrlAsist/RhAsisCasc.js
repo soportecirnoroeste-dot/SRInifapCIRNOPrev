@@ -31,7 +31,6 @@ window.RhAsisCasc = {
     obtenerPermisoUsuario: function () {
         let permiso = 0;
 
-        // 1. Buscamos en variables simples
         const permDirecto = localStorage.getItem('SRIPermEm') || 
                             localStorage.getItem('usuario_permiso_actual') || 
                             localStorage.getItem('permiso_usuario') || 
@@ -41,7 +40,6 @@ window.RhAsisCasc = {
             permiso = parseInt(permDirecto, 10);
         }
 
-        // 2. Si no lo encuentra, buscamos dentro de objetos JSON de sesión guardados
         if (!permiso) {
             const clavesSesion = ['usuario', 'usuarioLogueado', 'sesionActiva', 'datosUsuario', 'SRIEmpleado'];
             for (let i = 0; i < clavesSesion.length; i++) {
@@ -54,9 +52,7 @@ window.RhAsisCasc = {
                             permiso = parseInt(valPermiso, 10);
                             break;
                         }
-                    } catch (e) {
-                        // Continuar si no es un JSON válido
-                    }
+                    } catch (e) { }
                 }
             }
         }
@@ -66,11 +62,14 @@ window.RhAsisCasc = {
     },
 
     obtenerClaveCentroActual: function () {
-        if (RhAsisCasc.tienePermisoGlobal()) {
+        const permisoUsuario = RhAsisCasc.obtenerPermisoUsuario();
+        
+        // Si el usuario tiene permiso 4 o 5, puede elegir el campo desde el combo desplegable
+        if (permisoUsuario === 4 || permisoUsuario === 5) {
             const selectCentro = document.getElementById('selectCentroCargaAdmin');
             if (selectCentro && selectCentro.value) {
                 const claveSel = String(selectCentro.value).trim();
-                console.log("🏢 [TESTIGO] Clave de centro seleccionada en combo (Admin):", claveSel);
+                console.log("🏢 [TESTIGO] Clave de centro seleccionada en combo (Admin Permiso 4/5):", claveSel);
                 return claveSel;
             }
         }
@@ -79,7 +78,6 @@ window.RhAsisCasc = {
                            localStorage.getItem('usuario_centro') || 
                            localStorage.getItem('depto_activo_actual') || "";
 
-        // Si viene vacía, buscamos dentro de los objetos JSON de sesión
         if (!claveUsuario) {
             const clavesSesion = ['usuario', 'usuarioLogueado', 'sesionActiva', 'SRIEmpleado'];
             for (let i = 0; i < clavesSesion.length; i++) {
@@ -97,10 +95,9 @@ window.RhAsisCasc = {
             }
         }
 
-        // Valor por defecto en caso de no estar definido
         if (!claveUsuario) claveUsuario = "CIQ";
 
-        console.log("🏢 [TESTIGO] Clave de centro asignada por defecto (Usuario):", claveUsuario);
+        console.log("🏢 [TESTIGO] Clave de centro asignada por defecto (Usuario Estándar):", claveUsuario);
         return claveUsuario;
     },
 
@@ -123,12 +120,16 @@ window.RhAsisCasc = {
             });
         }
 
-        const esAdminGlobal = RhAsisCasc.tienePermisoGlobal();
+        const permisoUsuario = RhAsisCasc.obtenerPermisoUsuario();
+        const esAdminGlobal = (permisoUsuario === 4 || permisoUsuario === 5);
         
+        console.log("🛡️ [TESTIGO] Renderizando vista. ¿Es admin global con acceso a combo?:", esAdminGlobal);
+
+        // Si es permiso 4 o 5, mostramos un selector habilitado; si no, un campo fijo o bloqueado
         const selectorCentroHtml = `
             <div class="flex flex-col gap-1">
                 <label for="selectCentroCargaAdmin" class="text-[10px] font-bold ${esAdminGlobal ? 'text-[#249444]' : 'text-stone-500'} uppercase tracking-wider">
-                    Campo / Centro de Trabajo ${esAdminGlobal ? '(Admin Global)' : '(Fijo)'}
+                    Campo / Centro de Trabajo ${esAdminGlobal ? '(Selector Global - Permiso ' + permisoUsuario + ')' : '(Asignado)'}
                 </label>
                 <select id="selectCentroCargaAdmin" ${!esAdminGlobal ? 'disabled' : ''} class="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] text-stone-700 shadow-xs cursor-pointer h-[34px]">
                     <option value="CIQ">CIQ - Campo Experimental Norman E. Borlaug</option>
@@ -183,16 +184,11 @@ window.RhAsisCasc = {
                                             <span id="textoCargaBtn">Carga de Datos</span>
                                         </button>
                                     </div>
-
-                                    <button id="exportBtn" disabled onclick="if(window.RhAsisCasc && typeof RhAsisCasc.exportarExcelCasc === 'function') RhAsisCasc.exportarExcelCasc()" class="px-4 py-2 bg-[#249444] text-white rounded-xl text-xs font-bold hover:bg-[#1e7a37] transition flex items-center gap-2 shadow-xs opacity-60 cursor-not-allowed h-[34px]">
-                                        <span id="exportText">Exportar Información</span>
-                                    </button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 🟢 SECCIÓN DE FILTROS RECUPERADA -->
                     <div class="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs">
                         <div class="px-6 py-4 border-b border-stone-100 flex justify-between items-center bg-white flex-wrap gap-3">
                             <h4 class="font-bold text-stone-800 text-xs uppercase tracking-wider">
@@ -475,7 +471,6 @@ window.RhAsisCasc = {
         return str;
     },
 
-    // 🟢 FUNCIÓN DE FILTRADO COMBINADO RECUPERADA
     aplicarFiltrosCombinados: function () {
         const fechaDesde = document.getElementById('filtroFechaDesde')?.value || "";
         const fechaHasta = document.getElementById('filtroFechaHasta')?.value || "";
