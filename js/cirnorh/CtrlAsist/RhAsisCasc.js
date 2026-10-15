@@ -28,27 +28,39 @@ window.RhAsisCasc = {
         return strVal;
     },
 
-    // 🟢 Búsqueda 100% dinámica del número de empleado activo en la sesión
-    obtenerNumEmpleadoLogueado: function () {
-        let numEmp = localStorage.getItem('usuario_numemp') || 
-                     localStorage.getItem('SRIPerNumE') || 
-                     localStorage.getItem('num_emp') || 
-                     localStorage.getItem('id_empleado') || "";
+  // 🟢 Consulta dinámica de permisos directo a la base de datos SQL
+    obtenerPermisoUsuarioDinamico: async function () {
+        const numEmp = RhAsisCasc.obtenerNumEmpleadoLogueado();
+        const apiCall = window.callAppsScript || window.FetchAPI;
 
-        if (!numEmp) {
-            const clavesJson = ['usuario', 'usuarioLogueado', 'sesionActiva', 'SRIEmpleado', 'datosUsuario'];
-            for (let i = 0; i < clavesJson.length; i++) {
-                const rawObj = localStorage.getItem(clavesJson[i]) || sessionStorage.getItem(clavesJson[i]);
-                if (rawObj) {
-                    try {
-                        const parsed = JSON.parse(rawObj);
-                        numEmp = parsed.SRIPerNumE || parsed.numEmp || parsed.id || parsed.empleadoId || "";
-                        if (numEmp) break;
-                    } catch (e) {}
-                }
-            }
+        // Definimos los IDs correspondientes al submódulo de Asistencia
+        const SRIModId = 5; 
+        const SRISubMId = 1; 
+
+        console.log("🔍 [DINÁMICO] Consultando permisos en SQL:", { numEmp, SRIModId, SRISubMId });
+
+        if (!apiCall || !numEmp) {
+            console.warn("⚠️ [DINÁMICO] No hay API disponible o N° de empleado vacío.");
+            return { permiso: 0, numEmp, SRIModId, SRISubMId };
         }
-        return String(numEmp).trim();
+
+        try {
+            const res = await apiCall("obtenerPermisoSubmoduloSQL", {
+                numEmp: numEmp,
+                modId: SRIModId,
+                subMid: SRISubMId
+            });
+
+            console.log("📡 [DINÁMICO] Respuesta de SQL para permisos:", res);
+
+            if (res && res.success && res.permiso !== undefined) {
+                return { permiso: parseInt(res.permiso, 10), numEmp, SRIModId, SRISubMId };
+            }
+        } catch (e) {
+            console.error("❌ [DINÁMICO] Error al consultar permisos en SQL:", e);
+        }
+
+        return { permiso: 0, numEmp, SRIModId, SRISubMId };
     },
 
     // 🟢 Consulta dinámica de permisos directo a la base de datos SQL
