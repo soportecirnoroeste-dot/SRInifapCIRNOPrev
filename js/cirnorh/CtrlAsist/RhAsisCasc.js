@@ -32,38 +32,45 @@ window.RhAsisCasc = {
         let permiso = 0;
         const apiCall = window.callAppsScript || window.FetchAPI;
 
-        // 1. Buscamos primero en almacenamiento local por rapidez
-        const permLocal = localStorage.getItem('SRIPermEm') || 
-                          localStorage.getItem('usuario_permiso_actual') || 
-                          localStorage.getItem('permiso_usuario');
-        if (permLocal !== null && permLocal !== undefined && permLocal !== "") {
-            permiso = parseInt(permLocal, 10);
-        }
-
-        // 2. Si no, consultamos en la base de datos (Módulo 5, Submódulo 1 de Asistencia)
+        // 1. Buscamos el número de empleado en todas las llaves posibles del login
         const numEmpActual = localStorage.getItem('usuario_numemp') || 
                              localStorage.getItem('SRIPerNumE') || 
-                             localStorage.getItem('num_emp');
+                             localStorage.getItem('num_emp') ||
+                             localStorage.getItem('id_empleado');
 
+        console.log("🔑 [TESTIGO] Número de empleado detectado en sesión para permisos:", numEmpActual);
+
+        // IDs institucionales de tu tabla de permisos SQL (Módulo 5, Submódulo 1)
         const SRIModId = 5; 
         const SRISubMId = 1; 
 
-        if (apiCall && numEmpActual && permiso === 0) {
+        if (apiCall && numEmpActual) {
             try {
+                console.log("📡 [TESTIGO] Consultando permiso en SQL para:", { numEmp: numEmpActual, modId: SRIModId, subMid: SRISubMId });
                 const res = await apiCall("obtenerPermisoSubmoduloSQL", {
                     numEmp: numEmpActual,
                     modId: SRIModId,
                     subMid: SRISubMId
                 });
+                console.log("📡 [TESTIGO] Respuesta cruda de permiso SQL:", res);
+                
                 if (res && res.success && res.permiso !== undefined) {
                     permiso = parseInt(res.permiso, 10);
                 }
             } catch (e) {
-                console.error("Error consultando permiso en SQL:", e);
+                console.error("❌ [TESTIGO] Error consultando permiso en SQL:", e);
             }
         }
 
-        console.log(`🔑 [TESTIGO] Permiso del submódulo de Asistencia detectado:`, permiso);
+        // 3. Respaldo local si la API no respondió
+        if (!permiso) {
+            const permLocal = localStorage.getItem('SRIPermEm') || 
+                              localStorage.getItem('usuario_permiso_actual') || 
+                              localStorage.getItem('permiso_asistencia') || "0";
+            permiso = parseInt(permLocal, 10);
+        }
+
+        console.log(`🔑 [TESTIGO FINAL] Nivel de Permiso del Submódulo asignado:`, permiso);
         return permiso;
     },
 
