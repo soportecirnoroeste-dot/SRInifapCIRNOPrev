@@ -28,7 +28,7 @@ window.RhAsisCasc = {
         return strVal;
     },
 
-    // 🟢 Búsqueda 100% dinámica del número de empleado activo en la sesión
+  // 🟢 Búsqueda 100% dinámica del número de empleado activo en la sesión
     obtenerNumEmpleadoLogueado: function () {
         let numEmp = localStorage.getItem('usuario_numemp') || 
                      localStorage.getItem('SRIPerNumE') || 
@@ -36,13 +36,14 @@ window.RhAsisCasc = {
                      localStorage.getItem('id_empleado') || "";
 
         if (!numEmp) {
-            const clavesJson = ['usuario', 'usuarioLogueado', 'sesionActiva', 'SRIEmpleado', 'datosUsuario'];
+            // Agregamos 'usuarioActivo' que es la clave real de tu sistema
+            const clavesJson = ['usuarioActivo', 'usuario', 'usuarioLogueado', 'sesionActiva', 'SRIEmpleado', 'datosUsuario'];
             for (let i = 0; i < clavesJson.length; i++) {
                 const rawObj = localStorage.getItem(clavesJson[i]) || sessionStorage.getItem(clavesJson[i]);
                 if (rawObj) {
                     try {
                         const parsed = JSON.parse(rawObj);
-                        numEmp = parsed.SRIPerNumE || parsed.numEmp || parsed.id || parsed.empleadoId || "";
+                        numEmp = parsed.SRIPerNumE || parsed.noEmpleado || parsed.numEmp || parsed.id || parsed.empleadoId || "";
                         if (numEmp) break;
                     } catch (e) {}
                 }
