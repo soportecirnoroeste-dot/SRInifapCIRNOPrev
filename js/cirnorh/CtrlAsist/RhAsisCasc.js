@@ -28,37 +28,40 @@ window.RhAsisCasc = {
         return strVal;
     },
 
-    obtenerPermisoUsuario: function () {
+    obtenerPermisoUsuario: async function () {
         let permiso = 0;
+        const apiCall = window.callAppsScript || window.FetchAPI;
 
-        const permDirecto = localStorage.getItem('SRIPermEm') || 
-                            localStorage.getItem('usuario_permiso_actual') || 
-                            localStorage.getItem('permiso_usuario') || 
-                            sessionStorage.getItem('SRIPermEm');
+        // Recuperamos el número de empleado actual del almacenamiento local
+        const numEmpActual = localStorage.getItem('usuario_numemp') || 
+                             localStorage.getItem('SRIPerNumE') || 
+                             localStorage.getItem('num_emp');
 
-        if (permDirecto !== null && permDirecto !== undefined && permDirecto !== "") {
-            permiso = parseInt(permDirecto, 10);
-        }
+        // IDs del módulo y submódulo de asistencia que se ven en tu tabla de SQL
+        const SRIModId = 5; // Cambia aquí el ID de módulo correspondiente si varía
+        const SRISubMId = 1; // Cambia aquí el ID de submódulo correspondiente
 
-        if (!permiso) {
-            const clavesSesion = ['usuario', 'usuarioLogueado', 'sesionActiva', 'datosUsuario', 'SRIEmpleado'];
-            for (let i = 0; i < clavesSesion.length; i++) {
-                const item = localStorage.getItem(clavesSesion[i]) || sessionStorage.getItem(clavesSesion[i]);
-                if (item) {
-                    try {
-                        const obj = JSON.parse(item);
-                        const valPermiso = obj.SRIPermEm || obj.permiso || obj.SRIPerPerm || obj.nivelPermiso;
-                        if (valPermiso !== undefined && valPermiso !== null) {
-                            console.log("testigo propio "+valPermiso);
-                            permiso = parseInt(valPermiso, 10);
-                            break;
-                        }
-                    } catch (e) { }
+        if (apiCall && numEmpActual) {
+            try {
+                const res = await apiCall("obtenerPermisoSubmoduloSQL", {
+                    numEmp: numEmpActual,
+                    modId: SRIModId,
+                    subMid: SRISubMId
+                });
+                if (res && res.success) {
+                    permiso = parseInt(res.permiso, 10);
                 }
+            } catch (e) {
+                console.error("Error consultando permiso en SQL:", e);
             }
         }
 
-        console.log("🔑 [TESTIGO] Permiso del usuario detectado:", permiso);
+        // Respaldo local si la API no estuviera disponible momentáneamente
+        if (!permiso) {
+            permiso = parseInt(localStorage.getItem('SRIPermEm') || "0", 10);
+        }
+
+        console.log(`🔑 [TESTIGO] Permiso obtenido de tabla (Módulo ${SRIModId}, Submódulo ${SRISubMId}):`, permiso);
         return permiso;
     },
 
