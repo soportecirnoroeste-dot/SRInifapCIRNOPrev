@@ -54,39 +54,47 @@ window.RhAsisCasc = {
 
     // 🟢 Consulta dinámica de permisos directo a la base de datos SQL
     obtenerPermisoUsuarioDinamico: async function () {
-    const numEmp = RhAsisCasc.obtenerNumEmpleadoLogueado();
-    const apiCall = window.callAppsScript || window.FetchAPI;
+        const numEmp = RhAsisCasc.obtenerNumEmpleadoLogueado();
+        const apiCall = window.callAppsScript || window.FetchAPI;
 
-    console.log("🔍 [SQL DINÁMICO] Consultando accesos en base de datos para el empleado:", numEmp);
+        // 1. Obtener dinámicamente el ID del módulo y su clave desde la configuración global o sesión
+        const configModulo = window.cirnorhConfig || {};
+        const usuarioActivo = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
+        
+        const modId = configModulo.claveDep || ""; // Ej: "5"
+        const moduloNombreCorto = usuarioActivo.SRIModNomC || configModulo.deptoKey || "";
 
-    if (!apiCall || !numEmp) {
-        console.warn("⚠️ [DINÁMICO] No hay API disponible o N° de empleado vacío.");
-        return { permiso: 0, numEmp };
-    }
+        // 2. Obtener dinámicamente el submódulo actual desde los parámetros de la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const submoduloActual = urlParams.get('seccion') || ""; // Ej: "asistencia"
 
-    try {
-        // Consultamos directamente a SQL pasando solo el empleado. 
-        // El motor de base de datos se encarga de cruzar las tablas de permisos y módulos.
-        const res = await apiCall("obtenerPermisoSubmoduloSQL", {
-            numEmp: numEmp
-        });
+        console.log("🔍 [DINÁMICO] Contexto actual -> Módulo ID:", modId, "| Módulo Nombre:", moduloNombreCorto, "| Submódulo:", submoduloActual, "| Empleado:", numEmp);
 
-        console.log("📡 [SQL DINÁMICO] Respuesta directa de la BD:", res);
-
-        if (res && res.success) {
-            return { 
-                permiso: parseInt(res.permiso || 0, 10), 
-                modulo: res.moduloNombre || "", 
-                submodulo: res.submoduloNombre || "", 
-                numEmp 
-            };
+        if (!apiCall || !numEmp) {
+            console.warn("⚠️ [DINÁMICO] No hay API disponible o N° de empleado vacío.");
+            return { permiso: 0, numEmp };
         }
-    } catch (e) {
-        console.error("❌ [DINÁMICO] Error al leer los registros de SQL:", e);
-    }
 
-    return { permiso: 0, numEmp };
-},
+        try {
+            // 3. Enviamos los datos dinámicos completos a SQL Server / Apps Script
+            const res = await apiCall("obtenerPermisoSubmoduloSQL", {
+                numEmp: numEmp,
+                modId: modId,
+                moduloNombre: moduloNombreCorto,
+                submoduloNombre: submoduloActual
+            });
+
+            console.log("📡 [DINÁMICO] Respuesta de SQL para permisos:", res);
+
+            if (res && res.success && res.permiso !== undefined) {
+                return { permiso: parseInt(res.permiso, 10), numEmp };
+            }
+        } catch (e) {
+            console.error("❌ [DINÁMICO] Error al consultar permisos en SQL:", e);
+        }
+
+        return { permiso: 0, numEmp };
+    },
 
     obtenerClaveCentroActual: function () {
         const selectCentro = document.getElementById('selectCentroCargaAdmin');
