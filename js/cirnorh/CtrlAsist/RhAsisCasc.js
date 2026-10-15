@@ -32,23 +32,30 @@ window.RhAsisCasc = {
         let permiso = 0;
         const apiCall = window.callAppsScript || window.FetchAPI;
 
-        // Recuperamos el número de empleado actual del almacenamiento local
+        // 1. Buscamos primero en almacenamiento local por rapidez
+        const permLocal = localStorage.getItem('SRIPermEm') || 
+                          localStorage.getItem('usuario_permiso_actual') || 
+                          localStorage.getItem('permiso_usuario');
+        if (permLocal !== null && permLocal !== undefined && permLocal !== "") {
+            permiso = parseInt(permLocal, 10);
+        }
+
+        // 2. Si no, consultamos en la base de datos (Módulo 5, Submódulo 1 de Asistencia)
         const numEmpActual = localStorage.getItem('usuario_numemp') || 
                              localStorage.getItem('SRIPerNumE') || 
                              localStorage.getItem('num_emp');
 
-        // IDs del módulo y submódulo de asistencia que se ven en tu tabla de SQL
-        const SRIModId = 5; // Cambia aquí el ID de módulo correspondiente si varía
-        const SRISubMId = 1; // Cambia aquí el ID de submódulo correspondiente
+        const SRIModId = 5; 
+        const SRISubMId = 1; 
 
-        if (apiCall && numEmpActual) {
+        if (apiCall && numEmpActual && permiso === 0) {
             try {
                 const res = await apiCall("obtenerPermisoSubmoduloSQL", {
                     numEmp: numEmpActual,
                     modId: SRIModId,
                     subMid: SRISubMId
                 });
-                if (res && res.success) {
+                if (res && res.success && res.permiso !== undefined) {
                     permiso = parseInt(res.permiso, 10);
                 }
             } catch (e) {
@@ -56,53 +63,25 @@ window.RhAsisCasc = {
             }
         }
 
-        // Respaldo local si la API no estuviera disponible momentáneamente
-        if (!permiso) {
-            permiso = parseInt(localStorage.getItem('SRIPermEm') || "0", 10);
-        }
-
-        console.log(`🔑 [TESTIGO] Permiso obtenido de tabla (Módulo ${SRIModId}, Submódulo ${SRISubMId}):`, permiso);
+        console.log(`🔑 [TESTIGO] Permiso del submódulo de Asistencia detectado:`, permiso);
         return permiso;
     },
 
     obtenerClaveCentroActual: function () {
-        const permisoUsuario = RhAsisCasc.obtenerPermisoUsuario();
-        
-        // Si el usuario tiene permiso 4 o 5, puede elegir el campo desde el combo desplegable
-        if (permisoUsuario === 4 || permisoUsuario === 5) {
-            const selectCentro = document.getElementById('selectCentroCargaAdmin');
-            if (selectCentro && selectCentro.value) {
-                const claveSel = String(selectCentro.value).trim();
-                console.log("🏢 [TESTIGO] Clave de centro seleccionada en combo (Admin Permiso 4/5):", claveSel);
-                return claveSel;
-            }
+        // Nota: Para obtener la clave de centro actual de forma síncrona en las validaciones, leemos del combo o localStorage
+        const selectCentro = document.getElementById('selectCentroCargaAdmin');
+        if (selectCentro && !selectCentro.disabled && selectCentro.value) {
+            const claveSel = String(selectCentro.value).trim();
+            console.log("🏢 [TESTIGO] Clave de centro seleccionada en combo (Admin):", claveSel);
+            return claveSel;
         }
         
         let claveUsuario = localStorage.getItem('centro_activo_actual') || 
                            localStorage.getItem('usuario_centro') || 
-                           localStorage.getItem('depto_activo_actual') || "";
+                           localStorage.getItem('depto_activo_actual') || "CIQ";
 
-        if (!claveUsuario) {
-            const clavesSesion = ['usuario', 'usuarioLogueado', 'sesionActiva', 'SRIEmpleado'];
-            for (let i = 0; i < clavesSesion.length; i++) {
-                const item = localStorage.getItem(clavesSesion[i]) || sessionStorage.getItem(clavesSesion[i]);
-                if (item) {
-                    try {
-                        const obj = JSON.parse(item);
-                        const valCentro = obj.SRICenId || obj.claveCentro || obj.centro || obj.depto;
-                        if (valCentro) {
-                            claveUsuario = String(valCentro).trim();
-                            break;
-                        }
-                    } catch (e) { }
-                }
-            }
-        }
-
-        if (!claveUsuario) claveUsuario = "CIQ";
-
-        console.log("🏢 [TESTIGO] Clave de centro asignada por defecto (Usuario Estándar):", claveUsuario);
-        return claveUsuario;
+        console.log("🏢 [TESTIGO] Clave de centro asignada por defecto:", claveUsuario);
+        return String(claveUsuario).trim();
     },
 
     mostrarVistaBiometrico: async function () {
@@ -124,12 +103,12 @@ window.RhAsisCasc = {
             });
         }
 
-        const permisoUsuario = RhAsisCasc.obtenerPermisoUsuario();
+        // Esperamos correctamente el permiso del usuario
+        const permisoUsuario = await RhAsisCasc.obtenerPermisoUsuario();
         const esAdminGlobal = (permisoUsuario === 4 || permisoUsuario === 5);
         
         console.log("🛡️ [TESTIGO] Renderizando vista. ¿Es admin global con acceso a combo?:", esAdminGlobal);
 
-        // Si es permiso 4 o 5, mostramos un selector habilitado; si no, un campo fijo o bloqueado
         const selectorCentroHtml = `
             <div class="flex flex-col gap-1">
                 <label for="selectCentroCargaAdmin" class="text-[10px] font-bold ${esAdminGlobal ? 'text-[#249444]' : 'text-stone-500'} uppercase tracking-wider">
@@ -188,11 +167,18 @@ window.RhAsisCasc = {
                                             <span id="textoCargaBtn">Carga de Datos</span>
                                         </button>
                                     </div>
+
+                                    <!-- 🟢 BOTÓN DE EXPORTAR RECUPERADO -->
+                                    <button id="exportBtn" disabled onclick="if(window.RhAsisCasc && typeof RhAsisCasc.exportarExcelCasc === 'function') RhAsisCasc.exportarExcelCasc()" class="px-4 py-2 bg-[#249444] text-white rounded-xl text-xs font-bold hover:bg-[#1e7a37] transition flex items-center gap-2 shadow-xs opacity-60 cursor-not-allowed h-[34px]">
+                                        <svg id="exportIcon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-down"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg>
+                                        <span id="exportText">Exportar Información</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
+                    <!-- FILTROS Y GRID -->
                     <div class="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs">
                         <div class="px-6 py-4 border-b border-stone-100 flex justify-between items-center bg-white flex-wrap gap-3">
                             <h4 class="font-bold text-stone-800 text-xs uppercase tracking-wider">
@@ -281,8 +267,6 @@ window.RhAsisCasc = {
                 reader.readAsArrayBuffer(file);
             });
 
-            console.log("📄 [TESTIGO] Filas leídas del archivo Excel:", rows ? rows.length : 0);
-
             const filasValidas = [];
             let rawFechaDetectada = "";
 
@@ -318,8 +302,6 @@ window.RhAsisCasc = {
                     }
                 }
             }
-
-            console.log("📊 [TESTIGO] Filas numéricas válidas filtradas para SQL:", filasValidas.length);
 
             if (filasValidas.length === 0) {
                 alert("El archivo se leyó pero no se encontraron filas con número de empleado válido.");
@@ -415,12 +397,17 @@ window.RhAsisCasc = {
 
     renderGrid: function (listaRegistros) {
         const gridContent = document.getElementById('gridContentBio');
+        const exportBtn = document.getElementById('exportBtn');
         const contador = document.getElementById('contadorRegistrosBio');
 
         if (!gridContent) return;
         const headers = RhAsisCasc.rawHeaderGlobal;
 
         if (!listaRegistros || listaRegistros.length === 0) {
+            if (exportBtn) {
+                exportBtn.disabled = true;
+                exportBtn.className = "px-4 py-2 bg-stone-100 border border-stone-200 text-stone-400 opacity-60 cursor-not-allowed rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 h-[34px]";
+            }
             if (contador) contador.innerText = "0";
             gridContent.innerHTML = `
                 <table class="w-full text-[11px] text-left border-collapse min-w-[950px]">
@@ -437,6 +424,11 @@ window.RhAsisCasc = {
                 </table>
             `;
             return;
+        }
+
+        if (exportBtn) {
+            exportBtn.disabled = false;
+            exportBtn.className = "px-4 py-2 bg-[#249444] hover:bg-[#1e7a37] text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer h-[34px]";
         }
 
         if (contador) contador.innerText = `${listaRegistros.length}`;
@@ -497,5 +489,13 @@ window.RhAsisCasc = {
         });
 
         RhAsisCasc.renderGrid(filtrados);
+    },
+
+    exportarExcelCasc: async function () {
+        if (typeof RhAsisForm !== 'undefined' && typeof RhAsisForm.exportarExcel === 'function') {
+            RhAsisForm.exportarExcel();
+        } else {
+            alert("Módulo de exportación Excel no disponible.");
+        }
     }
 };
