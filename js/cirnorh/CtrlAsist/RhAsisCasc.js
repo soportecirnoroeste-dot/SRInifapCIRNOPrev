@@ -28,12 +28,12 @@ window.RhAsisCasc = {
         return strVal;
     },
 
-  // 🟢 Búsqueda 100% dinámica del número de empleado activo en la sesión
+    // 🟢 Búsqueda 100% dinámica del número de empleado activo en la sesión
     obtenerNumEmpleadoLogueado: function () {
-        let numEmp = localStorage.getItem('usuario_numemp') || 
-                     localStorage.getItem('SRIPerNumE') || 
-                     localStorage.getItem('num_emp') || 
-                     localStorage.getItem('id_empleado') || "";
+        let numEmp = localStorage.getItem('usuario_numemp') ||
+            localStorage.getItem('SRIPerNumE') ||
+            localStorage.getItem('num_emp') ||
+            localStorage.getItem('id_empleado') || "";
 
         if (!numEmp) {
             // Agregamos 'usuarioActivo' que es la clave real de tu sistema
@@ -45,7 +45,7 @@ window.RhAsisCasc = {
                         const parsed = JSON.parse(rawObj);
                         numEmp = parsed.SRIPerNumE || parsed.noEmpleado || parsed.numEmp || parsed.id || parsed.empleadoId || "";
                         if (numEmp) break;
-                    } catch (e) {}
+                    } catch (e) { }
                 }
             }
         }
@@ -65,9 +65,11 @@ window.RhAsisCasc = {
         }
 
         try {
-            // Nota: Aquí el backend evaluará el módulo y submódulo activo de la sección
+            // Enviamos el número de empleado junto con el módulo (5) y submódulo (1)
             const res = await apiCall("obtenerPermisoSubmoduloSQL", {
-                numEmp: numEmp
+                numEmp: numEmp,
+                modId: 5,   // Módulo 5: Control de Asistencia
+                subMid: 1   // Submódulo 1: Biométrico / Registros
             });
 
             console.log("📡 [DINÁMICO] Respuesta de SQL para permisos:", res);
@@ -87,10 +89,10 @@ window.RhAsisCasc = {
         if (selectCentro && !selectCentro.disabled && selectCentro.value) {
             return String(selectCentro.value).trim();
         }
-        
-        let claveUsuario = localStorage.getItem('centro_activo_actual') || 
-                           localStorage.getItem('usuario_centro') || 
-                           localStorage.getItem('depto_activo_actual') || "";
+
+        let claveUsuario = localStorage.getItem('centro_activo_actual') ||
+            localStorage.getItem('usuario_centro') ||
+            localStorage.getItem('depto_activo_actual') || "";
 
         return String(claveUsuario).trim();
     },
@@ -337,7 +339,7 @@ window.RhAsisCasc = {
                     numEmp: primerNumEmp,
                     fecha: fechaNormalizada
                 });
-                
+
                 const yaExiste = verificacion && (verificacion.existe === true || verificacion.existe === "true");
 
                 if (yaExiste) {
@@ -460,21 +462,21 @@ window.RhAsisCasc = {
                 </thead>
                 <tbody class="divide-y divide-stone-100">
                     ${listaRegistros.map(r => {
-                        const celdas = Array.isArray(r) ? [...r.slice(0, 12)] : headers.map(h => r[h] || "");
-                        return `
+            const celdas = Array.isArray(r) ? [...r.slice(0, 12)] : headers.map(h => r[h] || "");
+            return `
                             <tr class="bg-white hover:bg-stone-50 transition text-stone-700">
                                 ${celdas.map((c, index) => {
-                                    let val = c;
-                                    if (index === 2 || index === 3) {
-                                        val = RhAsisCasc.extraerHoraLegible(val, false);
-                                    } else if (index === 4) {
-                                        val = RhAsisCasc.extraerHoraLegible(val, true);
-                                    }
-                                    return `<td class="p-2.5 border-b border-stone-100 text-center whitespace-nowrap">${val !== null && val !== undefined && String(val).trim() !== '' ? val : ''}</td>`;
-                                }).join('')}
+                let val = c;
+                if (index === 2 || index === 3) {
+                    val = RhAsisCasc.extraerHoraLegible(val, false);
+                } else if (index === 4) {
+                    val = RhAsisCasc.extraerHoraLegible(val, true);
+                }
+                return `<td class="p-2.5 border-b border-stone-100 text-center whitespace-nowrap">${val !== null && val !== undefined && String(val).trim() !== '' ? val : ''}</td>`;
+            }).join('')}
                             </tr>
                         `;
-                    }).join('')}
+        }).join('')}
                 </tbody>
             </table>
         `;
