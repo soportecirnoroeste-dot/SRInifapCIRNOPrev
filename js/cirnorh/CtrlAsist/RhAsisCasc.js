@@ -54,35 +54,39 @@ window.RhAsisCasc = {
 
     // 🟢 Consulta dinámica de permisos directo a la base de datos SQL
     obtenerPermisoUsuarioDinamico: async function () {
-        const numEmp = RhAsisCasc.obtenerNumEmpleadoLogueado();
-        const apiCall = window.callAppsScript || window.FetchAPI;
+    const numEmp = RhAsisCasc.obtenerNumEmpleadoLogueado();
+    const apiCall = window.callAppsScript || window.FetchAPI;
 
-        console.log("🔍 [DINÁMICO] Consultando permisos en SQL para el empleado:", numEmp);
+    console.log("🔍 [SQL DINÁMICO] Consultando accesos en base de datos para el empleado:", numEmp);
 
-        if (!apiCall || !numEmp) {
-            console.warn("⚠️ [DINÁMICO] No hay API disponible o N° de empleado vacío.");
-            return { permiso: 0, numEmp };
-        }
-
-        try {
-            // Enviamos el número de empleado junto con el módulo (5) y submódulo (1)
-            const res = await apiCall("obtenerPermisoSubmoduloSQL", {
-                numEmp: numEmp,
-                modId: 5,   // Módulo 5: Recursos Humanos / Asistencia
-                subMid: 1   // Submódulo 1: Control de Asistencia / Biométrico
-            });
-
-            console.log("📡 [DINÁMICO] Respuesta de SQL para permisos:", res);
-
-            if (res && res.success && res.permiso !== undefined) {
-                return { permiso: parseInt(res.permiso, 10), numEmp };
-            }
-        } catch (e) {
-            console.error("❌ [DINÁMICO] Error al consultar permisos en SQL:", e);
-        }
-
+    if (!apiCall || !numEmp) {
+        console.warn("⚠️ [DINÁMICO] No hay API disponible o N° de empleado vacío.");
         return { permiso: 0, numEmp };
-    },
+    }
+
+    try {
+        // Consultamos directamente a SQL pasando solo el empleado. 
+        // El motor de base de datos se encarga de cruzar las tablas de permisos y módulos.
+        const res = await apiCall("obtenerPermisoSubmoduloSQL", {
+            numEmp: numEmp
+        });
+
+        console.log("📡 [SQL DINÁMICO] Respuesta directa de la BD:", res);
+
+        if (res && res.success) {
+            return { 
+                permiso: parseInt(res.permiso || 0, 10), 
+                modulo: res.moduloNombre || "", 
+                submodulo: res.submoduloNombre || "", 
+                numEmp 
+            };
+        }
+    } catch (e) {
+        console.error("❌ [DINÁMICO] Error al leer los registros de SQL:", e);
+    }
+
+    return { permiso: 0, numEmp };
+},
 
     obtenerClaveCentroActual: function () {
         const selectCentro = document.getElementById('selectCentroCargaAdmin');
