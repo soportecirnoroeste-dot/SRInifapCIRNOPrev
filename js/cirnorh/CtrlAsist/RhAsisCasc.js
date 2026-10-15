@@ -28,9 +28,7 @@ window.RhAsisCasc = {
         return strVal;
     },
 
-    // 🟢 1. Testigo y Verificación de Permiso
     obtenerPermisoUsuario: function () {
-        // Busca el permiso en las llaves habituales del sistema
         const permiso = parseInt(
             localStorage.getItem('SRIPermEm') || 
             localStorage.getItem('usuario_permiso_actual') || 
@@ -42,7 +40,6 @@ window.RhAsisCasc = {
 
     tienePermisoGlobal: function () {
         const permiso = RhAsisCasc.obtenerPermisoUsuario();
-        // Permiso 4 o 5 se consideran administradores con acceso a todos los campos
         const esAdmin = (permiso === 4 || permiso === 5);
         console.log("🛡️ [TESTIGO] ¿Tiene permiso global para seleccionar campo?:", esAdmin);
         return esAdmin;
@@ -63,7 +60,6 @@ window.RhAsisCasc = {
         return String(claveUsuario).trim();
     },
 
-    // 🟢 2. Renderizado con Combo de Selección de Campo
     mostrarVistaBiometrico: async function () {
         const contenedor = document.getElementById('app-container') || document.querySelector('main') || document.body;
 
@@ -85,7 +81,6 @@ window.RhAsisCasc = {
 
         const esAdminGlobal = RhAsisCasc.tienePermisoGlobal();
         
-        // Combo de campos disponible si es Admin Global (permiso 4 o 5)
         const selectorCentroHtml = `
             <div class="flex flex-col gap-1">
                 <label for="selectCentroCargaAdmin" class="text-[10px] font-bold ${esAdminGlobal ? 'text-[#249444]' : 'text-stone-500'} uppercase tracking-wider">
@@ -144,16 +139,47 @@ window.RhAsisCasc = {
                                             <span id="textoCargaBtn">Carga de Datos</span>
                                         </button>
                                     </div>
+
+                                    <button id="exportBtn" disabled onclick="if(window.RhAsisCasc && typeof RhAsisCasc.exportarExcelCasc === 'function') RhAsisCasc.exportarExcelCasc()" class="px-4 py-2 bg-[#249444] text-white rounded-xl text-xs font-bold hover:bg-[#1e7a37] transition flex items-center gap-2 shadow-xs opacity-60 cursor-not-allowed h-[34px]">
+                                        <span id="exportText">Exportar Información</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
+                    <!-- 🟢 SECCIÓN DE FILTROS RECUPERADA -->
                     <div class="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs">
-                        <div class="px-6 py-4 border-b border-stone-100 flex justify-between items-center bg-white">
+                        <div class="px-6 py-4 border-b border-stone-100 flex justify-between items-center bg-white flex-wrap gap-3">
                             <h4 class="font-bold text-stone-800 text-xs uppercase tracking-wider">
                                 LISTADO DE <span id="contadorRegistrosBio">0</span> REGISTROS DE BIOMÉTRICO
                             </h4>
+
+                            <div class="flex flex-wrap items-end gap-3">
+                                <div class="flex flex-col gap-1">
+                                    <label for="filtroFechaDesde" class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">De</label>
+                                    <input type="date" id="filtroFechaDesde" onchange="RhAsisCasc.aplicarFiltrosCombinados()"
+                                        class="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] text-stone-700 shadow-xs cursor-pointer">
+                                </div>
+
+                                <div class="flex flex-col gap-1">
+                                    <label for="filtroFechaHasta" class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Hasta</label>
+                                    <input type="date" id="filtroFechaHasta" onchange="RhAsisCasc.aplicarFiltrosCombinados()"
+                                        class="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] text-stone-700 shadow-xs cursor-pointer">
+                                </div>
+
+                                <div class="flex flex-col gap-1">
+                                    <label for="filtroCentroBio" class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Centro</label>
+                                    <input type="text" id="filtroCentroBio" oninput="RhAsisCasc.aplicarFiltrosCombinados()" placeholder="Centro..."
+                                        class="w-32 px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] transition-all shadow-xs text-stone-700">
+                                </div>
+
+                                <div class="flex flex-col gap-1">
+                                    <label for="filtroNumEmpBio" class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">N° Empleado</label>
+                                    <input type="text" id="filtroNumEmpBio" oninput="RhAsisCasc.aplicarFiltrosCombinados()" placeholder="Núm..."
+                                        class="w-32 px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] transition-all shadow-xs text-stone-700">
+                                </div>
+                            </div>
                         </div>
 
                         <div id="gridContentBio" class="max-h-[500px] overflow-y-auto overflow-x-auto custom-scrollbar">
@@ -179,7 +205,6 @@ window.RhAsisCasc = {
         await RhAsisCasc.cargarDatosDesdeSheets();
     },
 
-    // 🟢 3. Lectura de Archivo y Filtrado Estricto de Datos para SQL Server
     manejarCargaYGuardadoAutomatico: async function (input) {
         const file = input.files[0];
         if (!file) return;
@@ -224,15 +249,12 @@ window.RhAsisCasc = {
                 const col0 = String(row[0] || "").trim();
                 const col1 = String(row[1] || "").trim();
 
-                // Detectamos qué columna contiene el número de empleado y verificamos que sea puramente NUMÉRICO
                 let numEmpCandidato = col0;
                 if (isNaN(numEmpCandidato) || numEmpCandidato === "") {
                     numEmpCandidato = col1;
                 }
 
-                // 🛑 FILTRADO CLAVE: Si no es un número válido (ej. es "NO. EMPLEADO", encabezados o letras), se omite
                 if (isNaN(numEmpCandidato) || numEmpCandidato === "" || parseInt(numEmpCandidato, 10) <= 0) {
-                    console.log(`⚠️ [TESTIGO] Fila ${i} omitida por no contener un N° de empleado numérico válido:`, row[0]);
                     continue;
                 }
 
@@ -264,19 +286,12 @@ window.RhAsisCasc = {
             let primerNumEmp = String(filasValidas[0][0] || filasValidas[0][1] || "0").trim();
             let claveCentroSeleccionado = RhAsisCasc.obtenerClaveCentroActual();
 
-            console.log("🔍 [TESTIGO] Parámetros para la verificación en SQL:");
-            console.log("  - NumEmp referencia:", primerNumEmp);
-            console.log("  - Fecha referencia:", fechaNormalizada);
-            console.log("  - Centro objetivo:", claveCentroSeleccionado);
-
             if (apiCall) {
                 const verificacion = await apiCall("verificarFechaBiometrico", {
                     numEmp: primerNumEmp,
                     fecha: fechaNormalizada
                 });
                 
-                console.log("📡 [TESTIGO] Respuesta de verificarFechaBiometrico:", verificacion);
-
                 const yaExiste = verificacion && (verificacion.existe === true || verificacion.existe === "true");
 
                 if (yaExiste) {
@@ -289,27 +304,23 @@ window.RhAsisCasc = {
                         const empIdNum = parseInt(String(row[0] || row[1] || "0").trim(), 10);
                         return [
                             claveCentroSeleccionado,
-                            empIdNum,                 // INT para SRIPerNumE
-                            row[4] || "",             // SRICtrlAHrE
-                            row[5] || "",             // SRICtrlAHrS
-                            row[6] || "",             // SRICtrlAHrRg
-                            row[7] || "",             // SRICtrlAReg
-                            row[8] || "",             // SRICtrlAFeRg
-                            row[9] || "",             // SRICtrlADia
-                            row[10] || "",            // SRICtrlAMen
-                            row[11] || "",            // SRICtrlAMed
-                            row[12] || "",            // SRICtrlAMay
-                            row[13] || ""             // SRICtrlAFalta
+                            empIdNum,
+                            row[4] || "",
+                            row[5] || "",
+                            row[6] || "",
+                            row[7] || "",
+                            row[8] || "",
+                            row[9] || "",
+                            row[10] || "",
+                            row[11] || "",
+                            row[12] || "",
+                            row[13] || ""
                         ];
                     });
-
-                    console.log("🚀 [TESTIGO] Enviando Muestra de Filas a SQL Server (Muestra de 1ra fila):", rowsParaSql[0]);
 
                     const resultado = await apiCall("guardarBiometrico", {
                         filas: rowsParaSql
                     });
-
-                    console.log("📡 [TESTIGO] Respuesta de guardarBiometrico:", resultado);
 
                     if (resultado && resultado.success) {
                         alert(`✅ ¡Se guardaron ${rowsParaSql.length} registros exitosamente en SQL Server para el centro ${claveCentroSeleccionado}!`);
@@ -418,5 +429,30 @@ window.RhAsisCasc = {
         let str = String(fechaStr).trim();
         if (str.includes('T')) str = str.split('T')[0];
         return str;
+    },
+
+    // 🟢 FUNCIÓN DE FILTRADO COMBINADO RECUPERADA
+    aplicarFiltrosCombinados: function () {
+        const fechaDesde = document.getElementById('filtroFechaDesde')?.value || "";
+        const fechaHasta = document.getElementById('filtroFechaHasta')?.value || "";
+        const numEmpFiltro = document.getElementById('filtroNumEmpBio')?.value.toLowerCase().trim() || "";
+        const centroFiltro = document.getElementById('filtroCentroBio')?.value.toLowerCase().trim() || "";
+
+        const filtrados = RhAsisCasc.registrosBiometrico.filter(row => {
+            if (!Array.isArray(row)) return false;
+            const centro = String(row[0] || "").toLowerCase();
+            const numEmp = String(row[1] || "").toLowerCase();
+            const fechaRegRaw = String(row[6] || "").trim();
+            const fechaRegNorm = RhAsisCasc.normalizarFechaFiltro(fechaRegRaw);
+
+            if (centroFiltro && !centro.includes(centroFiltro)) return false;
+            if (numEmpFiltro && !numEmp.includes(numEmpFiltro)) return false;
+            if (fechaDesde && fechaRegNorm < fechaDesde) return false;
+            if (fechaHasta && fechaRegNorm > fechaHasta) return false;
+
+            return true;
+        });
+
+        RhAsisCasc.renderGrid(filtrados);
     }
 };
