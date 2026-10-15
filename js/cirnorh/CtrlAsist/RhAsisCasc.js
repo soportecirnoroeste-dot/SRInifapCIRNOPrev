@@ -68,8 +68,8 @@ window.RhAsisCasc = {
             // Enviamos el número de empleado junto con el módulo (5) y submódulo (1)
             const res = await apiCall("obtenerPermisoSubmoduloSQL", {
                 numEmp: numEmp,
-                modId: 5,   // Módulo 5: Control de Asistencia
-                subMid: 1   // Submódulo 1: Biométrico / Registros
+                modId: 5,   // Módulo 5: Recursos Humanos / Asistencia
+                subMid: 1   // Submódulo 1: Control de Asistencia / Biométrico
             });
 
             console.log("📡 [DINÁMICO] Respuesta de SQL para permisos:", res);
