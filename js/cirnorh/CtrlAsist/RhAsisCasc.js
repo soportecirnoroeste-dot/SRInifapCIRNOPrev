@@ -64,9 +64,8 @@ window.RhAsisCasc = {
         const modId = configModulo.claveDep || ""; // Ej: "5"
         const moduloNombreCorto = usuarioActivo.SRIModNomC || configModulo.deptoKey || "";
 
-        // 2. Obtener dinámicamente el submódulo actual desde los parámetros de la URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const submoduloActual = urlParams.get('seccion') || ""; // Ej: "asistencia"
+        // 2. Obtener dinámicamente el submódulo actual desde el almacenamiento local (capturado del clic) o la URL
+        const submoduloActual = localStorage.getItem('submoduloActivoId') || new URLSearchParams(window.location.search).get('seccion') || "";
 
         console.log("🔍 [DINÁMICO] Contexto actual -> Módulo ID:", modId, "| Módulo Nombre:", moduloNombreCorto, "| Submódulo:", submoduloActual, "| Empleado:", numEmp);
 
