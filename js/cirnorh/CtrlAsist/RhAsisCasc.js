@@ -30,6 +30,26 @@ window.RhAsisCasc = {
         return strVal;
     },
 
+    // 🟢 Validación de permisos: Permiso 4 otorga control total para cualquier campo
+    tienePermisoGlobal: function () {
+        const permisoUsuario = parseInt(localStorage.getItem('usuario_permiso_actual') || localStorage.getItem('permiso_usuario') || "0", 10);
+        return permisoUsuario === 4;
+    },
+
+    obtenerClaveCentroActual: function () {
+        // Si tiene permiso 4, tomamos el valor seleccionado en el combo dinámico de la interfaz
+        if (RhAsisCasc.tienePermisoGlobal()) {
+            const selectCentro = document.getElementById('selectCentroCargaAdmin');
+            if (selectCentro && selectCentro.value) {
+                return String(selectCentro.value).trim();
+            }
+        }
+        
+        // Si no tiene permiso 4, tomamos de forma fija el centro asignado al usuario logueado
+        let claveCentroUsuario = localStorage.getItem('centro_activo_actual') || localStorage.getItem('usuario_centro') || "";
+        return String(claveCentroUsuario).trim();
+    },
+
     mostrarVistaBiometrico: async function () {
         const contenedor = document.getElementById('app-container') || document.querySelector('main') || document.body;
 
@@ -49,6 +69,23 @@ window.RhAsisCasc = {
             });
         }
 
+        // 🟢 Generamos dinámicamente el selector de campos si el usuario tiene permiso 4
+        let selectorCentroHtml = '';
+        const esAdminGlobal = RhAsisCasc.tienePermisoGlobal();
+
+        if (esAdminGlobal) {
+            selectorCentroHtml = `
+                <div class="flex flex-col gap-1">
+                    <label for="selectCentroCargaAdmin" class="text-[10px] font-bold text-[#249444] uppercase tracking-wider">Campo / Centro de Trabajo (Admin)</label>
+                    <select id="selectCentroCargaAdmin" class="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] text-stone-700 shadow-xs cursor-pointer h-[34px]">
+                        <option value="CIQ">CIQ - Campo Experimental Norman E. Borlaug</option>
+                        <option value="CIB">CIB - Centro de Investigación Regional Noroeste</option>
+                        <option value="CIG">CIG - Campo Experimental Valle del Yaqui</option>
+                    </select>
+                </div>
+            `;
+        }
+
         contenedor.innerHTML = `
             <div class="space-y-6 animate-fade-in pb-10">
                 <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 space-y-6">
@@ -58,7 +95,7 @@ window.RhAsisCasc = {
                         </div>
                         <div>
                             <h3 class="font-black text-stone-800 text-lg uppercase tracking-wide">CONTROL DE ASISTENCIA</h3>
-                            <p class="text-xs text-stone-500"></p>
+                            <p class="text-xs text-stone-500">Gestión y carga masiva de biométricos</p>
                         </div>
                     </div>
 
@@ -67,7 +104,10 @@ window.RhAsisCasc = {
                             <input type="file" id="uploadBiometrico" class="hidden" accept=".xlsx, .xlsm, .csv" onchange="RhAsisCasc.manejarCargaYGuardadoAutomatico(this)">
 
                             <div class="flex flex-wrap items-center justify-between gap-3 w-full">
-                                <h4 class="font-bold text-stone-800 text-sm">Gestión de Asistencias</h4>
+                                <div class="flex items-center gap-4">
+                                    <h4 class="font-bold text-stone-800 text-sm">Gestión de Asistencias</h4>
+                                    ${selectorCentroHtml}
+                                </div>
 
                                 <div class="flex flex-wrap items-end gap-2">
                                     <div class="flex flex-col gap-1">
@@ -159,42 +199,6 @@ window.RhAsisCasc = {
         await RhAsisCasc.cargarDatosDesdeSheets();
     },
 
-    cargarDatosDesdeSheets: async function () {
-        try {
-            const apiCall = window.callAppsScript || window.FetchAPI;
-            if (!apiCall) return;
-
-            const claveCentroActivo = RhAsisCasc.obtenerClaveCentroActual ? String(RhAsisCasc.obtenerClaveCentroActual()).trim() : "";
-            const cacheKey = `biometrico_registros_${claveCentroActivo || 'general'}`;
-
-            const datosEnCache = sessionStorage.getItem(cacheKey);
-            if (datosEnCache) {
-                RhAsisCasc.registrosBiometrico = JSON.parse(datosEnCache);
-                RhAsisCasc.renderGrid(RhAsisCasc.registrosBiometrico);
-                return;
-            }
-
-            const res = await apiCall("obtenerTodosLosRegistrosPlano", {
-                claveCentro: claveCentroActivo,
-                centro: claveCentroActivo
-            });
-
-            if (res && (res.success || Array.isArray(res))) {
-                const registrosData = Array.isArray(res) ? res : (res.registros || res.data || []);
-                RhAsisCasc.registrosBiometrico = registrosData;
-                sessionStorage.setItem(cacheKey, JSON.stringify(registrosData));
-                RhAsisCasc.renderGrid(RhAsisCasc.registrosBiometrico);
-            } else {
-                RhAsisCasc.registrosBiometrico = [];
-                RhAsisCasc.renderGrid([]);
-            }
-        } catch (e) {
-            console.error("Error al cargar biométrico:", e);
-            RhAsisCasc.registrosBiometrico = [];
-            RhAsisCasc.renderGrid([]);
-        }
-    },
-
     manejarCargaYGuardadoAutomatico: async function (input) {
         const file = input.files[0];
         if (!file) return;
@@ -210,7 +214,6 @@ window.RhAsisCasc = {
             }
             if (textCarga) textCarga.innerText = "Leyendo archivo...";
 
-            // 🟢 Lectura directa y robusta del Excel aquí mismo
             const rows = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = (evt) => {
@@ -233,7 +236,6 @@ window.RhAsisCasc = {
                 return;
             }
 
-            // Filtrar y extraer filas de datos válidas ignorando encabezados vacíos o texto institucional
             const filasValidas = [];
             let rawFechaDetectada = "";
 
@@ -241,24 +243,20 @@ window.RhAsisCasc = {
                 const row = rows[i];
                 if (!row || row.length === 0 || row.every(c => c === "")) continue;
 
-                // Detectar si es una línea con datos (si tiene texto o números en las primeras columnas)
                 const col0 = String(row[0] || "").trim();
                 const col1 = String(row[1] || "").trim();
-
-                // Ignorar filas de títulos institucionales
                 const rowText = row.join(" ").toLowerCase();
+
                 if (rowText.includes('instituto') || rowText.includes('coordinación') || rowText.includes('dirección') || rowText.includes('reporte') || rowText.includes('núm. emp')) {
                     continue;
                 }
 
                 if (col0 !== "" || col1 !== "") {
-                    // Asegurar que tenga al menos 12 columnas para la tabla SRICtrlAsi
                     while (row.length < 12) {
                         row.push("");
                     }
                     filasValidas.push(row);
 
-                    // Intentar capturar una fecha de referencia
                     if (!rawFechaDetectada) {
                         for (let c = 0; c < row.length; c++) {
                             const val = String(row[c] || "");
@@ -285,14 +283,11 @@ window.RhAsisCasc = {
 
             if (textCarga) textCarga.innerText = "Verificando...";
 
+            // 🟢 Obtenemos la clave de centro validando si es admin global (permiso 4) o centro asignado
             let claveCentroSeleccionado = RhAsisCasc.obtenerClaveCentroActual();
-            if (!claveCentroSeleccionado) {
-                claveCentroSeleccionado = localStorage.getItem('centro_activo_actual') || "";
-            }
-            claveCentroSeleccionado = String(claveCentroSeleccionado).trim();
 
             if (!claveCentroSeleccionado) {
-                alert("⚠️ Por favor selecciona un Centro de Trabajo válido en el panel principal antes de continuar.");
+                alert("⚠️ Por favor selecciona o configura un Centro de Trabajo válido antes de continuar.");
                 return;
             }
 
@@ -332,7 +327,7 @@ window.RhAsisCasc = {
                         sessionStorage.removeItem(`biometrico_registros_${claveCentroSeleccionado}`);
                         sessionStorage.removeItem(`biometrico_registros_general`);
 
-                        alert(`✅ ¡Datos cargados y guardados exitosamente en SQL Server (${rowsParaSql.length} registros)!`);
+                        alert(`✅ ¡Datos cargados y guardados exitosamente en SQL Server (${rowsParaSql.length} registros para el centro ${claveCentroSeleccionado})!`);
                         await RhAsisCasc.cargarDatosDesdeSheets();
                     } else {
                         alert("⚠️ Aviso al guardar: " + (resultado ? resultado.message : "Desconocido"));
@@ -349,6 +344,42 @@ window.RhAsisCasc = {
             }
             if (textCarga) textCarga.innerText = "Carga de Datos";
             input.value = "";
+        }
+    },
+
+    cargarDatosDesdeSheets: async function () {
+        try {
+            const apiCall = window.callAppsScript || window.FetchAPI;
+            if (!apiCall) return;
+
+            const claveCentroActivo = RhAsisCasc.obtenerClaveCentroActual ? String(RhAsisCasc.obtenerClaveCentroActual()).trim() : "";
+            const cacheKey = `biometrico_registros_${claveCentroActivo || 'general'}`;
+
+            const datosEnCache = sessionStorage.getItem(cacheKey);
+            if (datosEnCache) {
+                RhAsisCasc.registrosBiometrico = JSON.parse(datosEnCache);
+                RhAsisCasc.renderGrid(RhAsisCasc.registrosBiometrico);
+                return;
+            }
+
+            const res = await apiCall("obtenerTodosLosRegistrosPlano", {
+                claveCentro: claveCentroActivo,
+                centro: claveCentroActivo
+            });
+
+            if (res && (res.success || Array.isArray(res))) {
+                const registrosData = Array.isArray(res) ? res : (res.registros || res.data || []);
+                RhAsisCasc.registrosBiometrico = registrosData;
+                sessionStorage.setItem(cacheKey, JSON.stringify(registrosData));
+                RhAsisCasc.renderGrid(RhAsisCasc.registrosBiometrico);
+            } else {
+                RhAsisCasc.registrosBiometrico = [];
+                RhAsisCasc.renderGrid([]);
+            }
+        } catch (e) {
+            console.error("Error al cargar biométrico:", e);
+            RhAsisCasc.registrosBiometrico = [];
+            RhAsisCasc.renderGrid([]);
         }
     },
 
@@ -418,19 +449,6 @@ window.RhAsisCasc = {
         `;
     },
 
-    obtenerClaveCentroActual: function () {
-        let clave = "";
-        const selectCentro = document.getElementById('filtro-campos-regional') || document.querySelector('select');
-        if (selectCentro && selectCentro.value) {
-            const matchVal = selectCentro.value.match(/^(\d+)/);
-            clave = matchVal ? matchVal[1] : selectCentro.value;
-        }
-        if (!clave) {
-            clave = localStorage.getItem('centro_activo_actual') || "";
-        }
-        return String(clave).trim();
-    },
-
     normalizarFechaFiltro: function (fechaStr) {
         if (!fechaStr) return "";
         let str = String(fechaStr).trim();
@@ -460,10 +478,6 @@ window.RhAsisCasc = {
         });
 
         RhAsisCasc.renderGrid(filtrados);
-    },
-
-    obtenerRegistrosFiltradosActuales: function () {
-        return RhAsisCasc.registrosBiometrico;
     },
 
     exportarExcelCasc: async function () {
