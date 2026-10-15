@@ -28,66 +28,69 @@ window.RhAsisCasc = {
         return strVal;
     },
 
-    obtenerPermisoUsuario: async function () {
-        let permiso = 0;
-        const apiCall = window.callAppsScript || window.FetchAPI;
+    // 🟢 Búsqueda 100% dinámica del número de empleado activo en la sesión
+    obtenerNumEmpleadoLogueado: function () {
+        let numEmp = localStorage.getItem('usuario_numemp') || 
+                     localStorage.getItem('SRIPerNumE') || 
+                     localStorage.getItem('num_emp') || 
+                     localStorage.getItem('id_empleado') || "";
 
-        // 1. Buscamos el número de empleado en todas las llaves posibles del login
-        const numEmpActual = localStorage.getItem('usuario_numemp') || 
-                             localStorage.getItem('SRIPerNumE') || 
-                             localStorage.getItem('num_emp') ||
-                             localStorage.getItem('id_empleado');
-
-        console.log("🔑 [TESTIGO] Número de empleado detectado en sesión para permisos:", numEmpActual);
-
-        // IDs institucionales de tu tabla de permisos SQL (Módulo 5, Submódulo 1)
-        const SRIModId = 5; 
-        const SRISubMId = 1; 
-
-        if (apiCall && numEmpActual) {
-            try {
-                console.log("📡 [TESTIGO] Consultando permiso en SQL para:", { numEmp: numEmpActual, modId: SRIModId, subMid: SRISubMId });
-                const res = await apiCall("obtenerPermisoSubmoduloSQL", {
-                    numEmp: numEmpActual,
-                    modId: SRIModId,
-                    subMid: SRISubMId
-                });
-                console.log("📡 [TESTIGO] Respuesta cruda de permiso SQL:", res);
-                
-                if (res && res.success && res.permiso !== undefined) {
-                    permiso = parseInt(res.permiso, 10);
+        if (!numEmp) {
+            const clavesJson = ['usuario', 'usuarioLogueado', 'sesionActiva', 'SRIEmpleado', 'datosUsuario'];
+            for (let i = 0; i < clavesJson.length; i++) {
+                const rawObj = localStorage.getItem(clavesJson[i]) || sessionStorage.getItem(clavesJson[i]);
+                if (rawObj) {
+                    try {
+                        const parsed = JSON.parse(rawObj);
+                        numEmp = parsed.SRIPerNumE || parsed.numEmp || parsed.id || parsed.empleadoId || "";
+                        if (numEmp) break;
+                    } catch (e) {}
                 }
-            } catch (e) {
-                console.error("❌ [TESTIGO] Error consultando permiso en SQL:", e);
             }
         }
+        return String(numEmp).trim();
+    },
 
-        // 3. Respaldo local si la API no respondió
-        if (!permiso) {
-            const permLocal = localStorage.getItem('SRIPermEm') || 
-                              localStorage.getItem('usuario_permiso_actual') || 
-                              localStorage.getItem('permiso_asistencia') || "0";
-            permiso = parseInt(permLocal, 10);
+    // 🟢 Consulta dinámica de permisos directo a la base de datos SQL
+    obtenerPermisoUsuarioDinamico: async function () {
+        const numEmp = RhAsisCasc.obtenerNumEmpleadoLogueado();
+        const apiCall = window.callAppsScript || window.FetchAPI;
+
+        console.log("🔍 [DINÁMICO] Consultando permisos en SQL para el empleado:", numEmp);
+
+        if (!apiCall || !numEmp) {
+            console.warn("⚠️ [DINÁMICO] No hay API disponible o N° de empleado vacío.");
+            return { permiso: 0, numEmp };
         }
 
-        console.log(`🔑 [TESTIGO FINAL] Nivel de Permiso del Submódulo asignado:`, permiso);
-        return permiso;
+        try {
+            // Nota: Aquí el backend evaluará el módulo y submódulo activo de la sección
+            const res = await apiCall("obtenerPermisoSubmoduloSQL", {
+                numEmp: numEmp
+            });
+
+            console.log("📡 [DINÁMICO] Respuesta de SQL para permisos:", res);
+
+            if (res && res.success && res.permiso !== undefined) {
+                return { permiso: parseInt(res.permiso, 10), numEmp };
+            }
+        } catch (e) {
+            console.error("❌ [DINÁMICO] Error al consultar permisos en SQL:", e);
+        }
+
+        return { permiso: 0, numEmp };
     },
 
     obtenerClaveCentroActual: function () {
-        // Nota: Para obtener la clave de centro actual de forma síncrona en las validaciones, leemos del combo o localStorage
         const selectCentro = document.getElementById('selectCentroCargaAdmin');
         if (selectCentro && !selectCentro.disabled && selectCentro.value) {
-            const claveSel = String(selectCentro.value).trim();
-            console.log("🏢 [TESTIGO] Clave de centro seleccionada en combo (Admin):", claveSel);
-            return claveSel;
+            return String(selectCentro.value).trim();
         }
         
         let claveUsuario = localStorage.getItem('centro_activo_actual') || 
                            localStorage.getItem('usuario_centro') || 
-                           localStorage.getItem('depto_activo_actual') || "CIQ";
+                           localStorage.getItem('depto_activo_actual') || "";
 
-        console.log("🏢 [TESTIGO] Clave de centro asignada por defecto:", claveUsuario);
         return String(claveUsuario).trim();
     },
 
@@ -110,16 +113,25 @@ window.RhAsisCasc = {
             });
         }
 
-        // Esperamos correctamente el permiso del usuario
-        const permisoUsuario = await RhAsisCasc.obtenerPermisoUsuario();
+        // 🟢 Consultamos de forma dinámica el permiso real desde SQL Server
+        const datosPermiso = await RhAsisCasc.obtenerPermisoUsuarioDinamico();
+        const permisoUsuario = datosPermiso.permiso;
         const esAdminGlobal = (permisoUsuario === 4 || permisoUsuario === 5);
-        
-        console.log("🛡️ [TESTIGO] Renderizando vista. ¿Es admin global con acceso a combo?:", esAdminGlobal);
+
+        console.log("🛡️ [DINÁMICO] Evaluando interfaz. Permiso SQL:", permisoUsuario, "| ¿Es admin global?:", esAdminGlobal);
+
+        // Indicador visual en pantalla con el resultado dinámico obtenido de SQL
+        const indicadorDepuracionHtml = `
+            <div class="px-3 py-1.5 bg-stone-100 border border-stone-200 rounded-lg text-[11px] text-stone-600 flex items-center gap-3">
+                <span><b>Emp (SQL):</b> ${datosPermiso.numEmp || 'No detectado'}</span>
+                <span><b>Permiso (SQL):</b> <strong class="${esAdminGlobal ? 'text-emerald-600' : 'text-stone-800'}">${permisoUsuario}</strong></span>
+            </div>
+        `;
 
         const selectorCentroHtml = `
             <div class="flex flex-col gap-1">
                 <label for="selectCentroCargaAdmin" class="text-[10px] font-bold ${esAdminGlobal ? 'text-[#249444]' : 'text-stone-500'} uppercase tracking-wider">
-                    Campo / Centro de Trabajo ${esAdminGlobal ? '(Selector Global - Permiso ' + permisoUsuario + ')' : '(Asignado)'}
+                    Campo / Centro de Trabajo ${esAdminGlobal ? '(Selector Global Dinámico)' : '(Asignado)'}
                 </label>
                 <select id="selectCentroCargaAdmin" ${!esAdminGlobal ? 'disabled' : ''} class="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] text-stone-700 shadow-xs cursor-pointer h-[34px]">
                     <option value="CIQ">CIQ - Campo Experimental Norman E. Borlaug</option>
@@ -133,14 +145,17 @@ window.RhAsisCasc = {
         contenedor.innerHTML = `
             <div class="space-y-6 animate-fade-in pb-10">
                 <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 space-y-6">
-                    <div class="flex items-center gap-3 mb-6 pb-4 border-b border-stone-100">
-                        <div class="p-2.5 bg-[#f0fdf4] border border-[#c6f6d5] text-[#059669] rounded-xl flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 21a8 8 0 0 1 13.292-6"/><circle cx="10" cy="8" r="5"/><path d="m16 19 2 2 4-4"/></svg>
+                    <div class="flex items-center justify-between mb-6 pb-4 border-b border-stone-100 flex-wrap gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2.5 bg-[#f0fdf4] border border-[#c6f6d5] text-[#059669] rounded-xl flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 21a8 8 0 0 1 13.292-6"/><circle cx="10" cy="8" r="5"/><path d="m16 19 2 2 4-4"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-black text-stone-800 text-lg uppercase tracking-wide">CONTROL DE ASISTENCIA</h3>
+                                <p class="text-xs text-stone-500">Gestión y carga masiva de biométricos</p>
+                            </div>
                         </div>
-                        <div>
-                            <h3 class="font-black text-stone-800 text-lg uppercase tracking-wide">CONTROL DE ASISTENCIA</h3>
-                            <p class="text-xs text-stone-500">Gestión y carga masiva de biométricos</p>
-                        </div>
+                        ${indicadorDepuracionHtml}
                     </div>
 
                     <div class="bg-stone-50/60 rounded-2xl border border-stone-200 p-5 space-y-4">
@@ -175,9 +190,7 @@ window.RhAsisCasc = {
                                         </button>
                                     </div>
 
-                                    <!-- 🟢 BOTÓN DE EXPORTAR RECUPERADO -->
                                     <button id="exportBtn" disabled onclick="if(window.RhAsisCasc && typeof RhAsisCasc.exportarExcelCasc === 'function') RhAsisCasc.exportarExcelCasc()" class="px-4 py-2 bg-[#249444] text-white rounded-xl text-xs font-bold hover:bg-[#1e7a37] transition flex items-center gap-2 shadow-xs opacity-60 cursor-not-allowed h-[34px]">
-                                        <svg id="exportIcon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-down"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg>
                                         <span id="exportText">Exportar Información</span>
                                     </button>
                                 </div>
@@ -185,7 +198,6 @@ window.RhAsisCasc = {
                         </div>
                     </div>
 
-                    <!-- FILTROS Y GRID -->
                     <div class="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs">
                         <div class="px-6 py-4 border-b border-stone-100 flex justify-between items-center bg-white flex-wrap gap-3">
                             <h4 class="font-bold text-stone-800 text-xs uppercase tracking-wider">
