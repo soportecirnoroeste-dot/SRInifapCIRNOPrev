@@ -1,11 +1,11 @@
 // ==========================================
 // PUENTES GLOBALES PARA EL ROUTER DE LA APP (CIRNORH)
 // ==========================================
-window.manejarAccionSeccion_cirnorh = function(idOpt) {
+window.manejarAccionSeccion_cirnorh = function (idOpt) {
     manejarAccionSeccionRh(idOpt);
 };
 
-window.manejarAccionSeccionCirnorh = function(idOpt) {
+window.manejarAccionSeccionCirnorh = function (idOpt) {
     manejarAccionSeccionRh(idOpt);
 };
 
@@ -26,7 +26,7 @@ async function cargarDatosDelSistema() {
         // 2. Si SQL responde correctamente, extraemos los departamentos y actualizamos la caché local
         if (respuesta && (respuesta.success || respuesta.departamentos)) {
             const listaSubmodulos = respuesta.departamentos || respuesta.submodulos || respuesta.data || [];
-            
+
             window.datosSession = respuesta;
             window.datosSistema = {
                 success: true,
@@ -53,7 +53,7 @@ async function cargarDatosDelSistema() {
         if (cacheLocal) {
             const datosParseados = JSON.parse(cacheLocal);
             const listaSubmodulos = datosParseados.departamentos || datosParseados.submodulos || datosParseados.data || [];
-            
+
             window.datosSession = datosParseados;
             window.datosSistema = {
                 success: true,
@@ -98,6 +98,12 @@ function obtenerContenedor() {
 }
 
 function manejarAccionSeccionRh(idOpt) {
+    // 🟢 Guardamos el identificador del submódulo en localStorage y sessionStorage de forma limpia
+    if (idOpt) {
+        localStorage.setItem('submoduloActivoId', idOpt);
+        sessionStorage.setItem('submoduloActivoId', idOpt);
+    }
+
     if (typeof window.manejarAccionSeccionGenerica === 'function') {
         window.manejarAccionSeccionGenerica(idOpt);
     } else {
@@ -143,10 +149,10 @@ function ejecutarCargaSeccionRh(idOpt) {
         } else {
             renderizarVistaModuloRh(idOpt, tituloFinal);
         }
-    } 
+    }
     else if (idMinus.includes('asistencia') || idMinus.includes('asis') || idMinus === 'biometrico' || idMinus === '2' || tituloFinal.toLowerCase().includes('asistencia')) {
         cargarAsistenciaRh();
-    } 
+    }
     else {
         renderizarVistaModuloRh(idOpt, tituloFinal);
     }
@@ -227,7 +233,7 @@ async function procesarCargaInicialSeccionRh(event) {
         }
 
         if (contenedor) contenedor.innerHTML = '';
-        
+
         if (typeof window.cargarMenuDepartamento === 'function') {
             window.cargarMenuDepartamento();
         } else if (typeof window.restaurarMenuDepto === 'function') {
@@ -252,7 +258,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let intentos = 0;
     const maxIntentos = 15; // 15 intentos x 100ms = hasta 1.5 segundos de espera inteligente
-    
+
     const verificarYRenderizar = async () => {
         const opcionesDinamicas = window.cirnorhConfig.options;
         if ((opcionesDinamicas && opcionesDinamicas.length > 0) || intentos >= maxIntentos) {
