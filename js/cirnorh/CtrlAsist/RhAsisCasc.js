@@ -49,6 +49,7 @@ window.RhAsisCasc = {
                         const obj = JSON.parse(item);
                         const valPermiso = obj.SRIPermEm || obj.permiso || obj.SRIPerPerm || obj.nivelPermiso;
                         if (valPermiso !== undefined && valPermiso !== null) {
+                            console.log("testigo propio "+valPermiso);
                             permiso = parseInt(valPermiso, 10);
                             break;
                         }
