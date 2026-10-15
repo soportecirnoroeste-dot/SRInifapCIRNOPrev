@@ -29,20 +29,40 @@ window.RhAsisCasc = {
     },
 
     obtenerPermisoUsuario: function () {
-        const permiso = parseInt(
-            localStorage.getItem('SRIPermEm') || 
-            localStorage.getItem('usuario_permiso_actual') || 
-            localStorage.getItem('permiso_usuario') || "0", 10
-        );
+        let permiso = 0;
+
+        // 1. Buscamos en variables simples
+        const permDirecto = localStorage.getItem('SRIPermEm') || 
+                            localStorage.getItem('usuario_permiso_actual') || 
+                            localStorage.getItem('permiso_usuario') || 
+                            sessionStorage.getItem('SRIPermEm');
+
+        if (permDirecto !== null && permDirecto !== undefined && permDirecto !== "") {
+            permiso = parseInt(permDirecto, 10);
+        }
+
+        // 2. Si no lo encuentra, buscamos dentro de objetos JSON de sesión guardados
+        if (!permiso) {
+            const clavesSesion = ['usuario', 'usuarioLogueado', 'sesionActiva', 'datosUsuario', 'SRIEmpleado'];
+            for (let i = 0; i < clavesSesion.length; i++) {
+                const item = localStorage.getItem(clavesSesion[i]) || sessionStorage.getItem(clavesSesion[i]);
+                if (item) {
+                    try {
+                        const obj = JSON.parse(item);
+                        const valPermiso = obj.SRIPermEm || obj.permiso || obj.SRIPerPerm || obj.nivelPermiso;
+                        if (valPermiso !== undefined && valPermiso !== null) {
+                            permiso = parseInt(valPermiso, 10);
+                            break;
+                        }
+                    } catch (e) {
+                        // Continuar si no es un JSON válido
+                    }
+                }
+            }
+        }
+
         console.log("🔑 [TESTIGO] Permiso del usuario detectado:", permiso);
         return permiso;
-    },
-
-    tienePermisoGlobal: function () {
-        const permiso = RhAsisCasc.obtenerPermisoUsuario();
-        const esAdmin = (permiso === 4 || permiso === 5);
-        console.log("🛡️ [TESTIGO] ¿Tiene permiso global para seleccionar campo?:", esAdmin);
-        return esAdmin;
     },
 
     obtenerClaveCentroActual: function () {
@@ -55,9 +75,33 @@ window.RhAsisCasc = {
             }
         }
         
-        let claveUsuario = localStorage.getItem('centro_activo_actual') || localStorage.getItem('usuario_centro') || "";
+        let claveUsuario = localStorage.getItem('centro_activo_actual') || 
+                           localStorage.getItem('usuario_centro') || 
+                           localStorage.getItem('depto_activo_actual') || "";
+
+        // Si viene vacía, buscamos dentro de los objetos JSON de sesión
+        if (!claveUsuario) {
+            const clavesSesion = ['usuario', 'usuarioLogueado', 'sesionActiva', 'SRIEmpleado'];
+            for (let i = 0; i < clavesSesion.length; i++) {
+                const item = localStorage.getItem(clavesSesion[i]) || sessionStorage.getItem(clavesSesion[i]);
+                if (item) {
+                    try {
+                        const obj = JSON.parse(item);
+                        const valCentro = obj.SRICenId || obj.claveCentro || obj.centro || obj.depto;
+                        if (valCentro) {
+                            claveUsuario = String(valCentro).trim();
+                            break;
+                        }
+                    } catch (e) { }
+                }
+            }
+        }
+
+        // Valor por defecto en caso de no estar definido
+        if (!claveUsuario) claveUsuario = "CIQ";
+
         console.log("🏢 [TESTIGO] Clave de centro asignada por defecto (Usuario):", claveUsuario);
-        return String(claveUsuario).trim();
+        return claveUsuario;
     },
 
     mostrarVistaBiometrico: async function () {
