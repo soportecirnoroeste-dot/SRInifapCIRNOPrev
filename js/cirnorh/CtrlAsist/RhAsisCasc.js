@@ -517,6 +517,7 @@ window.RhAsisCasc = {
 
     cargarDatosDesdeSheets: async function () {
         try {
+            // 🟢 Usamos directamente la misma forma de llamada que ya tenías validada
             const apiCall = window.callAppsScript || window.FetchAPI;
             if (!apiCall) return;
 
@@ -534,14 +535,16 @@ window.RhAsisCasc = {
                 }
             }
 
+            // 🟢 Guardamos en las variables globales que leen el grid y los filtros
             RhAsisCasc.registrosBiometrico = listaRegistros;
             window.registrosFiltradosActuales = listaRegistros;
 
-            // Renderizamos inmediatamente el grid con lo que ya teníamos seguro
+            // Renderizamos inmediatamente el grid
             if (typeof RhAsisCasc.renderGrid === 'function') {
                 RhAsisCasc.renderGrid(listaRegistros);
             }
 
+            // Actualizamos el contador visual en la cabecera
             const contadorEl = document.getElementById('contadorRegistrosBio');
             if (contadorEl) {
                 contadorEl.innerText = listaRegistros.length;
