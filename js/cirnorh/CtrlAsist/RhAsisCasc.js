@@ -520,13 +520,7 @@ window.RhAsisCasc = {
             const apiCall = window.callAppsScript || window.FetchAPI;
             if (!apiCall) return;
 
-            // 🟢 Recuperamos la clave del centro actual para enviarla al backend
-            const claveCentroActivo = RhAsisCasc.obtenerClaveCentroActual ? String(RhAsisCasc.obtenerClaveCentroActual()).trim() : "";
-
-            const res = await apiCall("obtenerTodosLosRegistrosPlano", {
-                claveCentro: claveCentroActivo,
-                centro: claveCentroActivo
-            });
+            const res = await apiCall("obtenerTodosLosRegistrosPlano", {});
 
             let listaRegistros = [];
 
@@ -541,11 +535,12 @@ window.RhAsisCasc = {
             }
 
             RhAsisCasc.registrosBiometrico = listaRegistros;
-            window.registrosFiltradosActuales = listaRegistros;
 
             // Renderizamos el grid en pantalla
             if (typeof RhAsisCasc.renderGrid === 'function') {
                 RhAsisCasc.renderGrid(listaRegistros);
+            } else {
+                console.error("❌ No se encontró la función renderGrid en RhAsisCasc");
             }
 
             // Actualizamos el contador visual en la cabecera de la tabla
@@ -571,7 +566,15 @@ window.RhAsisCasc = {
         if (!gridContent) return;
         const headers = RhAsisCasc.rawHeaderGlobal;
 
-        if (!listaRegistros || listaRegistros.length === 0) {
+        // 🟢 Asegurarnos de que listaRegistros sea siempre un arreglo válido
+        let registrosValidos = [];
+        if (Array.isArray(listaRegistros)) {
+            registrosValidos = listaRegistros;
+        } else if (listaRegistros && typeof listaRegistros === 'object') {
+            registrosValidos = listaRegistros.data || listaRegistros.registros || Object.values(listaRegistros);
+        }
+
+        if (!registrosValidos || registrosValidos.length === 0) {
             if (exportBtn) {
                 exportBtn.disabled = true;
                 exportBtn.className = "px-4 py-2 bg-stone-100 border border-stone-200 text-stone-400 opacity-60 cursor-not-allowed rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 h-[34px]";
@@ -599,7 +602,7 @@ window.RhAsisCasc = {
             exportBtn.className = "px-4 py-2 bg-[#249444] hover:bg-[#1e7a37] text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer h-[34px]";
         }
 
-        if (contador) contador.innerText = `${listaRegistros.length}`;
+        if (contador) contador.innerText = `${registrosValidos.length}`;
 
         gridContent.innerHTML = `
             <table class="w-full text-[11px] text-left border-collapse min-w-[950px]">
@@ -607,23 +610,42 @@ window.RhAsisCasc = {
                     <tr>${headers.map(h => `<th class="p-3 border-b border-stone-200 text-center whitespace-nowrap">${h}</th>`).join('')}</tr>
                 </thead>
                 <tbody class="divide-y divide-stone-100">
-                    ${listaRegistros.map(r => {
-            // 🟢 Renderizamos únicamente las primeras 12 columnas en el Grid de la pantalla
-            const celdas = Array.isArray(r) ? r.slice(0, 12) : headers.map(h => r[h] || "");
-            return `
+                    ${registrosValidos.map(r => {
+                        // Extraemos las primeras 12 columnas de manera segura
+                        let celdas = [];
+                        if (Array.isArray(r)) {
+                            celdas = r.slice(0, 12);
+                        } else if (r && typeof r === 'object') {
+                            celdas = [
+                                r.Centro || r[0] || "",
+                                r.NumEmp || r[1] || "",
+                                r.SRICtrlAHrE || r[2] || "",
+                                r.SRICtrlAHrS || r[3] || "",
+                                r.SRICtrlAHrRg || r[4] || "",
+                                r.SRICtrlAReg || r[5] || "",
+                                r.SRICtrlAFeRg || r[6] || "",
+                                r.SRICtrlADia || r[7] || "",
+                                r.SRICtrlAMen || r[8] || "",
+                                r.SRICtrlAMed || r[9] || "",
+                                r.SRICtrlAMay || r[10] || "",
+                                r.SRICtrlAFalta || r[11] || ""
+                            ];
+                        }
+
+                        return `
                             <tr class="bg-white hover:bg-stone-50 transition text-stone-700">
                                 ${celdas.map((c, index) => {
-                let val = c;
-                if (index === 2 || index === 3) {
-                    val = RhAsisCasc.extraerHoraLegible(val, false);
-                } else if (index === 4) {
-                    val = RhAsisCasc.extraerHoraLegible(val, true);
-                }
-                return `<td class="p-2.5 border-b border-stone-100 text-center whitespace-nowrap">${val !== null && val !== undefined && String(val).trim() !== '' ? val : ''}</td>`;
-            }).join('')}
+                                    let val = c;
+                                    if (index === 2 || index === 3) {
+                                        val = RhAsisCasc.extraerHoraLegible(val, false);
+                                    } else if (index === 4) {
+                                        val = RhAsisCasc.extraerHoraLegible(val, true);
+                                    }
+                                    return `<td class="p-2.5 border-b border-stone-100 text-center whitespace-nowrap">${val !== null && val !== undefined && String(val).trim() !== '' ? val : ''}</td>`;
+                                }).join('')}
                             </tr>
                         `;
-        }).join('')}
+                    }).join('')}
                 </tbody>
             </table>
         `;
