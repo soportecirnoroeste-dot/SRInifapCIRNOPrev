@@ -110,32 +110,28 @@ window.RhAsisCasc = {
 
         const usuarioActivo = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
         const regId = usuarioActivo.SRIRegId || 100; 
-        console.log("🔍 [SQL] Solicitando centros reales para Regional ID:", regId);
 
         try {
             const res = await apiCall("obtenerCamposPorRegionalSQL", { regId: regId });
-            console.log("📡 [Respuesta SQL Centros]:", res);
 
             if (res && res.success && Array.isArray(res.data)) {
-                selectElement.innerHTML = '<option value="">Seleccione un centro de trabajo...</option>';
+                selectElement.innerHTML = '<option value="">SELECCIONE UN CENTRO DE TRABAJO...</option>';
                 
                 res.data.forEach(campo => {
                     const option = document.createElement('option');
-                    option.value = campo.CenId; // ID numérico real (SRICenId)
+                    option.value = campo.CenId;
                     
-                    const clave = campo.CenCla || '';
+                    // 🟢 Formato explícito: ID - NOMBRE (ej: 108 - DIRECCIÓN CIR-NOROESTE)
+                    const idCentro = campo.CenId || '';
                     const nombre = campo.CenNom || '';
-                    option.textContent = clave ? `${clave} - ${nombre}` : nombre;
+                    option.textContent = `${idCentro} - ${nombre}`;
                     
                     selectElement.appendChild(option);
                 });
 
-                // Si el usuario no es admin global, preseleccionamos su centro asignado de la sesión
                 if (usuarioActivo.SRICenId) {
                     selectElement.value = usuarioActivo.SRICenId;
                 }
-
-                console.log("✅ Selector actualizado con los centros de dbo.SRICentro!");
             }
         } catch (e) {
             console.error("❌ Error en petición SQL de campos:", e);
@@ -504,27 +500,21 @@ window.RhAsisCasc = {
                 </thead>
                 <tbody class="divide-y divide-stone-100">
                     ${listaRegistros.map(r => {
-                        const celdas = Array.isArray(r) ? [...r.slice(0, 12)] : headers.map(h => r[h] || "");
-                        return `
+            const celdas = Array.isArray(r) ? [...r.slice(0, 12)] : headers.map(h => r[h] || "");
+            return `
                             <tr class="bg-white hover:bg-stone-50 transition text-stone-700">
                                 ${celdas.map((c, index) => {
-                                    let val = c;
-                                    
-                                    // 🟢 Formato personalizado para la columna Centro (Índice 0) -> CenId - CenNom o Clave
-                                    if (index === 0) {
-                                        // Si el valor es numérico o ID, puedes cruzarlo o mostrarlo limpio junto al nombre
-                                        val = val ? String(val).trim() : "SIN CENTRO";
-                                    } else if (index === 2 || index === 3) {
-                                        val = RhAsisCasc.extraerHoraLegible(val, false);
-                                    } else if (index === 4) {
-                                        val = RhAsisCasc.extraerHoraLegible(val, true);
-                                    }
-
-                                    return `<td class="p-2.5 border-b border-stone-100 text-center whitespace-nowrap">${val !== null && val !== undefined && String(val).trim() !== '' ? val : ''}</td>`;
-                                }).join('')}
+                let val = c;
+                if (index === 2 || index === 3) {
+                    val = RhAsisCasc.extraerHoraLegible(val, false);
+                } else if (index === 4) {
+                    val = RhAsisCasc.extraerHoraLegible(val, true);
+                }
+                return `<td class="p-2.5 border-b border-stone-100 text-center whitespace-nowrap">${val !== null && val !== undefined && String(val).trim() !== '' ? val : ''}</td>`;
+            }).join('')}
                             </tr>
                         `;
-                    }).join('')}
+        }).join('')}
                 </tbody>
             </table>
         `;
