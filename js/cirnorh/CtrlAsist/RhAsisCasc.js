@@ -517,34 +517,44 @@ window.RhAsisCasc = {
 
     cargarDatosDesdeSheets: async function () {
         try {
-            // 🟢 Usamos directamente la misma forma de llamada que ya tenías validada
             const apiCall = window.callAppsScript || window.FetchAPI;
             if (!apiCall) return;
 
+            // Llamamos a la función en Apps Script
             const res = await apiCall("obtenerTodosLosRegistrosPlano", {});
+            console.log("📡 Respuesta cruda de Apps Script:", res);
 
             let listaRegistros = [];
 
             if (res) {
+                // Si la respuesta viene directamente como un arreglo
                 if (Array.isArray(res)) {
                     listaRegistros = res;
-                } else if (res.data && Array.isArray(res.data)) {
+                } 
+                // Si viene envuelta en un objeto con propiedad data o registros (éste es tu caso)
+                else if (res.data && Array.isArray(res.data)) {
                     listaRegistros = res.data;
                 } else if (res.registros && Array.isArray(res.registros)) {
                     listaRegistros = res.registros;
+                } 
+                // Por si viene anidada como res.resultado o similar
+                else if (res.resultado && Array.isArray(res.resultado)) {
+                    listaRegistros = res.resultado;
                 }
             }
 
-            // 🟢 Guardamos en las variables globales que leen el grid y los filtros
+            console.log("📋 Registros procesados para el grid:", listaRegistros.length);
+
+            // Asignamos a las variables globales del grid y filtros
             RhAsisCasc.registrosBiometrico = listaRegistros;
             window.registrosFiltradosActuales = listaRegistros;
 
-            // Renderizamos inmediatamente el grid
+            // Renderizamos inmediatamente el grid en pantalla
             if (typeof RhAsisCasc.renderGrid === 'function') {
                 RhAsisCasc.renderGrid(listaRegistros);
             }
 
-            // Actualizamos el contador visual en la cabecera
+            // Actualizamos el contador visual
             const contadorEl = document.getElementById('contadorRegistrosBio');
             if (contadorEl) {
                 contadorEl.innerText = listaRegistros.length;
