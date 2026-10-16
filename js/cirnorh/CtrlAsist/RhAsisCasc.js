@@ -174,14 +174,23 @@ window.RhAsisCasc = {
         const permisoUsuario = datosPermiso.permiso;
         const esAdminGlobal = (permisoUsuario === 4 || permisoUsuario === 5);
 
-        // 3. Selector dinámico de centros
+        // 🟢 2. Definir HTML condicional para el filtro de Centro (Visible exclusivamente para permiso 4 o superior/específico)
+        const filtroCentroHtml = (permisoUsuario === 4) ? `
+            <div class="flex flex-col gap-1">
+                <label for="filtroCentroBio" class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Centro</label>
+                <input type="text" id="filtroCentroBio" oninput="RhAsisCasc.aplicarFiltrosCombinados()" placeholder="Centro..."
+                    class="w-32 px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] transition-all shadow-xs text-stone-700">
+            </div>
+        ` : '';
+
+        // 3. Selector dinámico de centros superior
         const selectorCentroHtml = `
             <div class="flex flex-col gap-1">
                 <label for="selectCentroCargaAdmin" class="text-[10px] font-bold ${esAdminGlobal ? 'text-[#249444]' : 'text-stone-500'} uppercase tracking-wider">
-                    Selecciona centro para cargar datos ${esAdminGlobal ? '' : ''}
+                    Selecciona centro para cargar datos
                 </label>
-                <select id="selectCentroCargaAdmin" ${!esAdminGlobal ? 'disabled' : ''} onchange="RhAsisCasc.cargarDatosDesdeSheets()" class="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] text-stone-700 shadow-xs cursor-pointer h-[34px]">
-                    <option value="">Cargando centros...</option>
+                <select id="selectCentroCargaAdmin" ${!esAdminGlobal ? 'disabled' : ''} class="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] text-stone-700 shadow-xs cursor-pointer h-[34px]">
+                    <option value="">SELECCIONE UN CENTRO DE TRABAJO...</option>
                 </select>
             </div>
         `;
@@ -247,6 +256,7 @@ window.RhAsisCasc = {
                                 LISTADO DE <span id="contadorRegistrosBio">0</span> REGISTROS DE BIOMÉTRICO
                             </h4>
 
+                            <!-- 🟢 4. BARRA DE FILTROS REORDENADA (Centro colocado al final) -->
                             <div class="flex flex-wrap items-end gap-3">
                                 <div class="flex flex-col gap-1">
                                     <label for="filtroFechaDesde" class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">De</label>
@@ -261,16 +271,12 @@ window.RhAsisCasc = {
                                 </div>
 
                                 <div class="flex flex-col gap-1">
-                                    <label for="filtroCentroBio" class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Centro</label>
-                                    <input type="text" id="filtroCentroBio" oninput="RhAsisCasc.aplicarFiltrosCombinados()" placeholder="Centro..."
-                                        class="w-32 px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] transition-all shadow-xs text-stone-700">
-                                </div>
-
-                                <div class="flex flex-col gap-1">
                                     <label for="filtroNumEmpBio" class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">N° Empleado</label>
                                     <input type="text" id="filtroNumEmpBio" oninput="RhAsisCasc.aplicarFiltrosCombinados()" placeholder="Núm..."
                                         class="w-32 px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] transition-all shadow-xs text-stone-700">
                                 </div>
+
+                                ${filtroCentroHtml}
                             </div>
                         </div>
 
@@ -293,7 +299,6 @@ window.RhAsisCasc = {
             </div>
         `;
 
-        // 4. Poblar el combo dinámicamente con datos reales de SQL
         await RhAsisCasc.cargarCamposPorRegional();
 
         RhAsisCasc.registrosBiometrico = [];
