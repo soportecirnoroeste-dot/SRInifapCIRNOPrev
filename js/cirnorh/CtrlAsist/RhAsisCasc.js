@@ -493,25 +493,30 @@ window.RhAsisCasc = {
             const apiCall = window.callAppsScript || window.FetchAPI;
             if (!apiCall) return;
 
-            // Obtenemos la regional del usuario activo para traer todos sus centros
             const usuarioActivo = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
             const regId = usuarioActivo.SRIRegId || 100;
+            
+            console.log("🔍 [DEBUG] Solicitando registros para Regional ID:", regId);
 
-            // 🟢 Solicitamos todos los registros de la regional sin filtrar por el combo de carga
             const res = await apiCall("obtenerTodosLosRegistrosPlano", {
                 regId: regId
             });
 
+            console.log("📡 [DEBUG] Respuesta obtenida de obtenerTodosLosRegistrosPlano:", res);
+
             if (res && (res.success || Array.isArray(res))) {
                 const registrosData = Array.isArray(res) ? res : (res.registros || res.data || []);
+                console.log("📋 [DEBUG] Registros procesados para el grid:", registrosData.length);
+                
                 RhAsisCasc.registrosBiometrico = registrosData;
                 RhAsisCasc.renderGrid(RhAsisCasc.registrosBiometrico);
             } else {
+                console.warn("⚠️ [DEBUG] La respuesta no contiene datos válidos:", res);
                 RhAsisCasc.registrosBiometrico = [];
                 RhAsisCasc.renderGrid([]);
             }
         } catch (e) {
-            console.error("Error al cargar biométrico desde SQL:", e);
+            console.error("❌ Error al cargar biométrico desde SQL:", e);
             RhAsisCasc.registrosBiometrico = [];
             RhAsisCasc.renderGrid([]);
         }
