@@ -1,4 +1,10 @@
 // js/cirnorh/asistencia/RhAsisCasc.js
+// Al iniciar tu módulo o vista, asegúrate de invocarla así:
+document.addEventListener("DOMContentLoaded", function() {
+    if (typeof RhAsisCasc.cargarCamposPorRegional === "function") {
+        RhAsisCasc.cargarCamposPorRegional();
+    }
+});
 
 window.RhAsisCasc = {
     registrosBiometrico: [],
