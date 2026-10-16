@@ -67,10 +67,7 @@ window.RhAsisCasc = {
         // 2. Obtener dinámicamente el submódulo actual desde el almacenamiento local (capturado del clic) o la URL
         const submoduloActual = localStorage.getItem('submoduloActivoId') || new URLSearchParams(window.location.search).get('seccion') || "";
 
-        console.log("🔍 [DINÁMICO] Contexto actual -> Módulo ID:", modId, "| Módulo Nombre:", moduloNombreCorto, "| Submódulo:", submoduloActual, "| Empleado:", numEmp);
-
         if (!apiCall || !numEmp) {
-            console.warn("⚠️ [DINÁMICO] No hay API disponible o N° de empleado vacío.");
             return { permiso: 0, numEmp };
         }
 
@@ -83,7 +80,6 @@ window.RhAsisCasc = {
                 submoduloNombre: submoduloActual
             });
 
-            console.log("📡 [DINÁMICO] Respuesta de SQL para permisos:", res);
 
             if (res && res.success && res.permiso !== undefined) {
                 return { permiso: parseInt(res.permiso, 10), numEmp };
@@ -114,35 +110,35 @@ window.RhAsisCasc = {
 
         if (!selectElement || !apiCall) return;
 
+        // 1. Imprimir la sesión activa para validar la región
         const usuarioActivo = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
-        const regId = usuarioActivo.SRIRegId || 100; // Tomado de la sesión (ej. 100)
-
-        console.log("🔍 [SQL] Solicitando centros reales para Regional ID:", regId);
+        const regId = usuarioActivo.SRIRegId || ""; 
+        console.log("🔍 [DEBUG FRONTEND] Regional leída de localStorage.usuarioActivo:", regId, usuarioActivo);
 
         try {
             const res = await apiCall("obtenerCamposPorRegionalSQL", { regId: regId });
+            console.log("📡 [DEBUG FRONTEND] Respuesta completa del backend:", res);
 
             if (res && res.success && Array.isArray(res.data)) {
+                console.log("📋 [DEBUG FRONTEND] Listado de centros recibidos para pintar:", res.data);
+                
                 selectElement.innerHTML = '<option value="">Todos los campos de la regional</option>';
-
-                res.data.forEach(centro => {
+                
+                res.data.forEach(campo => {
                     const option = document.createElement('option');
-                    option.value = centro.CenId; // SRICenId de la tabla
-
-                    // Mapeo exacto de la columna corta (SRICenNcor) y el nombre (SRICenNom)
-                    const clave = centro.CenCla || '';
-                    const nombre = centro.CenNom || '';
+                    option.value = campo.CenId;
+                    const clave = campo.CenCla || '';
+                    const nombre = campo.CenNom || '';
                     option.textContent = clave ? `${clave} - ${nombre}` : nombre;
-
                     selectElement.appendChild(option);
                 });
-                console.log("✅ Centros reales de SRICentro cargados con éxito:", res.data.length);
+            } else {
+                console.warn("⚠️ [DEBUG FRONTEND] La respuesta no contiene un arreglo 'data' válido:", res);
             }
         } catch (e) {
-            console.error("❌ Error al cargar los centros desde SQL:", e);
+            console.error("❌ [DEBUG FRONTEND] Error en la petición:", e);
         }
     },
-
     mostrarVistaBiometrico: async function () {
         const contenedor = document.getElementById('app-container') || document.querySelector('main') || document.body;
 
