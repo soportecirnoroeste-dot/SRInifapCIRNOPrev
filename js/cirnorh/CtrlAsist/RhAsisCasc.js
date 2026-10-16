@@ -535,15 +535,13 @@ window.RhAsisCasc = {
             }
 
             RhAsisCasc.registrosBiometrico = listaRegistros;
+            window.registrosFiltradosActuales = listaRegistros;
 
-            // Renderizamos el grid en pantalla
+            // Renderizamos inmediatamente el grid con lo que ya teníamos seguro
             if (typeof RhAsisCasc.renderGrid === 'function') {
                 RhAsisCasc.renderGrid(listaRegistros);
-            } else {
-                console.error("❌ No se encontró la función renderGrid en RhAsisCasc");
             }
 
-            // Actualizamos el contador visual en la cabecera de la tabla
             const contadorEl = document.getElementById('contadorRegistrosBio');
             if (contadorEl) {
                 contadorEl.innerText = listaRegistros.length;
