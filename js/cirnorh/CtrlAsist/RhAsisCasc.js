@@ -1,5 +1,4 @@
 // js/cirnorh/asistencia/RhAsisCasc.js
-// Al iniciar tu módulo o vista, asegúrate de invocarla así:
 document.addEventListener("DOMContentLoaded", function() {
     if (typeof RhAsisCasc.cargarCamposPorRegional === "function") {
         RhAsisCasc.cargarCamposPorRegional();
@@ -34,7 +33,6 @@ window.RhAsisCasc = {
         return strVal;
     },
 
-    // 🟢 Búsqueda 100% dinámica del número de empleado activo en la sesión
     obtenerNumEmpleadoLogueado: function () {
         let numEmp = localStorage.getItem('usuario_numemp') ||
             localStorage.getItem('SRIPerNumE') ||
@@ -42,7 +40,6 @@ window.RhAsisCasc = {
             localStorage.getItem('id_empleado') || "";
 
         if (!numEmp) {
-            // Agregamos 'usuarioActivo' que es la clave real de tu sistema
             const clavesJson = ['usuarioActivo', 'usuario', 'usuarioLogueado', 'sesionActiva', 'SRIEmpleado', 'datosUsuario'];
             for (let i = 0; i < clavesJson.length; i++) {
                 const rawObj = localStorage.getItem(clavesJson[i]) || sessionStorage.getItem(clavesJson[i]);
@@ -58,19 +55,15 @@ window.RhAsisCasc = {
         return String(numEmp).trim();
     },
 
-    // 🟢 Consulta dinámica de permisos directo a la base de datos SQL
     obtenerPermisoUsuarioDinamico: async function () {
         const numEmp = RhAsisCasc.obtenerNumEmpleadoLogueado();
         const apiCall = window.callAppsScript || window.FetchAPI;
 
-        // 1. Obtener dinámicamente el ID del módulo y su clave desde la configuración global o sesión
         const configModulo = window.cirnorhConfig || {};
         const usuarioActivo = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
 
-        const modId = configModulo.claveDep || ""; // Ej: "5"
+        const modId = configModulo.claveDep || "";
         const moduloNombreCorto = usuarioActivo.SRIModNomC || configModulo.deptoKey || "";
-
-        // 2. Obtener dinámicamente el submódulo actual desde el almacenamiento local (capturado del clic) o la URL
         const submoduloActual = localStorage.getItem('submoduloActivoId') || new URLSearchParams(window.location.search).get('seccion') || "";
 
         if (!apiCall || !numEmp) {
@@ -78,14 +71,12 @@ window.RhAsisCasc = {
         }
 
         try {
-            // 3. Enviamos los datos dinámicos completos a SQL Server / Apps Script
             const res = await apiCall("obtenerPermisoSubmoduloSQL", {
                 numEmp: numEmp,
                 modId: modId,
                 moduloNombre: moduloNombreCorto,
                 submoduloNombre: submoduloActual
             });
-
 
             if (res && res.success && res.permiso !== undefined) {
                 return { permiso: parseInt(res.permiso, 10), numEmp };
@@ -110,41 +101,47 @@ window.RhAsisCasc = {
         return String(claveUsuario).trim();
     },
 
+    // 🟢 CARGA DINÁMICA DE LOS CENTROS DESDE LA TABLA SQL (dbo.SRICentro) FILTRADOS POR REGIONAL
     cargarCamposPorRegional: async function () {
         const apiCall = window.callAppsScript || window.FetchAPI;
-        const selectElement = document.getElementById('filtro-campos-regional');
+        const selectElement = document.getElementById('selectCentroCargaAdmin');
 
         if (!selectElement || !apiCall) return;
 
-        // 1. Imprimir la sesión activa para validar la región
         const usuarioActivo = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
-        const regId = usuarioActivo.SRIRegId || ""; 
-        console.log("🔍 [DEBUG FRONTEND] Regional leída de localStorage.usuarioActivo:", regId, usuarioActivo);
+        const regId = usuarioActivo.SRIRegId || 100; 
+        console.log("🔍 [SQL] Solicitando centros reales para Regional ID:", regId);
 
         try {
             const res = await apiCall("obtenerCamposPorRegionalSQL", { regId: regId });
-            console.log("📡 [DEBUG FRONTEND] Respuesta completa del backend:", res);
+            console.log("📡 [Respuesta SQL Centros]:", res);
 
             if (res && res.success && Array.isArray(res.data)) {
-                console.log("📋 [DEBUG FRONTEND] Listado de centros recibidos para pintar:", res.data);
-                
-                selectElement.innerHTML = '<option value="">Todos los campos de la regional</option>';
+                selectElement.innerHTML = '<option value="">Seleccione un centro de trabajo...</option>';
                 
                 res.data.forEach(campo => {
                     const option = document.createElement('option');
-                    option.value = campo.CenId;
+                    option.value = campo.CenId; // ID numérico real (SRICenId)
+                    
                     const clave = campo.CenCla || '';
                     const nombre = campo.CenNom || '';
                     option.textContent = clave ? `${clave} - ${nombre}` : nombre;
+                    
                     selectElement.appendChild(option);
                 });
-            } else {
-                console.warn("⚠️ [DEBUG FRONTEND] La respuesta no contiene un arreglo 'data' válido:", res);
+
+                // Si el usuario no es admin global, preseleccionamos su centro asignado de la sesión
+                if (usuarioActivo.SRICenId) {
+                    selectElement.value = usuarioActivo.SRICenId;
+                }
+
+                console.log("✅ Selector actualizado con los centros de dbo.SRICentro!");
             }
         } catch (e) {
-            console.error("❌ [DEBUG FRONTEND] Error en la petición:", e);
+            console.error("❌ Error en petición SQL de campos:", e);
         }
     },
+
     mostrarVistaBiometrico: async function () {
         const contenedor = document.getElementById('app-container') || document.querySelector('main') || document.body;
 
@@ -164,12 +161,10 @@ window.RhAsisCasc = {
             });
         }
 
-        // 🟢 Consultamos de forma dinámica el permiso real desde SQL Server
         const datosPermiso = await RhAsisCasc.obtenerPermisoUsuarioDinamico();
         const permisoUsuario = datosPermiso.permiso;
         const esAdminGlobal = (permisoUsuario === 4 || permisoUsuario === 5);
 
-        // Indicador visual en pantalla con el resultado dinámico obtenido de SQL
         const indicadorDepuracionHtml = `
             <div class="px-3 py-1.5 bg-stone-100 border border-stone-200 rounded-lg text-[11px] text-stone-600 flex items-center gap-3">
                 <span><b>Emp (SQL):</b> ${datosPermiso.numEmp || 'No detectado'}</span>
@@ -177,16 +172,14 @@ window.RhAsisCasc = {
             </div>
         `;
 
+        // 🟢 Selector limpio y listo para ser poblado de manera 100% dinámica por SQL
         const selectorCentroHtml = `
             <div class="flex flex-col gap-1">
                 <label for="selectCentroCargaAdmin" class="text-[10px] font-bold ${esAdminGlobal ? 'text-[#249444]' : 'text-stone-500'} uppercase tracking-wider">
                     Campo / Centro de Trabajo ${esAdminGlobal ? '(Selector Global Dinámico)' : '(Asignado)'}
                 </label>
-                <select id="selectCentroCargaAdmin" ${!esAdminGlobal ? 'disabled' : ''} class="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] text-stone-700 shadow-xs cursor-pointer h-[34px]">
-                    <option value="CIQ">CIQ - Campo Experimental Norman E. Borlaug</option>
-                    <option value="CIB">CIB - Centro de Investigación Regional Noroeste</option>
-                    <option value="CIG">CIG - Campo Experimental Valle del Yaqui</option>
-                    <option value="CEBAC">CEBAC - Campo Experimental Bácum</option>
+                <select id="selectCentroCargaAdmin" ${!esAdminGlobal ? 'disabled' : ''} onchange="RhAsisCasc.cargarDatosDesdeSheets()" class="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] text-stone-700 shadow-xs cursor-pointer h-[34px]">
+                    <option value="">Cargando centros...</option>
                 </select>
             </div>
         `;
@@ -298,6 +291,9 @@ window.RhAsisCasc = {
                 </div>
             </div>
         `;
+
+        // 🟢 LLAMADA CLAVE: Al terminar de pintar la vista, cargamos los centros de la regional desde SQL
+        await RhAsisCasc.cargarCamposPorRegional();
 
         RhAsisCasc.registrosBiometrico = [];
         await RhAsisCasc.cargarDatosDesdeSheets();
