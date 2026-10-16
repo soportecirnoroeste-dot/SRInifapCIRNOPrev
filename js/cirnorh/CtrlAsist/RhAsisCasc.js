@@ -639,9 +639,9 @@ window.RhAsisCasc = {
 
         const filtrados = RhAsisCasc.registrosBiometrico.filter(row => {
             if (!Array.isArray(row)) return false;
-            const centro = String(row[0] || "").toLowerCase();
-            const numEmp = String(row[1] || "").toLowerCase();
-            const fechaRegRaw = String(row[6] || "").trim();
+            const centro = String(row[0] || "").toLowerCase(); // ID del Centro
+            const numEmp = String(row[1] || "").toLowerCase(); // Núm. Empleado
+            const fechaRegRaw = String(row[6] || "").trim();    // Fecha Reg.
             const fechaRegNorm = RhAsisCasc.normalizarFechaFiltro(fechaRegRaw);
 
             if (centroFiltro && !centro.includes(centroFiltro)) return false;
@@ -652,10 +652,12 @@ window.RhAsisCasc = {
             return true;
         });
 
-        // 🟢 Guardamos la referencia de los filtrados actuales para la exportación
         window.registrosFiltradosActuales = filtrados;
-
         RhAsisCasc.renderGrid(filtrados);
+    },
+
+    obtenerRegistrosFiltradosActuales: function () {
+        return window.registrosFiltradosActuales || RhAsisCasc.registrosBiometrico;
     },
 
     exportarExcelCasc: async function () {
@@ -751,35 +753,18 @@ window.RhAsisCasc = {
             const fondoHoja = "FFFFFF";
 
             for (const key of chavesGrupos) {
-                const rowsMapeadas = mapearRegistros(gruposAProcesar[key]);
+                const filasGrupo = gruposAProcesar[key];
+                const rowsMapeadas = mapearRegistros(filasGrupo);
                 let etiquetaEmp = numEmpFiltro ? numEmpFiltro : key.replace(/^Emp_/, '');
 
+                // 🟢 Extraemos el nombre del empleado directamente de la columna 12 que manda SQL
                 let nombreEmpleadoEncontrado = "";
-                const catalogoPersonal = RhAsisCasc.personalGlobal || [];
-
-                if (catalogoPersonal && catalogoPersonal.length > 0) {
-                    const empleadoMatch = catalogoPersonal.find(emp => {
-                        let numEmpFila = "";
-                        if (Array.isArray(emp)) {
-                            numEmpFila = String(emp[0] || emp[1] || "").trim();
-                        } else if (emp && typeof emp === 'object') {
-                            numEmpFila = String(emp.numEmp || emp.claveReg || emp.num_emp || "").trim();
-                        }
-                        const numEmpBuscado = etiquetaEmp !== undefined && etiquetaEmp !== null ? String(etiquetaEmp).trim() : "";
-                        return numEmpFila === numEmpBuscado;
-                    });
-
-                    if (empleadoMatch) {
-                        if (Array.isArray(empleadoMatch)) {
-                            nombreEmpleadoEncontrado = String(empleadoMatch[1] || empleadoMatch[2] || "").trim();
-                        } else {
-                            nombreEmpleadoEncontrado = String(empleadoMatch.nombre || empleadoMatch.nombreEmpleado || "").trim();
-                        }
-                    }
+                if (filasGrupo && filasGrupo.length > 0 && filasGrupo[0][12]) {
+                    nombreEmpleadoEncontrado = String(filasGrupo[0][12]).trim();
                 }
 
-                const textoIncidencias = nombreEmpleadoEncontrado
-                    ? `INCIDENCIAS DEL EMPLEADO: ${etiquetaEmp} - ${nombreEmpleadoEncontrado}`
+                const textoIncidencias = nombreEmpleadoEncontrado && nombreEmpleadoEncontrado !== "EMPLEADO"
+                    ? `INCIDENCIAS DEL EMPLEADO: ${etiquetaEmp} - ${nombreEmpleadoEncontrado.toUpperCase()}`
                     : `INCIDENCIAS DEL EMPLEADO: ${etiquetaEmp}`;
 
                 const nombrePestana = `${etiquetaEmp}`.replace(/[*?/\\[]]/g, '').substring(0, 31);
@@ -815,7 +800,7 @@ window.RhAsisCasc = {
                 ws.getCell('C3').alignment = { vertical: 'middle', horizontal: 'center' };
 
                 ws.mergeCells('C4:J4');
-                ws.getCell('C4').value = textoIncidencias;
+                ws.getCell('C4').value = textoIncidencias; // 🟢 Muestra el número y el nombre completo
                 ws.getCell('C4').font = { name: 'Arial', sz: 8.5, bold: true, color: { argb: '000000' } };
                 ws.getCell('C4').alignment = { vertical: 'middle', horizontal: 'center' };
 
@@ -826,7 +811,7 @@ window.RhAsisCasc = {
 
                 const headerRowIndex = 7;
                 ws.getRow(headerRowIndex).values = RhAsisCasc.rawHeaderGlobal;
-
+                
                 ws.getRow(headerRowIndex).eachCell((cell) => {
                     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D9D9D9' } };
                     cell.font = { name: 'Arial', sz: 9, bold: true, color: { argb: '000000' } };
