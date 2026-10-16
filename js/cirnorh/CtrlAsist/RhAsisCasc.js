@@ -108,6 +108,42 @@ window.RhAsisCasc = {
         return String(claveUsuario).trim();
     },
 
+    cargarCamposPorRegional: async function () {
+        const apiCall = window.callAppsScript || window.FetchAPI;
+        const selectElement = document.getElementById('filtro-campos-regional'); // O el ID de tu select en asistencias
+
+        if (!selectElement || !apiCall) return;
+
+        // Extraemos dinámicamente el ID de la regional desde la sesión activa
+        const usuarioActivo = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
+        const regId = usuarioActivo.SRIRegId || ""; // Ej: 100
+
+        console.log("🔍 [DINÁMICO] Cargando campos para la regional ID:", regId);
+
+        try {
+            const res = await apiCall("obtenerCamposPorRegionalSQL", { regId: regId });
+
+            if (res && res.success && Array.isArray(res.data)) {
+                // Limpiamos y dejamos la opción por defecto
+                selectElement.innerHTML = '<option value="">Todos los campos de la regional</option>';
+                
+                res.data.forEach(campo => {
+                    const option = document.createElement('option');
+                    option.value = campo.CenId || campo.id;
+                    
+                    // 🟢 Corrección: Unimos clave y nombre de forma limpia en una sola línea
+                    const clave = campo.CenCla || campo.clave || '';
+                    const nombre = campo.CenNom || campo.nombre || '';
+                    option.textContent = clave ? `${clave} - ${nombre}` : nombre;
+                    
+                    selectElement.appendChild(option);
+                });
+            }
+        } catch (e) {
+            console.error("❌ Error al cargar los campos de la regional:", e);
+        }
+    },
+
     mostrarVistaBiometrico: async function () {
         const contenedor = document.getElementById('app-container') || document.querySelector('main') || document.body;
 
