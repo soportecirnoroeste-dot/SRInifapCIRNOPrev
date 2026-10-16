@@ -60,7 +60,7 @@ window.RhAsisCasc = {
         // 1. Obtener dinámicamente el ID del módulo y su clave desde la configuración global o sesión
         const configModulo = window.cirnorhConfig || {};
         const usuarioActivo = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
-        
+
         const modId = configModulo.claveDep || ""; // Ej: "5"
         const moduloNombreCorto = usuarioActivo.SRIModNomC || configModulo.deptoKey || "";
 
@@ -109,39 +109,39 @@ window.RhAsisCasc = {
     },
 
     cargarCamposPorRegional: async function () {
-    const apiCall = window.callAppsScript || window.FetchAPI;
-    const selectElement = document.getElementById('filtro-campos-regional');
+        const apiCall = window.callAppsScript || window.FetchAPI;
+        const selectElement = document.getElementById('filtro-campos-regional');
 
-    if (!selectElement || !apiCall) return;
+        if (!selectElement || !apiCall) return;
 
-    const usuarioActivo = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
-    const regId = usuarioActivo.SRIRegId || 100; // Tomado de la sesión (ej. 100)
+        const usuarioActivo = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
+        const regId = usuarioActivo.SRIRegId || 100; // Tomado de la sesión (ej. 100)
 
-    console.log("🔍 [SQL] Solicitando centros reales para Regional ID:", regId);
+        console.log("🔍 [SQL] Solicitando centros reales para Regional ID:", regId);
 
-    try {
-        const res = await apiCall("obtenerCamposPorRegionalSQL", { regId: regId });
+        try {
+            const res = await apiCall("obtenerCamposPorRegionalSQL", { regId: regId });
 
-        if (res && res.success && Array.isArray(res.data)) {
-            selectElement.innerHTML = '<option value="">Todos los campos de la regional</option>';
-            
-            res.data.forEach(centro => {
-                const option = document.createElement('option');
-                option.value = centro.CenId; // SRICenId de la tabla
-                
-                // Mapeo exacto de la columna corta (SRICenNcor) y el nombre (SRICenNom)
-                const clave = centro.CenCla || '';
-                const nombre = centro.CenNom || '';
-                option.textContent = clave ? `${clave} - ${nombre}` : nombre;
-                
-                selectElement.appendChild(option);
-            });
-            console.log("✅ Centros reales de SRICentro cargados con éxito:", res.data.length);
+            if (res && res.success && Array.isArray(res.data)) {
+                selectElement.innerHTML = '<option value="">Todos los campos de la regional</option>';
+
+                res.data.forEach(centro => {
+                    const option = document.createElement('option');
+                    option.value = centro.CenId; // SRICenId de la tabla
+
+                    // Mapeo exacto de la columna corta (SRICenNcor) y el nombre (SRICenNom)
+                    const clave = centro.CenCla || '';
+                    const nombre = centro.CenNom || '';
+                    option.textContent = clave ? `${clave} - ${nombre}` : nombre;
+
+                    selectElement.appendChild(option);
+                });
+                console.log("✅ Centros reales de SRICentro cargados con éxito:", res.data.length);
+            }
+        } catch (e) {
+            console.error("❌ Error al cargar los centros desde SQL:", e);
         }
-    } catch (e) {
-        console.error("❌ Error al cargar los centros desde SQL:", e);
-    }
-}
+    },
 
     mostrarVistaBiometrico: async function () {
         const contenedor = document.getElementById('app-container') || document.querySelector('main') || document.body;
