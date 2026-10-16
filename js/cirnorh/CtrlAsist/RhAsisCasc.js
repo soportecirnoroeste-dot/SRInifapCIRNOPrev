@@ -520,7 +520,13 @@ window.RhAsisCasc = {
             const apiCall = window.callAppsScript || window.FetchAPI;
             if (!apiCall) return;
 
-            const res = await apiCall("obtenerTodosLosRegistrosPlano", {});
+            // 🟢 Recuperamos la clave del centro actual para enviarla al backend
+            const claveCentroActivo = RhAsisCasc.obtenerClaveCentroActual ? String(RhAsisCasc.obtenerClaveCentroActual()).trim() : "";
+
+            const res = await apiCall("obtenerTodosLosRegistrosPlano", {
+                claveCentro: claveCentroActivo,
+                centro: claveCentroActivo
+            });
 
             let listaRegistros = [];
 
@@ -535,12 +541,11 @@ window.RhAsisCasc = {
             }
 
             RhAsisCasc.registrosBiometrico = listaRegistros;
+            window.registrosFiltradosActuales = listaRegistros;
 
             // Renderizamos el grid en pantalla
             if (typeof RhAsisCasc.renderGrid === 'function') {
                 RhAsisCasc.renderGrid(listaRegistros);
-            } else {
-                console.error("❌ No se encontró la función renderGrid en RhAsisCasc");
             }
 
             // Actualizamos el contador visual en la cabecera de la tabla
