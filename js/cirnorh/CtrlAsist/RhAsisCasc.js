@@ -493,10 +493,13 @@ window.RhAsisCasc = {
             const apiCall = window.callAppsScript || window.FetchAPI;
             if (!apiCall) return;
 
-            const claveCentroActivo = RhAsisCasc.obtenerClaveCentroActual();
+            // Obtenemos la regional del usuario activo para traer todos sus centros
+            const usuarioActivo = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
+            const regId = usuarioActivo.SRIRegId || 100;
+
+            // 🟢 Solicitamos todos los registros de la regional sin filtrar por el combo de carga
             const res = await apiCall("obtenerTodosLosRegistrosPlano", {
-                claveCentro: claveCentroActivo,
-                centro: claveCentroActivo
+                regId: regId
             });
 
             if (res && (res.success || Array.isArray(res))) {
