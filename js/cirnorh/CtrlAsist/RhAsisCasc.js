@@ -97,7 +97,7 @@ window.RhAsisCasc = {
                 return { permiso: parseInt(res.permiso, 10), numEmp };
             }
         } catch (e) {
-            console.error("❌ [DINÁMICO] Error al consultar permisos en SQL:", e);
+            console.error("❌ [DINÁMICO] Error al consultar permisos en:", e);
         }
 
         return { permiso: 0, numEmp };
@@ -124,29 +124,26 @@ window.RhAsisCasc = {
         if (!selectElement || !apiCall) return;
 
         const usuarioActivo = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
-        const regId = usuarioActivo.SRIRegId || 100;
+        const regId = usuarioActivo.SRIRegId || 100; 
 
         try {
             const res = await apiCall("obtenerCamposPorRegionalSQL", { regId: regId });
 
             if (res && res.success && Array.isArray(res.data)) {
                 selectElement.innerHTML = '<option value="">SELECCIONE UN CENTRO DE TRABAJO...</option>';
-
+                
                 res.data.forEach(campo => {
                     const option = document.createElement('option');
                     option.value = campo.CenId;
-
-                    // 🟢 Formato explícito: ID - NOMBRE (ej: 108 - DIRECCIÓN CIR-NOROESTE)
+                    
                     const idCentro = campo.CenId || '';
                     const nombre = campo.CenNom || '';
                     option.textContent = `${idCentro} - ${nombre}`;
-
+                    
                     selectElement.appendChild(option);
                 });
 
-                if (usuarioActivo.SRICenId) {
-                    selectElement.value = usuarioActivo.SRICenId;
-                }
+                // 🟢 Se elimina la autoselección para obligar a elegir siempre de forma manual
             }
         } catch (e) {
             console.error("❌ Error en petición SQL de campos:", e);
@@ -429,7 +426,7 @@ window.RhAsisCasc = {
                 const yaExiste = verificacion && (verificacion.existe === true || verificacion.existe === "true");
 
                 if (yaExiste) {
-                    alert(`🛑 Los datos para este periodo (Empleado: ${primerNumEmp}, Fecha: ${fechaPrimerRegistroNorm}) ya fueron cargados anteriormente en SQL Server.`);
+                    alert(`🛑 Los datos para este periodo ya fueron cargados anteriormente.`);
                     return;
                 } else {
                     if (textCarga) textCarga.innerText = "Guardando...";
@@ -518,9 +515,7 @@ window.RhAsisCasc = {
             const apiCall = window.callAppsScript || window.FetchAPI;
             if (!apiCall) return;
 
-            console.log("🔍 Solicitando registros a SQL Server...");
             const res = await apiCall("obtenerTodosLosRegistrosPlano", {});
-            console.log("📡 Respuesta recibida:", res);
 
             let listaRegistros = [];
 
@@ -533,8 +528,6 @@ window.RhAsisCasc = {
                     listaRegistros = res.registros;
                 }
             }
-
-            console.log("📋 Total registros listos para renderizar:", listaRegistros.length);
 
             RhAsisCasc.registrosBiometrico = listaRegistros;
 
