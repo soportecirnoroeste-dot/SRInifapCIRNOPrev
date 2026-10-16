@@ -287,6 +287,7 @@ window.RhAsisCasc = {
         RhAsisCasc.registrosBiometrico = [];
         await RhAsisCasc.cargarDatosDesdeSheets();
     },
+
     manejarCargaYGuardadoAutomatico: async function (input) {
         const file = input.files[0];
         if (!file) return;
@@ -359,6 +360,38 @@ window.RhAsisCasc = {
                 alert("El archivo se leyó pero no se encontraron filas con número de empleado válido.");
                 return;
             }
+
+            // 🟢 VALIDACIÓN DE CENTRO: Comprobar que el nombre del centro coincida con la columna B del Excel
+            const selectCentro = document.getElementById('selectCentroCargaAdmin');
+            if (selectCentro && selectCentro.selectedIndex >= 0) {
+                const textoSeleccionado = selectCentro.options[selectCentro.selectedIndex].text.toLowerCase();
+                
+                // Extraer el nombre limpio (quitando el ID numérico si tiene formato "ID - Nombre")
+                let nombreCentroLimpio = "";
+                if (textoSeleccionado.includes("-")) {
+                    nombreCentroLimpio = textoSeleccionado.split("-")[1].trim();
+                } else {
+                    nombreCentroLimpio = textoSeleccionado.trim();
+                }
+
+                if (nombreCentroLimpio && !nombreCentroLimpio.includes("seleccione")) {
+                    let coincideCentro = false;
+                    for (let i = 0; i < filasValidas.length; i++) {
+                        // Columna B corresponde al índice 1 de la fila
+                        const valorColB = String(filasValidas[i][1] || "").toLowerCase().trim();
+                        if (valorColB && (valorColB.includes(nombreCentroLimpio) || nombreCentroLimpio.includes(valorColB))) {
+                            coincideCentro = true;
+                            break; // Con que un registro coincida, la validación es exitosa
+                        }
+                    }
+
+                    if (!coincideCentro) {
+                        alert(`❌ Error de validación: El archivo que intentas subir no corresponde al centro seleccionado ("${selectCentro.options[selectCentro.selectedIndex].text}"). Verifica el centro de trabajo.`);
+                        return;
+                    }
+                }
+            }
+            // 🟢 FIN DE LA VALIDACIÓN DE CENTRO
 
             let fechaNormalizada = RhAsisCasc.normalizarFechaFiltro(rawFechaDetectada || new Date().toISOString());
             let primerNumEmp = String(filasValidas[0][0] || filasValidas[0][1] || "0").trim();
