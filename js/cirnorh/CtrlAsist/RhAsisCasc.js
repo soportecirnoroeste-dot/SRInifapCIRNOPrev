@@ -163,12 +163,12 @@ window.RhAsisCasc = {
         const esAdminGlobal = (permisoUsuario === 4 || permisoUsuario === 5);
 
         // 🟢 2. DECLARACIÓN DE LA VARIABLE (AQUÍ ESTABA EL ERROR)
-       /* const indicadorDepuracionHtml = `
-            <div class="px-3 py-1.5 bg-stone-100 border border-stone-200 rounded-lg text-[11px] text-stone-600 flex items-center gap-3">
+        const indicadorDepuracionHtml = `
+            /*<div class="px-3 py-1.5 bg-stone-100 border border-stone-200 rounded-lg text-[11px] text-stone-600 flex items-center gap-3">
                 <span><b>Emp (SQL):</b> ${datosPermiso.numEmp || 'No detectado'}</span>
                 <span><b>Permiso (SQL):</b> <strong class="${esAdminGlobal ? 'text-emerald-600' : 'text-stone-800'}">${permisoUsuario}</strong></span>
             </div>
-        `;*/
+        `;
 
         // 3. Selector dinámico de centros
         const selectorCentroHtml = `
