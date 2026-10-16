@@ -17,19 +17,34 @@ window.RhAsisCasc = {
         if (!valor) return "";
         let strVal = String(valor).trim();
 
-        if (strVal.includes('1899-12-30T') || strVal.includes('T')) {
+        // Si viene con formato de fecha ISO o de SQL/Excel con 'T'
+        if (strVal.includes('T')) {
             const fechaObj = new Date(strVal);
             if (!isNaN(fechaObj.getTime())) {
-                const horas = String(fechaObj.getHours()).padStart(2, '0');
-                const minutos = String(fechaObj.getMinutes()).padStart(2, '0');
+                // 🟢 IMPORTANTE: Usar getUTC... para evitar que la zona horaria local altere la hora
+                const horas = String(fechaObj.getUTCHours()).padStart(2, '0');
+                const minutos = String(fechaObj.getUTCMinutes()).padStart(2, '0');
 
                 if (esRegistroCompleto) {
-                    const segundos = String(fechaObj.getSeconds()).padStart(2, '0');
+                    const segundos = String(fechaObj.getUTCSeconds()).padStart(2, '0');
                     return `${horas}:${minutos}:${segundos}`;
                 }
                 return `${horas}:${minutos}`;
             }
         }
+
+        // Si ya viene como cadena de texto tipo "08:00:00" o "08:00", la cortamos limpio
+        if (strVal.match(/^\d{1,2}:\d{2}(:\d{2})?$/)) {
+            const partes = strVal.split(':');
+            const h = partes[0].padStart(2, '0');
+            const m = partes[1].padStart(2, '0');
+            if (esRegistroCompleto && partes[2]) {
+                const s = partes[2].padStart(2, '0');
+                return `${h}:${m}:${s}`;
+            }
+            return `${h}:${m}`;
+        }
+
         return strVal;
     },
 
