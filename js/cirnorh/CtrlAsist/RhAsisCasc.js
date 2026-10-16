@@ -657,41 +657,254 @@ window.RhAsisCasc = {
         RhAsisCasc.renderGrid(filtrados);
     },
 
-    exportarExcelCasc: function () {
-        // 🟢 Tomamos los registros actuales del grid (respeta los filtros aplicados o trae todos)
-        const registrosAExportar = window.registrosFiltradosActuales || RhAsisCasc.registrosBiometrico;
-        
-        if (!registrosAExportar || registrosAExportar.length === 0) {
-            alert("⚠️ No hay información disponible en el grid para exportar.");
-            return;
-        }
-
-        if (typeof XLSX === 'undefined') {
-            alert("❌ La librería SheetJS (XLSX) no está disponible en la página.");
-            return;
-        }
+    exportarExcelCasc: async function () {
+        const exportBtn = document.getElementById('exportBtn');
+        const exportText = document.getElementById('exportText');
+        const exportIcon = document.getElementById('exportIcon');
 
         try {
-            // 🟢 Armamos la estructura del reporte con sus cabeceras institucionales
-            const wsData = [
-                ["INSTITUTO NACIONAL DE INVESTIGACIONES FORESTALES, AGRÍCOLAS Y PECUARIAS"],
-                ["COORDINACIÓN DE ADMINISTRACIÓN Y SISTEMAS - DIRECCIÓN DE DESARROLLO HUMANO"],
-                ["REPORTE DE CONTROL DE ASISTENCIA - BIOMÉTRICO"],
-                [], // Línea en blanco
-                RhAsisCasc.rawHeaderGlobal,
-                ...registrosAExportar
-            ];
+            if (exportBtn) {
+                exportBtn.disabled = true;
+                exportBtn.classList.add('bg-stone-400', 'cursor-wait', 'opacity-80');
+                exportBtn.classList.remove('bg-[#249444]', 'hover:bg-[#1e7a37]', 'cursor-pointer');
+            }
+            if (exportText) {
+                exportText.innerText = "Generando archivo...";
+            }
+            if (exportIcon) {
+                exportIcon.outerHTML = `
+                    <svg id="exportIcon" class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+                    </svg>
+                `;
+            }
 
-            const ws = XLSX.utils.aoa_to_sheet(wsData);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Asistencia Biométrico");
+            // 🟢 Tomamos los registros filtrados actuales o todos los del grid
+            const registrosAExportar = window.registrosFiltradosActuales || RhAsisCasc.obtenerRegistrosFiltradosActuales ? RhAsisCasc.obtenerRegistrosFiltradosActuales() : RhAsisCasc.registrosBiometrico;
+            const numEmpFiltro = document.getElementById('filtroNumEmpBio')?.value.trim() || "";
+            const centroActual = RhAsisCasc.obtenerClaveCentroActual() || "General";
 
-            // 🟢 Generamos y descargamos el archivo Excel automáticamente
-            XLSX.writeFile(wb, `Reporte_Biometrico_INIFAP.xlsx`);
-            
-        } catch (error) {
-            console.error("❌ Error al generar el Excel:", error);
-            alert("❌ Ocurrió un error al exportar la información.");
+            if (!registrosAExportar || registrosAExportar.length === 0) {
+                alert("⚠️ No hay información disponible en el grid para exportar.");
+                return;
+            }
+
+            if (typeof ExcelJS === 'undefined') {
+                alert("❌ Error: La librería ExcelJS no está cargada en el HTML.");
+                return;
+            }
+
+            if (!RhAsisCasc.personalGlobal || RhAsisCasc.personalGlobal.length === 0) {
+                try {
+                    RhAsisCasc.personalGlobal = await RhAsisCasc.obtenerPersonalAsync();
+                } catch (err) {}
+            }
+
+            let imageBuffer = null;
+            try {
+                const response = await fetch('Logo.png');
+                if (response.ok) {
+                    imageBuffer = await response.arrayBuffer();
+                }
+            } catch (err) {}
+
+            const mapearRegistros = (lista) => {
+                return lista.map(r => {
+                    const celdas = Array.isArray(r) ? [...r] : RhAsisCasc.rawHeaderGlobal.map(h => r[h] || "");
+                    return celdas.map((c, index) => {
+                        let val = c;
+                        if (index === 2 || index === 3) {
+                            val = RhAsisCasc.extraerHoraLegible(val, false);
+                        } else if (index === 4) {
+                            val = RhAsisCasc.extraerHoraLegible(val, true);
+                        } else if (val instanceof Date) {
+                            val = val.toLocaleDateString();
+                        } else if (typeof val === 'string' && val.includes('T') && val.length > 18 && !val.includes('1899-12-30')) {
+                            const d = new Date(val);
+                            if (!isNaN(d)) val = d.toLocaleDateString();
+                        }
+                        return val !== null && val !== undefined ? val : "";
+                    });
+                });
+            };
+
+            // 🟢 Agrupamos los registros por Número de Empleado (Columna 1)
+            let gruposAProcesar = {};
+            if (!numEmpFiltro) {
+                registrosAExportar.forEach(row => {
+                    const empId = String(row[1] || "S_N").trim();
+                    if (!gruposAProcesar[empId]) gruposAProcesar[empId] = [];
+                    gruposAProcesar[empId].push(row);
+                });
+            } else {
+                gruposAProcesar[`Emp_${numEmpFiltro}`] = registrosAExportar;
+            }
+
+            const chavesGrupos = Object.keys(gruposAProcesar);
+            if (chavesGrupos.length === 0) {
+                alert("No hay registros para exportar con los filtros actuales.");
+                return;
+            }
+
+            const wb = new ExcelJS.Workbook();
+            const fondoHoja = "FFFFFF";
+
+            for (const key of chavesGrupos) {
+                const rowsMapeadas = mapearRegistros(gruposAProcesar[key]);
+                let etiquetaEmp = numEmpFiltro ? numEmpFiltro : key.replace(/^Emp_/, '');
+
+                let nombreEmpleadoEncontrado = "";
+                const catalogoPersonal = RhAsisCasc.personalGlobal || [];
+
+                if (catalogoPersonal && catalogoPersonal.length > 0) {
+                    const empleadoMatch = catalogoPersonal.find(emp => {
+                        let numEmpFila = "";
+                        if (Array.isArray(emp)) {
+                            numEmpFila = String(emp[0] || emp[1] || "").trim();
+                        } else if (emp && typeof emp === 'object') {
+                            numEmpFila = String(emp.numEmp || emp.claveReg || emp.num_emp || "").trim();
+                        }
+                        const numEmpBuscado = etiquetaEmp !== undefined && etiquetaEmp !== null ? String(etiquetaEmp).trim() : "";
+                        return numEmpFila === numEmpBuscado;
+                    });
+
+                    if (empleadoMatch) {
+                        if (Array.isArray(empleadoMatch)) {
+                            nombreEmpleadoEncontrado = String(empleadoMatch[1] || empleadoMatch[2] || "").trim();
+                        } else {
+                            nombreEmpleadoEncontrado = String(empleadoMatch.nombre || empleadoMatch.nombreEmpleado || "").trim();
+                        }
+                    }
+                }
+
+                const textoIncidencias = nombreEmpleadoEncontrado
+                    ? `INCIDENCIAS DEL EMPLEADO: ${etiquetaEmp} - ${nombreEmpleadoEncontrado}`
+                    : `INCIDENCIAS DEL EMPLEADO: ${etiquetaEmp}`;
+
+                const nombrePestana = `${etiquetaEmp}`.replace(/[*?/\\[]]/g, '').substring(0, 31);
+
+                const ws = wb.addWorksheet(nombrePestana);
+                ws.views = [{ showGridLines: false }];
+
+                if (imageBuffer) {
+                    const imageId = wb.addImage({
+                        buffer: imageBuffer,
+                        extension: 'png',
+                    });
+
+                    ws.addImage(imageId, {
+                        tl: { col: 0, row: 0 },
+                        br: { col: 2, row: 4 }
+                    });
+                }
+
+                ws.mergeCells('C1:J1');
+                ws.getCell('C1').value = "INSTITUTO NACIONAL DE INVESTIGACIONES FORESTALES AGRÍCOLAS Y PECUARIAS";
+                ws.getCell('C1').font = { name: 'Arial', sz: 9, bold: true, color: { argb: '000000' } };
+                ws.getCell('C1').alignment = { vertical: 'middle', horizontal: 'center' };
+
+                ws.mergeCells('C2:J2');
+                ws.getCell('C2').value = "COORDINACIÓN DE ADMINISTRACIÓN Y SISTEMAS";
+                ws.getCell('C2').font = { name: 'Arial', sz: 8.5, bold: true, color: { argb: '000000' } };
+                ws.getCell('C2').alignment = { vertical: 'middle', horizontal: 'center' };
+
+                ws.mergeCells('C3:J3');
+                ws.getCell('C3').value = "DIRECCIÓN DE DESARROLLO HUMANO Y PROFESIONALIZACIÓN";
+                ws.getCell('C3').font = { name: 'Arial', sz: 8.5, bold: true, color: { argb: '000000' } };
+                ws.getCell('C3').alignment = { vertical: 'middle', horizontal: 'center' };
+
+                ws.mergeCells('C4:J4');
+                ws.getCell('C4').value = textoIncidencias;
+                ws.getCell('C4').font = { name: 'Arial', sz: 8.5, bold: true, color: { argb: '000000' } };
+                ws.getCell('C4').alignment = { vertical: 'middle', horizontal: 'center' };
+
+                ws.mergeCells('C5:J5');
+                ws.getCell('C5').value = "Reporte: RH_CONTROL_ASISTENCIA_CASC";
+                ws.getCell('C5').font = { name: 'Arial', sz: 8.5, bold: true, color: { argb: '000000' } };
+                ws.getCell('C5').alignment = { vertical: 'middle', horizontal: 'center' };
+
+                const headerRowIndex = 7;
+                ws.getRow(headerRowIndex).values = RhAsisCasc.rawHeaderGlobal;
+
+                ws.getRow(headerRowIndex).eachCell((cell) => {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D9D9D9' } };
+                    cell.font = { name: 'Arial', sz: 9, bold: true, color: { argb: '000000' } };
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                    cell.border = { top: { style: 'thin', color: { argb: 'B0B0B0' } }, bottom: { style: 'thin', color: { argb: 'B0B0B0' } }, left: { style: 'thin', color: { argb: 'B0B0B0' } }, right: { style: 'thin', color: { argb: 'B0B0B0' } } };
+                });
+
+                rowsMapeadas.forEach((dRow, idx) => {
+                    const rowIndex = headerRowIndex + 1 + idx;
+                    const row = ws.getRow(rowIndex);
+                    row.values = dRow;
+
+                    let bgColor = fondoHoja;
+                    let fontColor = "000000";
+                    let isBold = false;
+
+                    // 🟢 Aplicación de formato condicional por incidencias (Retardos / Faltas)
+                    if (dRow[11]) {
+                        bgColor = "FF0000"; fontColor = "FFFFFF"; isBold = true;
+                    } else if (dRow[10]) {
+                        bgColor = "E46C0A"; fontColor = "FFFFFF"; isBold = true;
+                    } else if (dRow[9]) {
+                        bgColor = "FFC000"; isBold = true;
+                    } else if (dRow[8]) {
+                        bgColor = "FFFF00"; isBold = true;
+                    }
+
+                    row.eachCell((cell) => {
+                        cell.font = { name: 'Arial', sz: 9, bold: isBold, color: { argb: fontColor } };
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                        cell.border = { top: { style: 'thin', color: { argb: 'E0E0E0' } }, bottom: { style: 'thin', color: { argb: 'E0E0E0' } }, left: { style: 'thin', color: { argb: 'E0E0E0' } }, right: { style: 'thin', color: { argb: 'E0E0E0' } } };
+                    });
+                });
+
+                ws.columns.forEach((column, colIndex) => {
+                    if (colIndex === 0) { column.width = 16; return; }
+                    if (colIndex === 1) { column.width = 16; return; }
+                    let maxLength = 10;
+                    column.eachCell({ includeEmpty: false }, (cell, rowNum) => {
+                        if (rowNum >= 7) {
+                            const columnLength = cell.value ? String(cell.value).length : 10;
+                            if (columnLength > maxLength) maxLength = columnLength;
+                        }
+                    });
+                    column.width = maxLength + 3;
+                });
+            }
+
+            const buffer = await wb.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = `RepBiometrico_${centroActual}_${numEmpFiltro ? `${numEmpFiltro}` : "General"}.xlsx`;
+
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            alert("Ocurrió un error al compilar el archivo .xlsx: " + err.message);
+        } finally {
+            if (exportBtn) {
+                exportBtn.disabled = false;
+                exportBtn.classList.remove('bg-stone-400', 'cursor-wait', 'opacity-80');
+                exportBtn.classList.add('bg-[#249444]', 'hover:bg-[#1e7a37]', 'cursor-pointer');
+            }
+            if (exportText) {
+                exportText.innerText = "Exportar Información";
+            }
+            const currentIcon = document.getElementById('exportIcon');
+            if (currentIcon) {
+                currentIcon.outerHTML = `
+                    <svg id="exportIcon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-down"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg>
+                `;
+            }
         }
-    },
+    }
 };
