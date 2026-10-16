@@ -413,19 +413,53 @@ window.RhAsisCasc = {
 
                     const rowsParaSql = filasValidas.map(row => {
                         const empIdNum = parseInt(String(row[0] || row[1] || "0").trim(), 10);
+                        
+                        // Función interna para limpiar formatos de fecha y hora inválidos para SQL
+                        function limpiarFechaSql(val) {
+                            if (!val) return null;
+                            let s = String(val).trim();
+                            // Si contiene una fecha ISO o timestamp, extraemos solo la parte YYYY-MM-DD
+                            if (s.includes('T')) s = s.split('T')[0];
+                            // Validación básica de formato fecha YYYY-MM-DD o similar
+                            if (s.length >= 8 && (s.includes('-') || s.includes('/'))) {
+                                return s;
+                            }
+                            return null; // Si no es fecha válida, mandamos null para evitar error en SQL
+                        }
+
+                        function limpiarHoraSql(val) {
+                            if (!val) return null;
+                            let s = String(val).trim();
+                            // Si el Excel trae un formato de fecha tipo fecha-hora para la hora
+                            if (s.includes('T') || s.includes('1899-12-30')) {
+                                const d = new Date(s);
+                                if (!isNaN(d.getTime())) {
+                                    const h = String(d.getHours()).padStart(2, '0');
+                                    const m = String(d.getMinutes()).padStart(2, '0');
+                                    const sec = String(d.getSeconds()).padStart(2, '0');
+                                    return `${h}:${m}:${sec}`;
+                                }
+                            }
+                            // Si ya viene como texto HH:MM o HH:MM:SS
+                            if (s.match(/^\d{1,2}:\d{2}(:\d{2})?$/)) {
+                                return s.length === 5 ? s + ":00" : s;
+                            }
+                            return s ? s : null;
+                        }
+
                         return [
                             claveCentroSeleccionado,
                             empIdNum,
-                            row[4] || "",
-                            row[5] || "",
-                            row[6] || "",
-                            row[7] || "",
-                            row[8] || "",
-                            row[9] || "",
-                            row[10] || "",
-                            row[11] || "",
-                            row[12] || "",
-                            row[13] || ""
+                            limpiarHoraSql(row[4]),     // Hra. Entrada
+                            limpiarHoraSql(row[5]),     // Hra. Salida
+                            limpiarHoraSql(row[6]),     // Hra. Registro
+                            row[7] || "",               // Registro (ENTRADA/SALIDA)
+                            limpiarFechaSql(row[8]),    // Fecha Reg.
+                            row[9] || "",               // Día Reg.
+                            row[10] || "",              // Retardo Men.
+                            row[11] || "",              // Retardo Med.
+                            row[12] || "",              // Retardo May.
+                            row[13] || ""               // Falta
                         ];
                     });
 
