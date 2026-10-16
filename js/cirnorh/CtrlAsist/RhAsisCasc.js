@@ -492,14 +492,14 @@ window.RhAsisCasc = {
                     });
 
                     if (resultado && resultado.success) {
-                        alert(`✅ ¡Se guardaron ${rowsParaSql.length} registros exitosamente en SQL Server para el centro ${claveCentroSeleccionado}!`);
+                        alert(`✅ ¡Se guardaron ${rowsParaSql.length} registros exitosamente para el centro ${claveCentroSeleccionado}!`);
                         await RhAsisCasc.cargarDatosDesdeSheets();
                     } else {
                         alert("⚠️ Aviso al guardar: " + (resultado ? resultado.message : "Desconocido"));
                     }
                 }
             }
-            
+
         } catch (error) {
             console.error("❌ Error en el proceso:", error);
             alert("❌ Ocurrió un error al procesar la carga.");
