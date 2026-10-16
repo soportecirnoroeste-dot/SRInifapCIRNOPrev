@@ -164,7 +164,7 @@ window.RhAsisCasc = {
 
         // 🟢 2. DECLARACIÓN DE LA VARIABLE (AQUÍ ESTABA EL ERROR)
         const indicadorDepuracionHtml = `
-            /*<div class="px-3 py-1.5 bg-stone-100 border border-stone-200 rounded-lg text-[11px] text-stone-600 flex items-center gap-3">
+            <div class="px-3 py-1.5 bg-stone-100 border border-stone-200 rounded-lg text-[11px] text-stone-600 flex items-center gap-3">
                 <span><b>Emp (SQL):</b> ${datosPermiso.numEmp || 'No detectado'}</span>
                 <span><b>Permiso (SQL):</b> <strong class="${esAdminGlobal ? 'text-emerald-600' : 'text-stone-800'}">${permisoUsuario}</strong></span>
             </div>
@@ -174,7 +174,7 @@ window.RhAsisCasc = {
         const selectorCentroHtml = `
             <div class="flex flex-col gap-1">
                 <label for="selectCentroCargaAdmin" class="text-[10px] font-bold ${esAdminGlobal ? 'text-[#249444]' : 'text-stone-500'} uppercase tracking-wider">
-                    Selecciona centro para cargar datos
+                    Selecciona centro para cargar datos ${esAdminGlobal}
                 </label>
                 <select id="selectCentroCargaAdmin" ${!esAdminGlobal ? 'disabled' : ''} onchange="RhAsisCasc.cargarDatosDesdeSheets()" class="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] text-stone-700 shadow-xs cursor-pointer h-[34px]">
                     <option value="">Cargando centros...</option>
