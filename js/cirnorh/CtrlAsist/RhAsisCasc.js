@@ -658,7 +658,7 @@ window.RhAsisCasc = {
     },
 
     exportarExcelCasc: function () {
-        // 🟢 Tomamos los registros actuales del grid (respeta si hay filtros aplicados o trae todos los de SQL)
+        // 🟢 Tomamos los registros actuales del grid (respeta los filtros aplicados o trae todos)
         const registrosAExportar = window.registrosFiltradosActuales || RhAsisCasc.registrosBiometrico;
         
         if (!registrosAExportar || registrosAExportar.length === 0) {
@@ -666,38 +666,32 @@ window.RhAsisCasc = {
             return;
         }
 
-        // 🟢 Agrupamos dinámicamente los registros planos por Número de Empleado (Columna 1)
-        const grouped = {};
-        registrosAExportar.forEach(row => {
-            const numEmp = String(row[1] || "GENERAL").trim();
-            if (!grouped[numEmp]) {
-                grouped[numEmp] = {
-                    nombre: `Empleado ${numEmp}`,
-                    rows: []
-                };
-            }
-            grouped[numEmp].rows.push(row);
-        });
+        if (typeof XLSX === 'undefined') {
+            alert("❌ La librería SheetJS (XLSX) no está disponible en la página.");
+            return;
+        }
 
-        // 🟢 Inyectamos los datos agrupados y las cabeceras al módulo de formularios/Excel
-        if (typeof RhAsisForm !== 'undefined') {
-            RhAsisForm.groupedData = grouped;
-            RhAsisForm.rawHeader = RhAsisCasc.rawHeaderGlobal;
+        try {
+            // 🟢 Armamos la estructura del reporte con sus cabeceras institucionales
+            const wsData = [
+                ["INSTITUTO NACIONAL DE INVESTIGACIONES FORESTALES, AGRÍCOLAS Y PECUARIAS"],
+                ["COORDINACIÓN DE ADMINISTRACIÓN Y SISTEMAS - DIRECCIÓN DE DESARROLLO HUMANO"],
+                ["REPORTE DE CONTROL DE ASISTENCIA - BIOMÉTRICO"],
+                [], // Línea en blanco
+                RhAsisCasc.rawHeaderGlobal,
+                ...registrosAExportar
+            ];
+
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Asistencia Biométrico");
+
+            // 🟢 Generamos y descargamos el archivo Excel automáticamente
+            XLSX.writeFile(wb, `Reporte_Biometrico_INIFAP.xlsx`);
             
-            // Ejecutamos la generación y descarga del Excel institucional
-            if (typeof RhAsisForm.exportarExcel === 'function') {
-                RhAsisForm.exportarExcel();
-            } else {
-                // Fallback directo si la función interna de exportación cambió
-                const wb = RhAsisForm.generateWorkbook ? RhAsisForm.generateWorkbook() : null;
-                if (wb && typeof XLSX !== 'undefined') {
-                    XLSX.writeFile(wb, `Reporte_Biometrico_INIFAP.xlsx`);
-                } else {
-                    alert("⚠️ No se pudo inicializar el archivo Excel.");
-                }
-            }
-        } else {
-            alert("❌ Módulo de exportación Excel no disponible.");
+        } catch (error) {
+            console.error("❌ Error al generar el Excel:", error);
+            alert("❌ Ocurrió un error al exportar la información.");
         }
     },
 };
