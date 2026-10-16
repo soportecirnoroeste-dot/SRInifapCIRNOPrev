@@ -163,8 +163,6 @@ window.RhAsisCasc = {
         const permisoUsuario = datosPermiso.permiso;
         const esAdminGlobal = (permisoUsuario === 4 || permisoUsuario === 5);
 
-        console.log("🛡️ [DINÁMICO] Evaluando interfaz. Permiso SQL:", permisoUsuario, "| ¿Es admin global?:", esAdminGlobal);
-
         // Indicador visual en pantalla con el resultado dinámico obtenido de SQL
         const indicadorDepuracionHtml = `
             <div class="px-3 py-1.5 bg-stone-100 border border-stone-200 rounded-lg text-[11px] text-stone-600 flex items-center gap-3">
