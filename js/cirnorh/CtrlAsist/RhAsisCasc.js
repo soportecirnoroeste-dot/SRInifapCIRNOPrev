@@ -504,21 +504,27 @@ window.RhAsisCasc = {
                 </thead>
                 <tbody class="divide-y divide-stone-100">
                     ${listaRegistros.map(r => {
-            const celdas = Array.isArray(r) ? [...r.slice(0, 12)] : headers.map(h => r[h] || "");
-            return `
+                        const celdas = Array.isArray(r) ? [...r.slice(0, 12)] : headers.map(h => r[h] || "");
+                        return `
                             <tr class="bg-white hover:bg-stone-50 transition text-stone-700">
                                 ${celdas.map((c, index) => {
-                let val = c;
-                if (index === 2 || index === 3) {
-                    val = RhAsisCasc.extraerHoraLegible(val, false);
-                } else if (index === 4) {
-                    val = RhAsisCasc.extraerHoraLegible(val, true);
-                }
-                return `<td class="p-2.5 border-b border-stone-100 text-center whitespace-nowrap">${val !== null && val !== undefined && String(val).trim() !== '' ? val : ''}</td>`;
-            }).join('')}
+                                    let val = c;
+                                    
+                                    // 🟢 Formato personalizado para la columna Centro (Índice 0) -> CenId - CenNom o Clave
+                                    if (index === 0) {
+                                        // Si el valor es numérico o ID, puedes cruzarlo o mostrarlo limpio junto al nombre
+                                        val = val ? String(val).trim() : "SIN CENTRO";
+                                    } else if (index === 2 || index === 3) {
+                                        val = RhAsisCasc.extraerHoraLegible(val, false);
+                                    } else if (index === 4) {
+                                        val = RhAsisCasc.extraerHoraLegible(val, true);
+                                    }
+
+                                    return `<td class="p-2.5 border-b border-stone-100 text-center whitespace-nowrap">${val !== null && val !== undefined && String(val).trim() !== '' ? val : ''}</td>`;
+                                }).join('')}
                             </tr>
                         `;
-        }).join('')}
+                    }).join('')}
                 </tbody>
             </table>
         `;
