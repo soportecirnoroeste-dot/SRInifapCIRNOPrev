@@ -493,32 +493,45 @@ window.RhAsisCasc = {
             const apiCall = window.callAppsScript || window.FetchAPI;
             if (!apiCall) return;
 
-            const usuarioActivo = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
-            const regId = usuarioActivo.SRIRegId || 100;
+            console.log("🔍 Solicitando registros a SQL Server...");
+            const res = await apiCall("obtenerTodosLosRegistrosPlano", {});
+            console.log("📡 Respuesta recibida:", res);
+
+            let listaRegistros = [];
+
+            if (res) {
+                if (Array.isArray(res)) {
+                    listaRegistros = res;
+                } else if (res.data && Array.isArray(res.data)) {
+                    listaRegistros = res.data;
+                } else if (res.registros && Array.isArray(res.registros)) {
+                    listaRegistros = res.registros;
+                }
+            }
+
+            console.log("📋 Total registros listos para renderizar:", listaRegistros.length);
+
+            RhAsisCasc.registrosBiometrico = listaRegistros;
             
-            console.log("🔍 [DEBUG] Solicitando registros para Regional ID:", regId);
-
-            const res = await apiCall("obtenerTodosLosRegistrosPlano", {
-                regId: regId
-            });
-
-            console.log("📡 [DEBUG] Respuesta obtenida de obtenerTodosLosRegistrosPlano:", res);
-
-            if (res && (res.success || Array.isArray(res))) {
-                const registrosData = Array.isArray(res) ? res : (res.registros || res.data || []);
-                console.log("📋 [DEBUG] Registros procesados para el grid:", registrosData.length);
-                
-                RhAsisCasc.registrosBiometrico = registrosData;
-                RhAsisCasc.renderGrid(RhAsisCasc.registrosBiometrico);
+            // Renderizamos el grid en pantalla
+            if (typeof RhAsisCasc.renderGrid === 'function') {
+                RhAsisCasc.renderGrid(listaRegistros);
             } else {
-                console.warn("⚠️ [DEBUG] La respuesta no contiene datos válidos:", res);
-                RhAsisCasc.registrosBiometrico = [];
+                console.error("❌ No se encontró la función renderGrid en RhAsisCasc");
+            }
+
+            // Actualizamos el contador visual en la cabecera de la tabla
+            const contadorEl = document.getElementById('contadorRegistrosBio');
+            if (contadorEl) {
+                contadorEl.innerText = listaRegistros.length;
+            }
+
+        } catch (e) {
+            console.error("❌ Error en cargarDatosDesdeSheets:", e);
+            RhAsisCasc.registrosBiometrico = [];
+            if (typeof RhAsisCasc.renderGrid === 'function') {
                 RhAsisCasc.renderGrid([]);
             }
-        } catch (e) {
-            console.error("❌ Error al cargar biométrico desde SQL:", e);
-            RhAsisCasc.registrosBiometrico = [];
-            RhAsisCasc.renderGrid([]);
         }
     },
 
