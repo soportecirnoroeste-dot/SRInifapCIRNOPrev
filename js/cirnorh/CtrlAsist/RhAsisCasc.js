@@ -603,7 +603,8 @@ window.RhAsisCasc = {
                 </thead>
                 <tbody class="divide-y divide-stone-100">
                     ${listaRegistros.map(r => {
-            const celdas = Array.isArray(r) ? [...r.slice(0, 12)] : headers.map(h => r[h] || "");
+            // 🟢 Renderizamos únicamente las primeras 12 columnas en el Grid de la pantalla
+            const celdas = Array.isArray(r) ? r.slice(0, 12) : headers.map(h => r[h] || "");
             return `
                             <tr class="bg-white hover:bg-stone-50 transition text-stone-700">
                                 ${celdas.map((c, index) => {
