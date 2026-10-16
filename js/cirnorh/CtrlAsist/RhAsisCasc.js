@@ -522,8 +522,6 @@ window.RhAsisCasc = {
 
             // Llamamos a la función en Apps Script
             const res = await apiCall("obtenerTodosLosRegistrosPlano", {});
-            console.log("📡 Respuesta cruda de Apps Script:", res);
-
             let listaRegistros = [];
 
             if (res) {
@@ -542,8 +540,6 @@ window.RhAsisCasc = {
                     listaRegistros = res.resultado;
                 }
             }
-
-            console.log("📋 Registros procesados para el grid:", listaRegistros.length);
 
             // Asignamos a las variables globales del grid y filtros
             RhAsisCasc.registrosBiometrico = listaRegistros;
@@ -905,7 +901,7 @@ window.RhAsisCasc = {
 
             const anchor = document.createElement('a');
             anchor.href = url;
-            anchor.download = `RepBiometrico_${centroActual}_${numEmpFiltro ? `${numEmpFiltro}` : "General"}.xlsx`;
+            anchor.download = `RepBiometrico.xlsx`;
 
             document.body.appendChild(anchor);
             anchor.click();
