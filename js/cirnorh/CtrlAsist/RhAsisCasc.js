@@ -161,18 +161,18 @@ window.RhAsisCasc = {
         const permisoUsuario = datosPermiso.permiso;
         const esAdminGlobal = (permisoUsuario === 4 || permisoUsuario === 5);
 
-        const indicadorDepuracionHtml = `
+        /*const indicadorDepuracionHtml = `
             <div class="px-3 py-1.5 bg-stone-100 border border-stone-200 rounded-lg text-[11px] text-stone-600 flex items-center gap-3">
                 <span><b>Emp (SQL):</b> ${datosPermiso.numEmp || 'No detectado'}</span>
                 <span><b>Permiso (SQL):</b> <strong class="${esAdminGlobal ? 'text-emerald-600' : 'text-stone-800'}">${permisoUsuario}</strong></span>
             </div>
-        `;
+        `;*/
 
         // 🟢 Selector limpio y listo para ser poblado de manera 100% dinámica por SQL
         const selectorCentroHtml = `
             <div class="flex flex-col gap-1">
                 <label for="selectCentroCargaAdmin" class="text-[10px] font-bold ${esAdminGlobal ? 'text-[#249444]' : 'text-stone-500'} uppercase tracking-wider">
-                    Campo / Centro de Trabajo ${esAdminGlobal ? '(Selector Global Dinámico)' : '(Asignado)'}
+                    Selecciona Centro a cargar datos
                 </label>
                 <select id="selectCentroCargaAdmin" ${!esAdminGlobal ? 'disabled' : ''} onchange="RhAsisCasc.cargarDatosDesdeSheets()" class="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs uppercase outline-none focus:ring-2 focus:ring-[#249444] text-stone-700 shadow-xs cursor-pointer h-[34px]">
                     <option value="">Cargando centros...</option>
