@@ -1,5 +1,5 @@
 // js/cirnorh/asistencia/RhAsisCasc.js
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
     if (typeof RhAsisCasc.cargarCamposPorRegional === "function") {
         RhAsisCasc.cargarCamposPorRegional();
     }
@@ -124,23 +124,23 @@ window.RhAsisCasc = {
         if (!selectElement || !apiCall) return;
 
         const usuarioActivo = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
-        const regId = usuarioActivo.SRIRegId || 100; 
+        const regId = usuarioActivo.SRIRegId || 100;
 
         try {
             const res = await apiCall("obtenerCamposPorRegionalSQL", { regId: regId });
 
             if (res && res.success && Array.isArray(res.data)) {
                 selectElement.innerHTML = '<option value="">SELECCIONE UN CENTRO DE TRABAJO...</option>';
-                
+
                 res.data.forEach(campo => {
                     const option = document.createElement('option');
                     option.value = campo.CenId;
-                    
+
                     // 🟢 Formato explícito: ID - NOMBRE (ej: 108 - DIRECCIÓN CIR-NOROESTE)
                     const idCentro = campo.CenId || '';
                     const nombre = campo.CenNom || '';
                     option.textContent = `${idCentro} - ${nombre}`;
-                    
+
                     selectElement.appendChild(option);
                 });
 
@@ -380,7 +380,7 @@ window.RhAsisCasc = {
             const selectCentro = document.getElementById('selectCentroCargaAdmin');
             if (selectCentro && selectCentro.selectedIndex >= 0) {
                 const textoSeleccionado = selectCentro.options[selectCentro.selectedIndex].text.toLowerCase();
-                
+
                 // Extraer el nombre limpio (quitando el ID numérico si tiene formato "ID - Nombre")
                 let nombreCentroLimpio = "";
                 if (textoSeleccionado.includes("-")) {
@@ -409,26 +409,34 @@ window.RhAsisCasc = {
             // 🟢 FIN DE LA VALIDACIÓN DE CENTRO
 
             let fechaNormalizada = RhAsisCasc.normalizarFechaFiltro(rawFechaDetectada || new Date().toISOString());
-            let primerNumEmp = String(filasValidas[0][0] || filasValidas[0][1] || "0").trim();
+
+            // 🟢 1. Extraer los datos exactos del PRIMER registro válido del archivo para la validación
+            let primerFilaValida = filasValidas[0];
+            let primerNumEmp = String(primerFilaValida[0] || primerFilaValida[1] || "0").trim();
+
+            // Buscamos la fecha en la columna correspondiente del primer registro (índice 8) o el detectado global
+            let rawFechaPrimerRegistro = primerFilaValida[8] || rawFechaDetectada;
+            let fechaPrimerRegistroNorm = RhAsisCasc.normalizarFechaFiltro(rawFechaPrimerRegistro);
             let claveCentroSeleccionado = RhAsisCasc.obtenerClaveCentroActual();
 
             if (apiCall) {
+                // 🟢 2. Validar duplicidad en SQL Server usando el primer registro
                 const verificacion = await apiCall("verificarFechaBiometrico", {
                     numEmp: primerNumEmp,
-                    fecha: fechaNormalizada
+                    fecha: fechaPrimerRegistroNorm
                 });
 
                 const yaExiste = verificacion && (verificacion.existe === true || verificacion.existe === "true");
 
                 if (yaExiste) {
-                    alert(`🛑 Los datos para este periodo ya fueron cargados anteriormente.`);
+                    alert(`🛑 Los datos para este periodo (Empleado: ${primerNumEmp}, Fecha: ${fechaPrimerRegistroNorm}) ya fueron cargados anteriormente en SQL Server.`);
                     return;
                 } else {
                     if (textCarga) textCarga.innerText = "Guardando...";
 
                     const rowsParaSql = filasValidas.map(row => {
                         const empIdNum = parseInt(String(row[0] || row[1] || "0").trim(), 10);
-                        
+
                         // Función interna para limpiar formatos de fecha y hora inválidos para SQL
                         function limpiarFechaSql(val) {
                             if (!val) return null;
@@ -449,9 +457,10 @@ window.RhAsisCasc = {
                             if (s.includes('T') || s.includes('1899-12-30')) {
                                 const d = new Date(s);
                                 if (!isNaN(d.getTime())) {
-                                    const h = String(d.getHours()).padStart(2, '0');
-                                    const m = String(d.getMinutes()).padStart(2, '0');
-                                    const sec = String(d.getSeconds()).padStart(2, '0');
+                                    // 🟢 Uso de getUTC... para evitar desfasamientos de zona horaria local
+                                    const h = String(d.getUTCHours()).padStart(2, '0');
+                                    const m = String(d.getUTCMinutes()).padStart(2, '0');
+                                    const sec = String(d.getUTCSeconds()).padStart(2, '0');
                                     return `${h}:${m}:${sec}`;
                                 }
                             }
@@ -490,6 +499,7 @@ window.RhAsisCasc = {
                     }
                 }
             }
+            
         } catch (error) {
             console.error("❌ Error en el proceso:", error);
             alert("❌ Ocurrió un error al procesar la carga.");
@@ -527,7 +537,7 @@ window.RhAsisCasc = {
             console.log("📋 Total registros listos para renderizar:", listaRegistros.length);
 
             RhAsisCasc.registrosBiometrico = listaRegistros;
-            
+
             // Renderizamos el grid en pantalla
             if (typeof RhAsisCasc.renderGrid === 'function') {
                 RhAsisCasc.renderGrid(listaRegistros);
