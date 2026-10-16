@@ -162,14 +162,6 @@ window.RhAsisCasc = {
         const permisoUsuario = datosPermiso.permiso;
         const esAdminGlobal = (permisoUsuario === 4 || permisoUsuario === 5);
 
-        // 🟢 2. DECLARACIÓN DE LA VARIABLE (AQUÍ ESTABA EL ERROR)
-        const indicadorDepuracionHtml = `
-            <div class="px-3 py-1.5 bg-stone-100 border border-stone-200 rounded-lg text-[11px] text-stone-600 flex items-center gap-3">
-                <span><b>Emp (SQL):</b> ${datosPermiso.numEmp || 'No detectado'}</span>
-                <span><b>Permiso (SQL):</b> <strong class="${esAdminGlobal ? 'text-emerald-600' : 'text-stone-800'}">${permisoUsuario}</strong></span>
-            </div>
-        `;
-
         // 3. Selector dinámico de centros
         const selectorCentroHtml = `
             <div class="flex flex-col gap-1">
@@ -195,7 +187,6 @@ window.RhAsisCasc = {
                                 <p class="text-xs text-stone-500">Gestión y carga masiva de biométricos</p>
                             </div>
                         </div>
-                        ${indicadorDepuracionHtml}
                     </div>
 
                     <div class="bg-stone-50/60 rounded-2xl border border-stone-200 p-5 space-y-4">
