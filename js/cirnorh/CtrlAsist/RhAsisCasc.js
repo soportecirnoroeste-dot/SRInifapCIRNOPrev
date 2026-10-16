@@ -124,22 +124,22 @@ window.RhAsisCasc = {
         if (!selectElement || !apiCall) return;
 
         const usuarioActivo = JSON.parse(localStorage.getItem('usuarioActivo') || '{}');
-        const regId = usuarioActivo.SRIRegId || 100; 
+        const regId = usuarioActivo.SRIRegId || 100;
 
         try {
             const res = await apiCall("obtenerCamposPorRegionalSQL", { regId: regId });
 
             if (res && res.success && Array.isArray(res.data)) {
                 selectElement.innerHTML = '<option value="">SELECCIONE UN CENTRO DE TRABAJO...</option>';
-                
+
                 res.data.forEach(campo => {
                     const option = document.createElement('option');
                     option.value = campo.CenId;
-                    
+
                     const idCentro = campo.CenId || '';
                     const nombre = campo.CenNom || '';
                     option.textContent = `${idCentro} - ${nombre}`;
-                    
+
                     selectElement.appendChild(option);
                 });
 
@@ -528,13 +528,13 @@ window.RhAsisCasc = {
                 // Si la respuesta viene directamente como un arreglo
                 if (Array.isArray(res)) {
                     listaRegistros = res;
-                } 
+                }
                 // Si viene envuelta en un objeto con propiedad data o registros (éste es tu caso)
                 else if (res.data && Array.isArray(res.data)) {
                     listaRegistros = res.data;
                 } else if (res.registros && Array.isArray(res.registros)) {
                     listaRegistros = res.registros;
-                } 
+                }
                 // Por si viene anidada como res.resultado o similar
                 else if (res.resultado && Array.isArray(res.resultado)) {
                     listaRegistros = res.resultado;
@@ -618,41 +618,41 @@ window.RhAsisCasc = {
                 </thead>
                 <tbody class="divide-y divide-stone-100">
                     ${registrosValidos.map(r => {
-                        // Extraemos las primeras 12 columnas de manera segura
-                        let celdas = [];
-                        if (Array.isArray(r)) {
-                            celdas = r.slice(0, 12);
-                        } else if (r && typeof r === 'object') {
-                            celdas = [
-                                r.Centro || r[0] || "",
-                                r.NumEmp || r[1] || "",
-                                r.SRICtrlAHrE || r[2] || "",
-                                r.SRICtrlAHrS || r[3] || "",
-                                r.SRICtrlAHrRg || r[4] || "",
-                                r.SRICtrlAReg || r[5] || "",
-                                r.SRICtrlAFeRg || r[6] || "",
-                                r.SRICtrlADia || r[7] || "",
-                                r.SRICtrlAMen || r[8] || "",
-                                r.SRICtrlAMed || r[9] || "",
-                                r.SRICtrlAMay || r[10] || "",
-                                r.SRICtrlAFalta || r[11] || ""
-                            ];
-                        }
+            // Extraemos las primeras 12 columnas de manera segura
+            let celdas = [];
+            if (Array.isArray(r)) {
+                celdas = r.slice(0, 12);
+            } else if (r && typeof r === 'object') {
+                celdas = [
+                    r.Centro || r[0] || "",
+                    r.NumEmp || r[1] || "",
+                    r.SRICtrlAHrE || r[2] || "",
+                    r.SRICtrlAHrS || r[3] || "",
+                    r.SRICtrlAHrRg || r[4] || "",
+                    r.SRICtrlAReg || r[5] || "",
+                    r.SRICtrlAFeRg || r[6] || "",
+                    r.SRICtrlADia || r[7] || "",
+                    r.SRICtrlAMen || r[8] || "",
+                    r.SRICtrlAMed || r[9] || "",
+                    r.SRICtrlAMay || r[10] || "",
+                    r.SRICtrlAFalta || r[11] || ""
+                ];
+            }
 
-                        return `
+            return `
                             <tr class="bg-white hover:bg-stone-50 transition text-stone-700">
                                 ${celdas.map((c, index) => {
-                                    let val = c;
-                                    if (index === 2 || index === 3) {
-                                        val = RhAsisCasc.extraerHoraLegible(val, false);
-                                    } else if (index === 4) {
-                                        val = RhAsisCasc.extraerHoraLegible(val, true);
-                                    }
-                                    return `<td class="p-2.5 border-b border-stone-100 text-center whitespace-nowrap">${val !== null && val !== undefined && String(val).trim() !== '' ? val : ''}</td>`;
-                                }).join('')}
+                let val = c;
+                if (index === 2 || index === 3) {
+                    val = RhAsisCasc.extraerHoraLegible(val, false);
+                } else if (index === 4) {
+                    val = RhAsisCasc.extraerHoraLegible(val, true);
+                }
+                return `<td class="p-2.5 border-b border-stone-100 text-center whitespace-nowrap">${val !== null && val !== undefined && String(val).trim() !== '' ? val : ''}</td>`;
+            }).join('')}
                             </tr>
                         `;
-                    }).join('')}
+        }).join('')}
                 </tbody>
             </table>
         `;
@@ -734,7 +734,7 @@ window.RhAsisCasc = {
             if (!RhAsisCasc.personalGlobal || RhAsisCasc.personalGlobal.length === 0) {
                 try {
                     RhAsisCasc.personalGlobal = await RhAsisCasc.obtenerPersonalAsync();
-                } catch (err) {}
+                } catch (err) { }
             }
 
             let imageBuffer = null;
@@ -743,7 +743,7 @@ window.RhAsisCasc = {
                 if (response.ok) {
                     imageBuffer = await response.arrayBuffer();
                 }
-            } catch (err) {}
+            } catch (err) { }
 
             const mapearRegistros = (lista) => {
                 return lista.map(r => {
@@ -791,10 +791,20 @@ window.RhAsisCasc = {
                 const rowsMapeadas = mapearRegistros(filasGrupo);
                 let etiquetaEmp = numEmpFiltro ? numEmpFiltro : key.replace(/^Emp_/, '');
 
-                // 🟢 Extraemos el nombre del empleado directamente de la columna 12 que manda SQL
+                // EXTRAER / BUSCAR NOMBRE DEL EMPLEADO PARA LA CABECERA
                 let nombreEmpleadoEncontrado = "";
                 if (filasGrupo && filasGrupo.length > 0 && filasGrupo[0][12]) {
                     nombreEmpleadoEncontrado = String(filasGrupo[0][12]).trim();
+                }
+
+                // Si la columna 12 viene vacía, buscamos el nombre en personalGlobal o localStorage
+                if (!nombreEmpleadoEncontrado && RhAsisCasc.personalGlobal) {
+                    const empMatch = RhAsisCasc.personalGlobal.find(p =>
+                        String(p.SRIPerNumE || p.NumEmp || p.noEmpleado || p.id).trim() === String(etiquetaEmp).trim()
+                    );
+                    if (empMatch) {
+                        nombreEmpleadoEncontrado = `${empMatch.SRIPerNom || empMatch.nombre || ''} ${empMatch.SRIPerApeP || empMatch.apellidoPat || ''} ${empMatch.SRIPerApeM || empMatch.apellidoMat || ''}`.trim();
+                    }
                 }
 
                 const textoIncidencias = nombreEmpleadoEncontrado && nombreEmpleadoEncontrado !== "EMPLEADO"
@@ -845,7 +855,7 @@ window.RhAsisCasc = {
 
                 const headerRowIndex = 7;
                 ws.getRow(headerRowIndex).values = RhAsisCasc.rawHeaderGlobal;
-                
+
                 ws.getRow(headerRowIndex).eachCell((cell) => {
                     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D9D9D9' } };
                     cell.font = { name: 'Arial', sz: 9, bold: true, color: { argb: '000000' } };
