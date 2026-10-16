@@ -651,14 +651,53 @@ window.RhAsisCasc = {
             return true;
         });
 
+        // 🟢 Guardamos la referencia de los filtrados actuales para la exportación
+        window.registrosFiltradosActuales = filtrados;
+
         RhAsisCasc.renderGrid(filtrados);
     },
 
-    exportarExcelCasc: async function () {
-        if (typeof RhAsisForm !== 'undefined' && typeof RhAsisForm.exportarExcel === 'function') {
-            RhAsisForm.exportarExcel();
-        } else {
-            alert("Módulo de exportación Excel no disponible.");
+    exportarExcelCasc: function () {
+        // 🟢 Tomamos los registros actuales del grid (respeta si hay filtros aplicados o trae todos los de SQL)
+        const registrosAExportar = window.registrosFiltradosActuales || RhAsisCasc.registrosBiometrico;
+        
+        if (!registrosAExportar || registrosAExportar.length === 0) {
+            alert("⚠️ No hay información disponible en el grid para exportar.");
+            return;
         }
-    }
+
+        // 🟢 Agrupamos dinámicamente los registros planos por Número de Empleado (Columna 1)
+        const grouped = {};
+        registrosAExportar.forEach(row => {
+            const numEmp = String(row[1] || "GENERAL").trim();
+            if (!grouped[numEmp]) {
+                grouped[numEmp] = {
+                    nombre: `Empleado ${numEmp}`,
+                    rows: []
+                };
+            }
+            grouped[numEmp].rows.push(row);
+        });
+
+        // 🟢 Inyectamos los datos agrupados y las cabeceras al módulo de formularios/Excel
+        if (typeof RhAsisForm !== 'undefined') {
+            RhAsisForm.groupedData = grouped;
+            RhAsisForm.rawHeader = RhAsisCasc.rawHeaderGlobal;
+            
+            // Ejecutamos la generación y descarga del Excel institucional
+            if (typeof RhAsisForm.exportarExcel === 'function') {
+                RhAsisForm.exportarExcel();
+            } else {
+                // Fallback directo si la función interna de exportación cambió
+                const wb = RhAsisForm.generateWorkbook ? RhAsisForm.generateWorkbook() : null;
+                if (wb && typeof XLSX !== 'undefined') {
+                    XLSX.writeFile(wb, `Reporte_Biometrico_INIFAP.xlsx`);
+                } else {
+                    alert("⚠️ No se pudo inicializar el archivo Excel.");
+                }
+            }
+        } else {
+            alert("❌ Módulo de exportación Excel no disponible.");
+        }
+    },
 };
