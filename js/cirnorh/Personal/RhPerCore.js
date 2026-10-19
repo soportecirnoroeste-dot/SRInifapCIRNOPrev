@@ -357,9 +357,15 @@ function aplicarFiltroYRenderizar(empleados) {
     const centroUsuario = String(usuarioActivo.SRICenId || '').trim();
     let empleadosFiltrados = empleados;
 
-    if (centroUsuario && centroUsuario !== '0' && centroUsuario !== '') {
+    // 🟢 Si el arreglo contiene múltiples centros (ej. 102, 106, 108), 
+    // significa que el usuario es Administrador global y NO debemos aplicar el filtro local por centro.
+    const centrosUnicos = [...new Set(empleados.map(e => String(e.SRICenId || '').trim()))];
+    const esAdminGlobal = centrosUnicos.length > 1;
+
+    if (!esAdminGlobal && centroUsuario && centroUsuario !== '0' && centroUsuario !== '') {
         empleadosFiltrados = empleados.filter(emp => String(emp.SRICenId || '').trim().includes(centroUsuario));
     }
+
     renderizarTablaPersonal(empleadosFiltrados);
 }
 
@@ -369,7 +375,10 @@ function filtrarTablaPersonal(textoBusqueda) {
     const centroUsuario = String(usuarioActivo.SRICenId || '').trim();
     let baseEmpleados = window._empleadosCache;
 
-    if (centroUsuario && centroUsuario !== '0') {
+    const centrosUnicos = [...new Set(baseEmpleados.map(e => String(e.SRICenId || '').trim()))];
+    const esAdminGlobal = centrosUnicos.length > 1;
+
+    if (!esAdminGlobal && centroUsuario && centroUsuario !== '0') {
         baseEmpleados = baseEmpleados.filter(emp => String(emp.SRICenId || '').trim().includes(centroUsuario));
     }
 
