@@ -708,9 +708,18 @@ window.RhAsisCasc = {
                 exportText.innerText = "Generando archivo...";
             }
 
+            // 🟢 VALIDACIÓN OBLIGATORIA DE CENTRO: Si no hay un centro seleccionado, se detiene la exportación
+            const selectCentro = document.getElementById('filtroCentroBio') || document.getElementById('selectCentro') || document.getElementById('centroId');
+            const centroIdSeleccionado = selectCentro ? selectCentro.value.trim() : "";
+            const centroActual = RhAsisCasc.obtenerClaveCentroActual ? RhAsisCasc.obtenerClaveCentroActual() : centroIdSeleccionado;
+
+            if (!centroActual || centroActual === "" || centroActual === "0" || centroActual === "Todos" || centroActual === "General") {
+                alert("⚠️ Debe seleccionar obligatoriamente un Centro / Campo específico en los filtros para poder exportar la información.");
+                return;
+            }
+
             const registrosAExportar = window.registrosFiltradosActuales || (typeof RhAsisCasc.obtenerRegistrosFiltradosActuales === 'function' ? RhAsisCasc.obtenerRegistrosFiltradosActuales() : RhAsisCasc.registrosBiometrico);
             const numEmpFiltro = document.getElementById('filtroNumEmpBio')?.value.trim() || "";
-            const centroActual = RhAsisCasc.obtenerClaveCentroActual ? RhAsisCasc.obtenerClaveCentroActual() : "General";
 
             if (!registrosAExportar || registrosAExportar.length === 0) {
                 alert("⚠️ No hay información disponible en el grid para exportar.");
@@ -728,7 +737,7 @@ window.RhAsisCasc = {
                 if (response.ok) {
                     imageBuffer = await response.arrayBuffer();
                 }
-            } catch (err) { }
+            } catch (err) {}
 
             const mapearRegistros = (lista) => {
                 return lista.map(r => {
@@ -775,7 +784,7 @@ window.RhAsisCasc = {
                 const rowsMapeadas = mapearRegistros(filasGrupo);
                 let etiquetaEmp = numEmpFiltro ? numEmpFiltro : key.replace(/^Emp_/, '');
 
-                // 🟢 LECTURA DIRECTA DESDE LA BASE DE DATOS (Posición 12 de la fila)
+                // 🟢 LECTURA DIRECTA DEL NOMBRE DEL EMPLEADO DESDE LA BASE DE DATOS (Columna 12)
                 let nombreEmpleadoEncontrado = "";
                 if (filasGrupo && filasGrupo.length > 0) {
                     const primeraFila = filasGrupo[0];
@@ -786,7 +795,7 @@ window.RhAsisCasc = {
                     }
                 }
 
-                const textoIncidencias = nombreEmpleadoEncontrado
+                const textoIncidencias = nombreEmpleadoEncontrado 
                     ? `INCIDENCIAS DEL EMPLEADO: ${etiquetaEmp} - ${nombreEmpleadoEncontrado.toUpperCase()}`
                     : `INCIDENCIAS DEL EMPLEADO: ${etiquetaEmp}`;
 
@@ -834,7 +843,7 @@ window.RhAsisCasc = {
 
                 const headerRowIndex = 7;
                 ws.getRow(headerRowIndex).values = RhAsisCasc.rawHeaderGlobal;
-
+                
                 ws.getRow(headerRowIndex).eachCell((cell) => {
                     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D9D9D9' } };
                     cell.font = { name: 'Arial', sz: 9, bold: true, color: { argb: '000000' } };
@@ -886,9 +895,12 @@ window.RhAsisCasc = {
             const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             const url = window.URL.createObjectURL(blob);
 
+            // 🟢 Generación de número aleatorio para el archivo descargado
+            const numeroAleatorio = Math.floor(1000 + Math.random() * 9000);
+
             const anchor = document.createElement('a');
             anchor.href = url;
-            anchor.download = `RepBiometrico_${centroActual}_${numEmpFiltro ? `${numEmpFiltro}` : "General"}.xlsx`;
+            anchor.download = `RepBiometrico_Centro${centroActual}_${numEmpFiltro ? numEmpFiltro : "Gen"}_${numeroAleatorio}.xlsx`;
 
             document.body.appendChild(anchor);
             anchor.click();
