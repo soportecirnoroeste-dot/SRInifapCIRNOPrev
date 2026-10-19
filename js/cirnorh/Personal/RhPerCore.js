@@ -174,11 +174,11 @@ function cargarPersonalRh(cargarLista = true) {
                         <thead class="bg-stone-100 font-bold text-stone-700 sticky top-0 z-10 border-b border-stone-200">
                             <tr>
                                 <th class="p-3 w-[18%] text-left border-b border-stone-200">REGIÓN</th>
-                                <th class="p-3 w-[27%] text-left border-b border-stone-200">CENTRO</th>
+                                <th class="p-3 w-[25%] text-left border-b border-stone-200">CENTRO</th>
                                 <th class="p-3 w-[10%] text-center border-b border-stone-200">NO. EMP</th>
                                 <th class="p-3 w-[20%] text-left border-b border-stone-200">NOMBRE</th>
                                 <th class="p-3 w-[15%] text-left border-b border-stone-200">PUESTO</th>
-                                <th class="p-3 w-[10%] text-left border-b border-stone-200">DEPARTAMENTO</th>
+                                <th class="p-3 w-[12%] text-left border-b border-stone-200">DEPARTAMENTO</th>
                             </tr>
                         </thead>
                         <tbody id="tabla-personal-body" class="divide-y divide-stone-100">
