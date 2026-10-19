@@ -173,7 +173,7 @@ function cargarPersonalRh(cargarLista = true) {
                     <table class="w-full text-left border-collapse text-xs min-w-[950px]">
                         <thead class="bg-stone-100 font-bold text-stone-700 sticky top-0 z-10 border-b border-stone-200">
                             <tr>
-                                <th class="p-3 border-b border-stone-200">REG</th>
+                                <th class="p-3 border-b border-stone-200">REGIÓN</th>
                                 <th class="p-3 border-b border-stone-200">CENTRO</th>
                                 <th class="p-3 border-b border-stone-200">NO. EMP</th>
                                 <th class="p-3 border-b border-stone-200">NOMBRE</th>
@@ -418,9 +418,7 @@ function renderizarTablaPersonal(registros) {
     if (!window._mapPuestosCache && window._catPuestos) {
         window._mapPuestosCache = {};
         window._catPuestos.forEach(p => {
-            // Buscamos la clave del puesto con sus posibles variantes
             const k = String(p.SRIPrtoId || p.SRIPtoId || p.SRIPuestoId || p.clave || '').trim();
-            // Buscamos la descripción del puesto con sus posibles variantes
             const v = String(p.SRIPtoDesc || p.SRIPuestoDesc || p.NomPto || p.nombre || p.descripcion || '').trim();
             if (k) window._mapPuestosCache[k] = v;
         });
@@ -435,7 +433,6 @@ function renderizarTablaPersonal(registros) {
         const reg = window._mapRegsCache?.[cReg] ? `${cReg} - ${window._mapRegsCache[cReg]}` : cReg;
         const centro = window._mapCentrosCache?.[cCentro] ? `${cCentro} - ${window._mapCentrosCache[cCentro]}` : cCentro;
 
-        // 🟢 Buscamos explícitamente la descripción en el caché del puesto. Si no existe, usamos el valor original.
         const descPuesto = window._mapPuestosCache?.[cNumPto];
         const puesto = (descPuesto && descPuesto !== '' && descPuesto !== 'undefined') ? descPuesto : cNumPto;
 
@@ -446,12 +443,16 @@ function renderizarTablaPersonal(registros) {
 
         return `
             <tr class="border-b border-stone-100 hover:bg-stone-50 transition">
-                <td class="p-3 font-mono text-stone-600">${valNa(reg)}</td>
-                <td class="p-3 font-mono text-stone-600">${valNa(centro)}</td>
-                <td class="p-3 font-mono text-stone-600">${valNa(noEmp)}</td>
-                <td class="p-3"><button type="button" onclick="seleccionarEmpleadoParaEditar('${noEmp}')" class="font-semibold text-[#249444] hover:underline text-left">${valNa(nombre)}</button></td>
-                <td class="p-3 text-stone-600">${valNa(puesto)}</td>
-                <td class="p-3 text-stone-600">${valNa(depto)}</td>
+                <td class="p-3 font-mono text-stone-600 truncate max-w-0" title="${valNa(reg)}">${valNa(reg)}</td>
+                <td class="p-3 font-mono text-stone-600 truncate max-w-0" title="${valNa(centro)}">${valNa(centro)}</td>
+                <td class="p-3 font-mono text-stone-600 text-center">${valNa(noEmp)}</td>
+                <td class="p-3 truncate max-w-0">
+                    <button type="button" onclick="seleccionarEmpleadoParaEditar('${noEmp}')" class="font-semibold text-[#249444] hover:underline text-left truncate w-full" title="${valNa(nombre)}">
+                        ${valNa(nombre)}
+                    </button>
+                </td>
+                <td class="p-3 text-stone-600 truncate max-w-0" title="${valNa(puesto)}">${valNa(puesto)}</td>
+                <td class="p-3 text-stone-600 truncate max-w-0" title="${valNa(depto)}">${valNa(depto)}</td>
             </tr>
         `;
     }).join('');
