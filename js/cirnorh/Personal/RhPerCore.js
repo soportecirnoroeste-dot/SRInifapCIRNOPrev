@@ -170,15 +170,15 @@ function cargarPersonalRh(cargarLista = true) {
             
             <div class="rounded-xl bg-white">
                 <div class="max-h-[500px] overflow-y-auto overflow-x-auto custom-scrollbar">
-                    <table class="w-full text-left border-collapse text-xs min-w-[950px]">
+                    <table class="w-full border-collapse text-xs min-w-[1000px] table-fixed">
                         <thead class="bg-stone-100 font-bold text-stone-700 sticky top-0 z-10 border-b border-stone-200">
                             <tr>
-                                <th class="p-3 border-b border-stone-200">REGIÓN</th>
-                                <th class="p-3 border-b border-stone-200">CENTRO</th>
-                                <th class="p-3 border-b border-stone-200">NO. EMP</th>
-                                <th class="p-3 border-b border-stone-200">NOMBRE</th>
-                                <th class="p-3 border-b border-stone-200">PUESTO</th>
-                                <th class="p-3 border-b border-stone-200">DEPARTAMENTO</th>
+                                <th class="p-3 w-[18%] text-left border-b border-stone-200">REGIÓN</th>
+                                <th class="p-3 w-[27%] text-left border-b border-stone-200">CENTRO</th>
+                                <th class="p-3 w-[10%] text-center border-b border-stone-200">NO. EMP</th>
+                                <th class="p-3 w-[20%] text-left border-b border-stone-200">NOMBRE</th>
+                                <th class="p-3 w-[15%] text-left border-b border-stone-200">PUESTO</th>
+                                <th class="p-3 w-[10%] text-left border-b border-stone-200">DEPARTAMENTO</th>
                             </tr>
                         </thead>
                         <tbody id="tabla-personal-body" class="divide-y divide-stone-100">
@@ -402,7 +402,6 @@ function renderizarTablaPersonal(registros) {
         return;
     }
 
-    // Inicializar mapas de caché rápida si no existen
     if (!window._mapRegsCache && window._catRegs) {
         window._mapRegsCache = {};
         window._catRegs.forEach(r => { window._mapRegsCache[String(r.SRIRegId).trim()] = r.SRIRegNom || ''; });
@@ -443,21 +442,20 @@ function renderizarTablaPersonal(registros) {
 
         return `
             <tr class="border-b border-stone-100 hover:bg-stone-50 transition">
-                <td class="p-3 font-mono text-stone-600 truncate max-w-0" title="${valNa(reg)}">${valNa(reg)}</td>
-                <td class="p-3 font-mono text-stone-600 truncate max-w-0" title="${valNa(centro)}">${valNa(centro)}</td>
-                <td class="p-3 font-mono text-stone-600 text-center">${valNa(noEmp)}</td>
-                <td class="p-3 truncate max-w-0">
+                <td class="p-3 text-left font-mono text-stone-600 truncate max-w-0" title="${valNa(reg)}">${valNa(reg)}</td>
+                <td class="p-3 text-left font-mono text-stone-600 truncate max-w-0" title="${valNa(centro)}">${valNa(centro)}</td>
+                <td class="p-3 text-center font-mono text-stone-600">${valNa(noEmp)}</td>
+                <td class="p-3 text-left truncate max-w-0">
                     <button type="button" onclick="seleccionarEmpleadoParaEditar('${noEmp}')" class="font-semibold text-[#249444] hover:underline text-left truncate w-full" title="${valNa(nombre)}">
                         ${valNa(nombre)}
                     </button>
                 </td>
-                <td class="p-3 text-stone-600 truncate max-w-0" title="${valNa(puesto)}">${valNa(puesto)}</td>
-                <td class="p-3 text-stone-600 truncate max-w-0" title="${valNa(depto)}">${valNa(depto)}</td>
+                <td class="p-3 text-left text-stone-600 truncate max-w-0" title="${valNa(puesto)}">${valNa(puesto)}</td>
+                <td class="p-3 text-left text-stone-600 truncate max-w-0" title="${valNa(depto)}">${valNa(depto)}</td>
             </tr>
         `;
     }).join('');
 }
-
 function cancelarEdicionPersonal() {
     const formContainer = document.getElementById('contenedor-formulario-personal');
     const gestionContainer = document.getElementById('contenedor-gestion-personal');
