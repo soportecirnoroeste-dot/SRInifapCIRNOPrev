@@ -708,15 +708,7 @@ window.RhAsisCasc = {
             if (exportText) {
                 exportText.innerText = "Generando archivo...";
             }
-            if (exportIcon) {
-                exportIcon.outerHTML = `
-                    <svg id="exportIcon" class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
-                    </svg>
-                `;
-            }
 
-            // 🟢 Tomamos los registros filtrados actuales o todos los del grid
             const registrosAExportar = window.registrosFiltradosActuales || RhAsisCasc.obtenerRegistrosFiltradosActuales ? RhAsisCasc.obtenerRegistrosFiltradosActuales() : RhAsisCasc.registrosBiometrico;
             const numEmpFiltro = document.getElementById('filtroNumEmpBio')?.value.trim() || "";
             const centroActual = RhAsisCasc.obtenerClaveCentroActual() || "General";
@@ -731,10 +723,19 @@ window.RhAsisCasc = {
                 return;
             }
 
+            // 🟢 Intentamos obtener el personal global si existe la función o caché local
             if (!RhAsisCasc.personalGlobal || RhAsisCasc.personalGlobal.length === 0) {
                 try {
-                    RhAsisCasc.personalGlobal = await RhAsisCasc.obtenerPersonalAsync();
-                } catch (err) { }
+                    if (typeof RhAsisCasc.obtenerPersonalAsync === 'function') {
+                        RhAsisCasc.personalGlobal = await RhAsisCasc.obtenerPersonalAsync();
+                    } else {
+                        // Buscamos respaldos locales comunes de empleados en localStorage
+                        const rawLocal = localStorage.getItem('personal_inifap') || localStorage.getItem('listaEmpleados') || '[]';
+                        RhAsisCasc.personalGlobal = JSON.parse(rawLocal);
+                    }
+                } catch (err) {
+                    RhAsisCasc.personalGlobal = [];
+                }
             }
 
             let imageBuffer = null;
@@ -743,7 +744,7 @@ window.RhAsisCasc = {
                 if (response.ok) {
                     imageBuffer = await response.arrayBuffer();
                 }
-            } catch (err) { }
+            } catch (err) {}
 
             const mapearRegistros = (lista) => {
                 return lista.map(r => {
@@ -765,7 +766,6 @@ window.RhAsisCasc = {
                 });
             };
 
-            // 🟢 Agrupamos los registros por Número de Empleado (Columna 1)
             let gruposAProcesar = {};
             if (!numEmpFiltro) {
                 registrosAExportar.forEach(row => {
@@ -791,23 +791,22 @@ window.RhAsisCasc = {
                 const rowsMapeadas = mapearRegistros(filasGrupo);
                 let etiquetaEmp = numEmpFiltro ? numEmpFiltro : key.replace(/^Emp_/, '');
 
-                // EXTRAER / BUSCAR NOMBRE DEL EMPLEADO PARA LA CABECERA
+                // 🟢 BÚSQUEDA INTELIGENTE DEL NOMBRE DEL EMPLEADO (Por ID de empleado)
                 let nombreEmpleadoEncontrado = "";
-                if (filasGrupo && filasGrupo.length > 0 && filasGrupo[0][12]) {
-                    nombreEmpleadoEncontrado = String(filasGrupo[0][12]).trim();
-                }
-
-                // Si la columna 12 viene vacía, buscamos el nombre en personalGlobal o localStorage
-                if (!nombreEmpleadoEncontrado && RhAsisCasc.personalGlobal) {
-                    const empMatch = RhAsisCasc.personalGlobal.find(p =>
-                        String(p.SRIPerNumE || p.NumEmp || p.noEmpleado || p.id).trim() === String(etiquetaEmp).trim()
-                    );
-                    if (empMatch) {
-                        nombreEmpleadoEncontrado = `${empMatch.SRIPerNom || empMatch.nombre || ''} ${empMatch.SRIPerApeP || empMatch.apellidoPat || ''} ${empMatch.SRIPerApeM || empMatch.apellidoMat || ''}`.trim();
+                if (RhAsisCasc.personalGlobal && RhAsisCasc.personalGlobal.length > 0) {
+                    const empleadoEncontrado = RhAsisCasc.personalGlobal.find(p => {
+                        const idPer = String(p.SRIPerNumE || p.NumEmp || p.noEmpleado || p.id || "").trim();
+                        return idPer === String(etiquetaEmp).trim();
+                    });
+                    if (empleadoEncontrado) {
+                        const nom = empleadoEncontrado.SRIPerNom || empleadoEncontrado.nombre || empleadoEncontrado.Nombre || "";
+                        const apP = empleadoEncontrado.SRIPerApeP || empleadoEncontrado.apellidoPat || empleadoEncontrado.Apaterno || "";
+                        const apM = empleadoEncontrado.SRIPerApeM || empleadoEncontrado.apellidoMat || empleadoEncontrado.Amaterno || "";
+                        nombreEmpleadoEncontrado = `${nom} ${apP} ${apM}`.trim();
                     }
                 }
 
-                const textoIncidencias = nombreEmpleadoEncontrado && nombreEmpleadoEncontrado !== "EMPLEADO"
+                const textoIncidencias = nombreEmpleadoEncontrado 
                     ? `INCIDENCIAS DEL EMPLEADO: ${etiquetaEmp} - ${nombreEmpleadoEncontrado.toUpperCase()}`
                     : `INCIDENCIAS DEL EMPLEADO: ${etiquetaEmp}`;
 
@@ -844,7 +843,7 @@ window.RhAsisCasc = {
                 ws.getCell('C3').alignment = { vertical: 'middle', horizontal: 'center' };
 
                 ws.mergeCells('C4:J4');
-                ws.getCell('C4').value = textoIncidencias; // 🟢 Muestra el número y el nombre completo
+                ws.getCell('C4').value = textoIncidencias; // 🟢 Aquí se imprime el número y el nombre completo del empleado
                 ws.getCell('C4').font = { name: 'Arial', sz: 8.5, bold: true, color: { argb: '000000' } };
                 ws.getCell('C4').alignment = { vertical: 'middle', horizontal: 'center' };
 
@@ -855,7 +854,7 @@ window.RhAsisCasc = {
 
                 const headerRowIndex = 7;
                 ws.getRow(headerRowIndex).values = RhAsisCasc.rawHeaderGlobal;
-
+                
                 ws.getRow(headerRowIndex).eachCell((cell) => {
                     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D9D9D9' } };
                     cell.font = { name: 'Arial', sz: 9, bold: true, color: { argb: '000000' } };
@@ -866,13 +865,13 @@ window.RhAsisCasc = {
                 rowsMapeadas.forEach((dRow, idx) => {
                     const rowIndex = headerRowIndex + 1 + idx;
                     const row = ws.getRow(rowIndex);
-                    row.values = dRow;
+                    // Tomamos únicamente las primeras 12 columnas del grid para las filas de datos
+                    row.values = dRow.slice(0, 12);
 
                     let bgColor = fondoHoja;
                     let fontColor = "000000";
                     let isBold = false;
 
-                    // 🟢 Aplicación de formato condicional por incidencias (Retardos / Faltas)
                     if (dRow[11]) {
                         bgColor = "FF0000"; fontColor = "FFFFFF"; isBold = true;
                     } else if (dRow[10]) {
@@ -911,7 +910,7 @@ window.RhAsisCasc = {
 
             const anchor = document.createElement('a');
             anchor.href = url;
-            anchor.download = `RepBiometrico.xlsx`;
+            anchor.download = `RepBiometrico_${centroActual}_${numEmpFiltro ? `${numEmpFiltro}` : "General"}.xlsx`;
 
             document.body.appendChild(anchor);
             anchor.click();
@@ -929,12 +928,6 @@ window.RhAsisCasc = {
             if (exportText) {
                 exportText.innerText = "Exportar Información";
             }
-            const currentIcon = document.getElementById('exportIcon');
-            if (currentIcon) {
-                currentIcon.outerHTML = `
-                    <svg id="exportIcon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-down"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg>
-                `;
-            }
         }
-    }
+    },
 };
