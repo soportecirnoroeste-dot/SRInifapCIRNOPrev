@@ -697,7 +697,6 @@ window.RhAsisCasc = {
     exportarExcelCasc: async function () {
         const exportBtn = document.getElementById('exportBtn');
         const exportText = document.getElementById('exportText');
-        const exportIcon = document.getElementById('exportIcon');
 
         try {
             if (exportBtn) {
@@ -709,9 +708,9 @@ window.RhAsisCasc = {
                 exportText.innerText = "Generando archivo...";
             }
 
-            const registrosAExportar = window.registrosFiltradosActuales || RhAsisCasc.obtenerRegistrosFiltradosActuales ? RhAsisCasc.obtenerRegistrosFiltradosActuales() : RhAsisCasc.registrosBiometrico;
+            const registrosAExportar = window.registrosFiltradosActuales || (typeof RhAsisCasc.obtenerRegistrosFiltradosActuales === 'function' ? RhAsisCasc.obtenerRegistrosFiltradosActuales() : RhAsisCasc.registrosBiometrico);
             const numEmpFiltro = document.getElementById('filtroNumEmpBio')?.value.trim() || "";
-            const centroActual = RhAsisCasc.obtenerClaveCentroActual() || "General";
+            const centroActual = RhAsisCasc.obtenerClaveCentroActual ? RhAsisCasc.obtenerClaveCentroActual() : "General";
 
             if (!registrosAExportar || registrosAExportar.length === 0) {
                 alert("⚠️ No hay información disponible en el grid para exportar.");
@@ -723,14 +722,15 @@ window.RhAsisCasc = {
                 return;
             }
 
-            // 🟢 Intentamos obtener el personal global si existe la función o caché local
+            // 🟢 Respaldo robusto para asegurar la lista de personal en memoria
             if (!RhAsisCasc.personalGlobal || RhAsisCasc.personalGlobal.length === 0) {
                 try {
                     if (typeof RhAsisCasc.obtenerPersonalAsync === 'function') {
                         RhAsisCasc.personalGlobal = await RhAsisCasc.obtenerPersonalAsync();
+                    } else if (window.personalGlobalCache) {
+                        RhAsisCasc.personalGlobal = window.personalGlobalCache;
                     } else {
-                        // Buscamos respaldos locales comunes de empleados en localStorage
-                        const rawLocal = localStorage.getItem('personal_inifap') || localStorage.getItem('listaEmpleados') || '[]';
+                        const rawLocal = localStorage.getItem('personal_inifap') || localStorage.getItem('listaEmpleados') || localStorage.getItem('empleadosCache') || '[]';
                         RhAsisCasc.personalGlobal = JSON.parse(rawLocal);
                     }
                 } catch (err) {
@@ -752,9 +752,9 @@ window.RhAsisCasc = {
                     return celdas.map((c, index) => {
                         let val = c;
                         if (index === 2 || index === 3) {
-                            val = RhAsisCasc.extraerHoraLegible(val, false);
+                            val = RhAsisCasc.extraerHoraLegible ? RhAsisCasc.extraerHoraLegible(val, false) : val;
                         } else if (index === 4) {
-                            val = RhAsisCasc.extraerHoraLegible(val, true);
+                            val = RhAsisCasc.extraerHoraLegible ? RhAsisCasc.extraerHoraLegible(val, true) : val;
                         } else if (val instanceof Date) {
                             val = val.toLocaleDateString();
                         } else if (typeof val === 'string' && val.includes('T') && val.length > 18 && !val.includes('1899-12-30')) {
@@ -791,19 +791,26 @@ window.RhAsisCasc = {
                 const rowsMapeadas = mapearRegistros(filasGrupo);
                 let etiquetaEmp = numEmpFiltro ? numEmpFiltro : key.replace(/^Emp_/, '');
 
-                // 🟢 BÚSQUEDA INTELIGENTE DEL NOMBRE DEL EMPLEADO (Por ID de empleado)
+                // 🟢 BÚSQUEDA EXHAUSTIVA DEL NOMBRE DEL EMPLEADO
                 let nombreEmpleadoEncontrado = "";
+                
+                // 1. Buscar en personalGlobal con múltiples variantes de propiedades
                 if (RhAsisCasc.personalGlobal && RhAsisCasc.personalGlobal.length > 0) {
-                    const empleadoEncontrado = RhAsisCasc.personalGlobal.find(p => {
-                        const idPer = String(p.SRIPerNumE || p.NumEmp || p.noEmpleado || p.id || "").trim();
+                    const empMatch = RhAsisCasc.personalGlobal.find(p => {
+                        const idPer = String(p.SRIPerNumE || p.NumEmp || p.noEmpleado || p.id || p.empleadoId || "").trim();
                         return idPer === String(etiquetaEmp).trim();
                     });
-                    if (empleadoEncontrado) {
-                        const nom = empleadoEncontrado.SRIPerNom || empleadoEncontrado.nombre || empleadoEncontrado.Nombre || "";
-                        const apP = empleadoEncontrado.SRIPerApeP || empleadoEncontrado.apellidoPat || empleadoEncontrado.Apaterno || "";
-                        const apM = empleadoEncontrado.SRIPerApeM || empleadoEncontrado.apellidoMat || empleadoEncontrado.Amaterno || "";
+                    if (empMatch) {
+                        const nom = empMatch.SRIPerNom || empMatch.nombre || empMatch.Nombre || empMatch.nombres || "";
+                        const apP = empMatch.SRIPerApeP || empMatch.apellidoPat || empMatch.Apaterno || empMatch.paterno || "";
+                        const apM = empMatch.SRIPerApeM || empMatch.apellidoMat || empMatch.Amaterno || empMatch.materno || "";
                         nombreEmpleadoEncontrado = `${nom} ${apP} ${apM}`.trim();
                     }
+                }
+
+                // 2. Si aún no se encuentra, buscar si el nombre viene guardado en alguna otra estructura global de la vista
+                if (!nombreEmpleadoEncontrado && window.empleadosCacheMap && window.empleadosCacheMap[etiquetaEmp]) {
+                    nombreEmpleadoEncontrado = window.empleadosCacheMap[etiquetaEmp];
                 }
 
                 const textoIncidencias = nombreEmpleadoEncontrado 
@@ -843,7 +850,7 @@ window.RhAsisCasc = {
                 ws.getCell('C3').alignment = { vertical: 'middle', horizontal: 'center' };
 
                 ws.mergeCells('C4:J4');
-                ws.getCell('C4').value = textoIncidencias; // 🟢 Aquí se imprime el número y el nombre completo del empleado
+                ws.getCell('C4').value = textoIncidencias; // 🟢 Nombre del empleado y número impreso correctamente
                 ws.getCell('C4').font = { name: 'Arial', sz: 8.5, bold: true, color: { argb: '000000' } };
                 ws.getCell('C4').alignment = { vertical: 'middle', horizontal: 'center' };
 
@@ -865,7 +872,6 @@ window.RhAsisCasc = {
                 rowsMapeadas.forEach((dRow, idx) => {
                     const rowIndex = headerRowIndex + 1 + idx;
                     const row = ws.getRow(rowIndex);
-                    // Tomamos únicamente las primeras 12 columnas del grid para las filas de datos
                     row.values = dRow.slice(0, 12);
 
                     let bgColor = fondoHoja;
@@ -891,8 +897,7 @@ window.RhAsisCasc = {
                 });
 
                 ws.columns.forEach((column, colIndex) => {
-                    if (colIndex === 0) { column.width = 16; return; }
-                    if (colIndex === 1) { column.width = 16; return; }
+                    if (colIndex === 0 || colIndex === 1) { column.width = 16; return; }
                     let maxLength = 10;
                     column.eachCell({ includeEmpty: false }, (cell, rowNum) => {
                         if (rowNum >= 7) {
