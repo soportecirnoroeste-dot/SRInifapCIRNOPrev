@@ -212,7 +212,7 @@ async function cargarDatosGenerales(forzarRecarga = false) {
 
     const tbody = document.getElementById('tabla-personal-body');
     if (tbody && window._empleadosCache.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-stone-400 italic">Sincronizando catálogos y datos...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-stone-400 italic">Sincronizando datos...</td></tr>`;
     }
 
     await cargarCatalogosSheets(forzarRecarga);
