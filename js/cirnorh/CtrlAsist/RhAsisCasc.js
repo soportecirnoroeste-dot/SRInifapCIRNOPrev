@@ -722,29 +722,13 @@ window.RhAsisCasc = {
                 return;
             }
 
-            // 🟢 Respaldo robusto para asegurar la lista de personal en memoria
-            if (!RhAsisCasc.personalGlobal || RhAsisCasc.personalGlobal.length === 0) {
-                try {
-                    if (typeof RhAsisCasc.obtenerPersonalAsync === 'function') {
-                        RhAsisCasc.personalGlobal = await RhAsisCasc.obtenerPersonalAsync();
-                    } else if (window.personalGlobalCache) {
-                        RhAsisCasc.personalGlobal = window.personalGlobalCache;
-                    } else {
-                        const rawLocal = localStorage.getItem('personal_inifap') || localStorage.getItem('listaEmpleados') || localStorage.getItem('empleadosCache') || '[]';
-                        RhAsisCasc.personalGlobal = JSON.parse(rawLocal);
-                    }
-                } catch (err) {
-                    RhAsisCasc.personalGlobal = [];
-                }
-            }
-
             let imageBuffer = null;
             try {
                 const response = await fetch('Logo.png');
                 if (response.ok) {
                     imageBuffer = await response.arrayBuffer();
                 }
-            } catch (err) {}
+            } catch (err) { }
 
             const mapearRegistros = (lista) => {
                 return lista.map(r => {
@@ -791,29 +775,18 @@ window.RhAsisCasc = {
                 const rowsMapeadas = mapearRegistros(filasGrupo);
                 let etiquetaEmp = numEmpFiltro ? numEmpFiltro : key.replace(/^Emp_/, '');
 
-                // 🟢 BÚSQUEDA EXHAUSTIVA DEL NOMBRE DEL EMPLEADO
+                // 🟢 LECTURA DIRECTA DESDE LA BASE DE DATOS (Posición 12 de la fila)
                 let nombreEmpleadoEncontrado = "";
-                
-                // 1. Buscar en personalGlobal con múltiples variantes de propiedades
-                if (RhAsisCasc.personalGlobal && RhAsisCasc.personalGlobal.length > 0) {
-                    const empMatch = RhAsisCasc.personalGlobal.find(p => {
-                        const idPer = String(p.SRIPerNumE || p.NumEmp || p.noEmpleado || p.id || p.empleadoId || "").trim();
-                        return idPer === String(etiquetaEmp).trim();
-                    });
-                    if (empMatch) {
-                        const nom = empMatch.SRIPerNom || empMatch.nombre || empMatch.Nombre || empMatch.nombres || "";
-                        const apP = empMatch.SRIPerApeP || empMatch.apellidoPat || empMatch.Apaterno || empMatch.paterno || "";
-                        const apM = empMatch.SRIPerApeM || empMatch.apellidoMat || empMatch.Amaterno || empMatch.materno || "";
-                        nombreEmpleadoEncontrado = `${nom} ${apP} ${apM}`.trim();
+                if (filasGrupo && filasGrupo.length > 0) {
+                    const primeraFila = filasGrupo[0];
+                    if (Array.isArray(primeraFila) && primeraFila[12]) {
+                        nombreEmpleadoEncontrado = String(primeraFila[12]).trim();
+                    } else if (typeof primeraFila === 'object' && primeraFila.NomEmp) {
+                        nombreEmpleadoEncontrado = String(primeraFila.NomEmp).trim();
                     }
                 }
 
-                // 2. Si aún no se encuentra, buscar si el nombre viene guardado en alguna otra estructura global de la vista
-                if (!nombreEmpleadoEncontrado && window.empleadosCacheMap && window.empleadosCacheMap[etiquetaEmp]) {
-                    nombreEmpleadoEncontrado = window.empleadosCacheMap[etiquetaEmp];
-                }
-
-                const textoIncidencias = nombreEmpleadoEncontrado 
+                const textoIncidencias = nombreEmpleadoEncontrado
                     ? `INCIDENCIAS DEL EMPLEADO: ${etiquetaEmp} - ${nombreEmpleadoEncontrado.toUpperCase()}`
                     : `INCIDENCIAS DEL EMPLEADO: ${etiquetaEmp}`;
 
@@ -850,7 +823,7 @@ window.RhAsisCasc = {
                 ws.getCell('C3').alignment = { vertical: 'middle', horizontal: 'center' };
 
                 ws.mergeCells('C4:J4');
-                ws.getCell('C4').value = textoIncidencias; // 🟢 Nombre del empleado y número impreso correctamente
+                ws.getCell('C4').value = textoIncidencias;
                 ws.getCell('C4').font = { name: 'Arial', sz: 8.5, bold: true, color: { argb: '000000' } };
                 ws.getCell('C4').alignment = { vertical: 'middle', horizontal: 'center' };
 
@@ -861,7 +834,7 @@ window.RhAsisCasc = {
 
                 const headerRowIndex = 7;
                 ws.getRow(headerRowIndex).values = RhAsisCasc.rawHeaderGlobal;
-                
+
                 ws.getRow(headerRowIndex).eachCell((cell) => {
                     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D9D9D9' } };
                     cell.font = { name: 'Arial', sz: 9, bold: true, color: { argb: '000000' } };
