@@ -699,22 +699,17 @@ window.RhAsisCasc = {
         const exportText = document.getElementById('exportText');
 
         try {
-            if (exportBtn) {
-                exportBtn.disabled = true;
-                exportBtn.classList.add('bg-stone-400', 'cursor-wait', 'opacity-80');
-                exportBtn.classList.remove('bg-[#249444]', 'hover:bg-[#1e7a37]', 'cursor-pointer');
-            }
-            if (exportText) {
-                exportText.innerText = "Generando archivo...";
-            }
+            // 1. EVALUAR SELECTORES Y FILTROS DE CENTRO EN LA PANTALLA
+            const selectCarga = document.getElementById('selectCentroCarga') || document.getElementById('selectCentro') || document.getElementById('filtroCentroBio');
+            const inputFiltroTabla = document.getElementById('filtroCentroTabla') || document.getElementById('inputFiltroCentro');
 
-            // 🟢 VALIDACIÓN OBLIGATORIA DE CENTRO: Si no hay un centro seleccionado, se detiene la exportación
-            const selectCentro = document.getElementById('filtroCentroBio') || document.getElementById('selectCentro') || document.getElementById('centroId');
-            const centroIdSeleccionado = selectCentro ? selectCentro.value.trim() : "";
-            const centroActual = RhAsisCasc.obtenerClaveCentroActual ? RhAsisCasc.obtenerClaveCentroActual() : centroIdSeleccionado;
+            const valSelectCarga = selectCarga ? selectCarga.value.trim() : "";
+            const valFiltroTabla = inputFiltroTabla ? inputFiltroTabla.value.trim() : "";
 
-            if (!centroActual || centroActual === "" || centroActual === "0" || centroActual === "Todos" || centroActual === "General") {
-                alert("⚠️ Debe seleccionar obligatoriamente un Centro / Campo específico en los filtros para poder exportar la información.");
+            // 🟢 REGLA ESTRICUTA: Si no hay selección en el combo ni en el filtro de la tabla, NO EXPORTA NADA
+            if ((!valSelectCarga || valSelectCarga === "" || valSelectCarga === "0" || valSelectCarga.includes("SELECCIONA")) && 
+                (!valFiltroTabla || valFiltroTabla === "")) {
+                alert("⚠️ Debe seleccionar obligatoriamente un Centro de trabajo para poder exportar la información.");
                 return;
             }
 
@@ -726,9 +721,30 @@ window.RhAsisCasc = {
                 return;
             }
 
+            // 🟢 OBTENER EL CENTRO REAL DIRECTAMENTE DE LA COLUMNA 0 DEL GRID (ej: "102")
+            let centroRealDelGrid = "";
+            if (registrosAExportar && registrosAExportar.length > 0) {
+                const primeraFila = registrosAExportar[0];
+                const rawCentro = Array.isArray(primeraFila) ? primeraFila[0] : (primeraFila.Centro || primeraFila.SRICenId || "");
+                // Limpia el valor en caso de venir como "102 - CIRNO" o "102"
+                centroRealDelGrid = String(rawCentro).split('-')[0].trim();
+            }
+
+            // Si por alguna razón la columna 0 viniera vacía, usa la selección del combo
+            const centroFinalArchivo = centroRealDelGrid || valSelectCarga || valFiltroTabla;
+
             if (typeof ExcelJS === 'undefined') {
                 alert("❌ Error: La librería ExcelJS no está cargada en el HTML.");
                 return;
+            }
+
+            if (exportBtn) {
+                exportBtn.disabled = true;
+                exportBtn.classList.add('bg-stone-400', 'cursor-wait', 'opacity-80');
+                exportBtn.classList.remove('bg-[#249444]', 'hover:bg-[#1e7a37]', 'cursor-pointer');
+            }
+            if (exportText) {
+                exportText.innerText = "Generando archivo...";
             }
 
             let imageBuffer = null;
@@ -784,7 +800,7 @@ window.RhAsisCasc = {
                 const rowsMapeadas = mapearRegistros(filasGrupo);
                 let etiquetaEmp = numEmpFiltro ? numEmpFiltro : key.replace(/^Emp_/, '');
 
-                // 🟢 LECTURA DIRECTA DEL NOMBRE DEL EMPLEADO DESDE LA BASE DE DATOS (Columna 12)
+                // LECTURA DIRECTA DEL NOMBRE DESDE LA BASE DE DATOS (Columna 12)
                 let nombreEmpleadoEncontrado = "";
                 if (filasGrupo && filasGrupo.length > 0) {
                     const primeraFila = filasGrupo[0];
@@ -895,12 +911,12 @@ window.RhAsisCasc = {
             const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             const url = window.URL.createObjectURL(blob);
 
-            // 🟢 Generación de número aleatorio para el archivo descargado
+            // Generación de número aleatorio único
             const numeroAleatorio = Math.floor(1000 + Math.random() * 9000);
 
             const anchor = document.createElement('a');
             anchor.href = url;
-            anchor.download = `RepBiometrico_Centro${centroActual}_${numEmpFiltro ? numEmpFiltro : "Gen"}_${numeroAleatorio}.xlsx`;
+            anchor.download = `RepBiometrico_Centro${centroFinalArchivo}_${numEmpFiltro ? numEmpFiltro : "Gen"}_${numeroAleatorio}.xlsx`;
 
             document.body.appendChild(anchor);
             anchor.click();
