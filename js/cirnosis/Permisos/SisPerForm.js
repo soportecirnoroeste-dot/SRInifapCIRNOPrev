@@ -182,6 +182,14 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
     if (!contenedorDinamico) return;
 
     contenedorDinamico.className = "col-span-1 sm:col-span-2 md:col-span-3 space-y-6 animate-fade-in";
+    
+    // 🟢 RESTAURAR SPINNER INMEDIATO AL DAR CLIC EN EL NOMBRE
+    contenedorDinamico.innerHTML = `
+        <div class="w-full space-y-6 bg-white p-12 rounded-2xl soft-shadow border border-[#249444]/10 mb-8 text-center animate-fade-in">
+            <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-[#249444] border-t-transparent"></div>
+            <p class="text-xs text-stone-500 font-bold mt-3 uppercase tracking-wider">Cargando matriz de permisos para ${nombreColaborador}...</p>
+        </div>
+    `;
 
     try {
         // 1. Asegurar catálogos del sistema
