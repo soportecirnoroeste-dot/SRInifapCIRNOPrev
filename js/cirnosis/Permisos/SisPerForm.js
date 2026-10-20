@@ -190,7 +190,6 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
     `;
 
     try {
-        // 1. Asegurar que tenemos los datos del sistema (departamentos y submódulos)
         if (!window.datosSistema || !window.datosSistema.departamentos || !window.datosSistema.submodulos) {
             const dataSys = await invocarBackendSis('obtenerDatosSistema', {});
             window._catDepartamentos = dataSys?.departamentos || dataSys?.deptos || [];
@@ -198,9 +197,7 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
             window.datosSistema = dataSys;
         }
 
-        // 2. Consultar los permisos actuales del empleado desde la tabla SRIPerEmp vía backend
-        const respuestaPermisos = await invocarBackendSis('obtenerPermisosColaborador', { numEmp: String(noEmp).trim() }); 
-        const permisosMap = respuestaPermisos?.permisos || respuestaPermisos || {};
+        const permisosMap = await invocarBackendSis('obtenerMatrizSisPermisos', { numEmp: String(noEmp).trim() });
 
         const deptos = window._catDepartamentos || [];
         const submodulos = window.allSubModulosData || [];
@@ -210,13 +207,12 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
             deptos.forEach(dep => {
                 const idMod = String(dep.SRIModId || dep.claveDep || '').trim();
                 const nombreDep = dep.SRIModNom || dep.nomDep || dep.nombre || `Departamento ${idMod}`;
-
-                // Filtrar submódulos que pertenecen a este departamento usando SRIModId
+                
                 const subsDelDepto = submodulos.filter(sub => String(sub.SRIModId || sub.ClaveDep || '').trim() === idMod);
 
                 filasHTML += `
                     <tr class="bg-stone-50 font-bold text-stone-800 border-t border-stone-200">
-                        <td class="p-3 pl-4 uppercase tracking-wider" colspan="4">📁 Departamento: ${nombreDep}</td>
+                        <td class="p-3 pl-4 uppercase tracking-wider" colspan="5">📁 Departamento: ${nombreDep}</td>
                     </tr>
                 `;
 
@@ -225,29 +221,26 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
                         const nombreSub = sub.SRISubMDes || sub.SModNom || sub.sModNom || sub.nombre || 'Submódulo';
                         const idSub = String(sub.SRISubMId || sub.SModClave || '').trim();
 
-                        // 🟢 Lectura precisa alineada con la estructura [idMod][idSub] de SRIPerEmp
                         const pData = permisosMap?.[idMod]?.[idSub] || permisosMap?.[idSub] || 0;
-
+                        
                         let nivPer = 0;
                         if (typeof pData === 'object' && pData !== null) {
                             nivPer = Number(pData.nivper || pData.ver || 0);
-                            if (Number(pData.eliminar) === 1) nivPer = Math.max(nivPer, 4);
-                            else if (Number(pData.editar) === 1) nivPer = Math.max(nivPer, 3);
-                            else if (Number(pData.agregar) === 1) nivPer = Math.max(nivPer, 2);
-                            else if (Number(pData.ver) === 1) nivPer = Math.max(nivPer, 1);
                         } else {
                             nivPer = Number(pData) || 0;
                         }
 
-                        // 🟢 Regla exacta de banderas basada en niveles (1=Ver, 2=Agregar, 3=Editar, 4=Eliminar/Admin)
+                        // Mapeo exacto de los 4 niveles operativos en el grid
                         const chkVer = nivPer >= 1 ? 'checked' : '';
-                        const chkEditar = nivPer >= 2 ? 'checked' : '';
+                        const chkAgregar = nivPer >= 2 ? 'checked' : '';
+                        const chkEditar = nivPer >= 3 ? 'checked' : '';
                         const chkEliminar = nivPer >= 4 ? 'checked' : '';
 
                         filasHTML += `
                             <tr class="hover:bg-stone-50 transition-all border-b border-stone-100">
                                 <td class="p-3 pl-8 font-medium text-stone-600"><span>↳ ${nombreSub}</span></td>
                                 <td class="p-3 text-center"><input type="checkbox" data-depto="${idMod}" data-submodulo="${idSub}" data-tipo="ver" ${chkVer} class="accent-[#249444] w-4 h-4 cursor-pointer chk-permiso"></td>
+                                <td class="p-3 text-center"><input type="checkbox" data-depto="${idMod}" data-submodulo="${idSub}" data-tipo="agregar" ${chkAgregar} class="accent-[#249444] w-4 h-4 cursor-pointer chk-permiso"></td>
                                 <td class="p-3 text-center"><input type="checkbox" data-depto="${idMod}" data-submodulo="${idSub}" data-tipo="editar" ${chkEditar} class="accent-[#249444] w-4 h-4 cursor-pointer chk-permiso"></td>
                                 <td class="p-3 text-center pr-4"><input type="checkbox" data-depto="${idMod}" data-submodulo="${idSub}" data-tipo="eliminar" ${chkEliminar} class="accent-[#249444] w-4 h-4 cursor-pointer chk-permiso"></td>
                             </tr>
@@ -256,7 +249,7 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
                 } else {
                     filasHTML += `
                         <tr class="border-b border-stone-100 bg-stone-50/40">
-                            <td class="p-3 pl-8 text-stone-400 italic text-xs" colspan="4">Sin submódulos registrados para este departamento.</td>
+                            <td class="p-3 pl-8 text-stone-400 italic text-xs" colspan="5">Sin submódulos registrados para este departamento.</td>
                         </tr>
                     `;
                 }
@@ -275,7 +268,7 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
                     
                     <div class="flex items-center gap-2 bg-stone-50 px-4 py-2 rounded-xl border border-stone-200">
                         <input type="checkbox" id="chk-admin-general" onchange="togglePermisosAdministrador(this)" class="accent-[#249444] w-4 h-4 cursor-pointer">
-                        <label for="chk-admin-general" class="text-xs font-bold text-stone-700 uppercase cursor-pointer select-none">Administrador (Todos los permisos)</label>
+                        <label for="chk-admin-general" class="text-xs font-bold text-stone-700 uppercase cursor-pointer select-none">Administrador (Todos los permisos) (Nivel 5)</label>
                     </div>
                 </div>
 
@@ -288,9 +281,10 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
                             <thead class="sticky top-0 z-10 bg-stone-100">
                                 <tr class="text-stone-600 font-bold border-b border-stone-200 text-[11px]">
                                     <th class="p-3 pl-4">DEPARTAMENTO / SUBMÓDULO</th>
-                                    <th class="p-3 text-center">VER / LEER</th>
-                                    <th class="p-3 text-center">CREAR / EDITAR</th>
-                                    <th class="p-3 text-center pr-4">ELIMINAR</th>
+                                    <th class="p-3 text-center">VER (N1)</th>
+                                    <th class="p-3 text-center">AGREGAR (N2)</th>
+                                    <th class="p-3 text-center">EDITAR (N3)</th>
+                                    <th class="p-3 text-center pr-4">ELIMINAR / ADMIN MÓDULO (N4)</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-stone-100 text-stone-700">${filasHTML}</tbody>
