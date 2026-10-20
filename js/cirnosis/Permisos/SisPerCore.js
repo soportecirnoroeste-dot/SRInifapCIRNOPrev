@@ -16,9 +16,14 @@ async function invocarBackendSis(action, payload = {}) {
 
 async function cargarDatosPermisosConCatalogos() {
     const tbody = document.getElementById('grid-permisos-empleados');
+    if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-stone-500 italic">Conectando con el servidor y cargando personal...</td></tr>`;
+    }
 
     try {
-        // 1. Cargar catálogos si no existen en memoria
+        console.log("🔍 [SISPER] Iniciando carga de catálogos y personal...");
+
+        // 1. Cargar catálogos
         if (!window._catPuestos || window._catPuestos.length === 0 || !window._catDepartamentos || window._catDepartamentos.length === 0) {
             const dataSys = await invocarBackendSis('obtenerDatosSistema', {});
             window._catDepartamentos = dataSys?.departamentos || dataSys?.deptos || [];
@@ -27,41 +32,42 @@ async function cargarDatosPermisosConCatalogos() {
             window._catCentros = dataSys?.centros || dataSys?.catCentros || [];
         }
 
-        // 2. Obtener listado de personal intentando ambas acciones del backend
+        // 2. Obtener listado de personal
         let data = window._empleadosCache || [];
         if (!data || data.length === 0) {
             let resEmp = null;
             try {
+                console.log("🔍 [SISPER] Solicitando obtenerPersonalSQL...");
                 resEmp = await invocarBackendSis('obtenerPersonalSQL');
             } catch (e1) {
-                console.warn("Intentando respaldo con obtenerPersonal...");
+                console.warn("⚠️ [SISPER] Falló obtenerPersonalSQL, intentando obtenerPersonal...", e1);
                 resEmp = await invocarBackendSis('obtenerPersonal');
             }
 
+            console.log("📦 [SISPER] Respuesta recibida de empleados:", resEmp);
             data = Array.isArray(resEmp) ? resEmp : (resEmp?.empleados || resEmp?.data || resEmp?.resultado || []);
             window._empleadosCache = data;
         }
 
         window.listaEmpleadosPermisosCache = window._empleadosCache;
 
-        // 3. Renderizar la tabla de forma segura llamando globalmente a SisPerForm
+        // 3. Renderizar en pantalla
         if (window.listaEmpleadosPermisosCache && window.listaEmpleadosPermisosCache.length > 0) {
             if (typeof window.renderizarTarjetasPermisosSis === 'function') {
                 window.renderizarTarjetasPermisosSis(window.listaEmpleadosPermisosCache);
             } else {
-                console.error("❌ renderizarTarjetasPermisosSis no está disponible en window.");
-                if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500 text-xs">Error: Función de renderizado no encontrada.</td></tr>`;
+                throw new Error("La función renderizarTarjetasPermisosSis no está disponible globalmente.");
             }
         } else {
             if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-stone-400 italic text-xs">No se encontraron registros de personal en la base de datos.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-stone-400 italic text-xs">No se encontraron registros de personal devueltos por el servidor.</td></tr>`;
             }
         }
 
     } catch (err) {
-        console.error("❌ Error crítico al cargar datos de permisos:", err);
+        console.error("❌ Error crítico en cargarDatosPermisosConCatalogos:", err);
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500 text-xs font-bold">Error al conectar con la Base de Datos / Servidor: ${err.message || 'Error de red'}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500 text-xs font-bold">Error al conectar con la Base de Datos: ${err.message || 'Error de red'}</td></tr>`;
         }
     }
 }
