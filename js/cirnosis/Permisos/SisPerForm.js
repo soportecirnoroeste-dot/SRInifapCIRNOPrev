@@ -190,6 +190,7 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
     `;
 
     try {
+        // 1. Asegurar catálogos del sistema
         if (!window.datosSistema || !window.datosSistema.departamentos || !window.datosSistema.submodulos) {
             const dataSys = await invocarBackendSis('obtenerDatosSistema', {});
             window._catDepartamentos = dataSys?.departamentos || dataSys?.deptos || [];
@@ -197,22 +198,24 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
             window.datosSistema = dataSys;
         }
 
-        // 🟢 1. Extraer el objeto mapa de permisos con fallback
+        // 2. Extraer el objeto mapa de permisos devuelto por la consulta SQL (SRIPerEmp)
         const resPermisos = await invocarBackendSis('obtenerMatrizSisPermisos', { numEmp: String(noEmp).trim() });
-        console.log("📌 Respuesta de permisos recibida:", resPermisos); // Para verificar en consola
+        console.log("📌 Permisos cargados desde SQL Server:", resPermisos);
         const permisosMap = resPermisos?.permisos || resPermisos || {};
 
         const deptos = window._catDepartamentos || [];
         const submodulos = window.allSubModulosData || [];
+        
         let filasHTML = "";
+        let tieneNivel5Global = false; // Flag para determinar si realmente es Admin General (Nivel 5)
 
         if (deptos.length > 0) {
             deptos.forEach(dep => {
-                const idMod = String(dep.SRIModId || dep.claveDep || '').trim();
+                const idMod = String(dep.SRIModId || dep.claveDep || dep.id || '').trim();
                 const nombreDep = dep.SRIModNom || dep.nomDep || dep.nombre || `Departamento ${idMod}`;
                 
-                // Filtrar submódulos comparando numéricamente / en texto limpio
-                const subsDelDepto = submodulos.filter(sub => String(sub.SRIModId || sub.ClaveDep || '').trim() === idMod);
+                // Filtrar submódulos por ID de departamento
+                const subsDelDepto = submodulos.filter(sub => String(sub.SRIModId || sub.ClaveDep || sub.claveDep || '').trim() === idMod);
 
                 filasHTML += `
                     <tr class="bg-stone-50 font-bold text-stone-800 border-t border-stone-200">
@@ -223,19 +226,24 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
                 if (subsDelDepto.length > 0) {
                     subsDelDepto.forEach(sub => {
                         const nombreSub = sub.SRISubMDes || sub.SModNom || sub.sModNom || sub.nombre || 'Submódulo';
-                        const idSub = String(sub.SRISubMId || sub.SModClave || '').trim();
+                        const idSub = String(sub.SRISubMId || sub.SModClave || sub.sModClave || sub.id || '').trim();
 
-                        // 🟢 2. Buscar por ID de departamento e ID de submódulo
+                        // Buscar objeto de permiso para este departamento y submódulo
                         const pData = permisosMap?.[idMod]?.[idSub] || permisosMap?.[idSub] || null;
                         
                         let nivPer = 0;
                         if (pData && typeof pData === 'object') {
-                            nivPer = Number(pData.nivper !== undefined ? pData.nivper : pData.ver || 0);
+                            nivPer = Number(pData.nivper !== undefined ? pData.nivper : pData.nivPer || pData.ver || 0);
                         } else if (pData !== null && pData !== undefined) {
                             nivPer = Number(pData) || 0;
                         }
 
-                        // 🟢 3. Activar casillas según los niveles (1=Ver, 2=Agregar, 3=Editar, 4=Eliminar)
+                        // Verificar si existe Nivel 5 explícito
+                        if (nivPer >= 5) {
+                            tieneNivel5Global = true;
+                        }
+
+                        // Mapeo exacto de los 4 niveles operativos en el grid (1=Ver, 2=Agregar, 3=Editar, 4=Eliminar)
                         const chkVer = nivPer >= 1 ? 'checked' : '';
                         const chkAgregar = nivPer >= 2 ? 'checked' : '';
                         const chkEditar = nivPer >= 3 ? 'checked' : '';
@@ -261,6 +269,9 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
             });
         }
 
+        // Marcar estado global
+        window._esAdminGeneralGlobal = tieneNivel5Global;
+
         contenedorDinamico.innerHTML = `
             <div class="w-full space-y-6 bg-white p-6 md:p-8 rounded-2xl soft-shadow border border-[#249444]/10 mb-8 animate-fade-in">
                 <div class="flex items-center justify-between pb-4 border-b border-stone-100">
@@ -272,7 +283,7 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
                     </div>
                     
                     <div class="flex items-center gap-2 bg-stone-50 px-4 py-2 rounded-xl border border-stone-200">
-                        <input type="checkbox" id="chk-admin-general" onchange="togglePermisosAdministrador(this)" class="accent-[#249444] w-4 h-4 cursor-pointer">
+                        <input type="checkbox" id="chk-admin-general" ${tieneNivel5Global ? 'checked' : ''} onchange="togglePermisosAdministrador(this)" class="accent-[#249444] w-4 h-4 cursor-pointer">
                         <label for="chk-admin-general" class="text-xs font-bold text-stone-700 uppercase cursor-pointer select-none">Administrador (Todos los permisos Nivel 5)</label>
                     </div>
                 </div>
@@ -303,7 +314,13 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
             </div>
         `;
 
-        actualizarEstadoCheckboxAdminGeneral();
+        try {
+            if (typeof actualizarEstadoCheckboxAdminGeneral === 'function') {
+                actualizarEstadoCheckboxAdminGeneral();
+            }
+        } catch (e) {
+            console.warn("Aviso en actualización de checkbox general:", e);
+        }
 
     } catch (err) {
         console.error("❌ Error al abrir matriz de permisos:", err);
