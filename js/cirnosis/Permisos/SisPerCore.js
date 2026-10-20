@@ -14,16 +14,25 @@ async function invocarBackendSis(action, payload = {}) {
     }
 }
 
+// Variable de control para evitar llamadas simultáneas duplicadas
+let _cargandoPermisosEnCurso = false;
+
 async function cargarDatosPermisosConCatalogos() {
+    if (_cargandoPermisosEnCurso) {
+        console.warn("⚠️ [SISPER] Ya hay una carga de permisos en curso. Omitiendo llamada duplicada.");
+        return;
+    }
+
+    _cargandoPermisosEnCurso = true;
     const tbody = document.getElementById('grid-permisos-empleados');
     if (tbody) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-stone-500 italic">Conectando con el servidor y cargando personal...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-stone-500 italic">Procesando ${window._empleadosCache?.length || '151'} registros de personal...</td></tr>`;
     }
 
     try {
         console.log("🔍 [SISPER] Iniciando carga de catálogos y personal...");
 
-        // 1. Cargar catálogos
+        // 1. Cargar catálogos si faltan
         if (!window._catPuestos || window._catPuestos.length === 0 || !window._catDepartamentos || window._catDepartamentos.length === 0) {
             const dataSys = await invocarBackendSis('obtenerDatosSistema', {});
             window._catDepartamentos = dataSys?.departamentos || dataSys?.deptos || [];
@@ -32,7 +41,7 @@ async function cargarDatosPermisosConCatalogos() {
             window._catCentros = dataSys?.centros || dataSys?.catCentros || [];
         }
 
-        // 2. Obtener listado de personal
+        // 2. Obtener listado de personal si no está en caché
         let data = window._empleadosCache || [];
         if (!data || data.length === 0) {
             let resEmp = null;
@@ -44,31 +53,34 @@ async function cargarDatosPermisosConCatalogos() {
                 resEmp = await invocarBackendSis('obtenerPersonal');
             }
 
-            console.log("📦 [SISPER] Respuesta recibida de empleados:", resEmp);
             data = Array.isArray(resEmp) ? resEmp : (resEmp?.empleados || resEmp?.data || resEmp?.resultado || []);
             window._empleadosCache = data;
         }
 
         window.listaEmpleadosPermisosCache = window._empleadosCache;
+        console.log(`📦 [SISPER] Total de empleados listos para pintar: ${window.listaEmpleadosPermisosCache.length}`);
 
-        // 3. Renderizar en pantalla
+        // 3. Renderizado seguro en pantalla
         if (window.listaEmpleadosPermisosCache && window.listaEmpleadosPermisosCache.length > 0) {
             if (typeof window.renderizarTarjetasPermisosSis === 'function') {
                 window.renderizarTarjetasPermisosSis(window.listaEmpleadosPermisosCache);
             } else {
-                throw new Error("La función renderizarTarjetasPermisosSis no está disponible globalmente.");
+                throw new Error("La función renderizarTarjetasPermisosSis no está disponible en window.");
             }
         } else {
             if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-stone-400 italic text-xs">No se encontraron registros de personal devueltos por el servidor.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-stone-400 italic text-xs">No se encontraron registros para mostrar.</td></tr>`;
             }
         }
 
     } catch (err) {
         console.error("❌ Error crítico en cargarDatosPermisosConCatalogos:", err);
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500 text-xs font-bold">Error al conectar con la Base de Datos: ${err.message || 'Error de red'}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500 text-xs font-bold">Error al procesar los datos: ${err.message || 'Error desconocido'}</td></tr>`;
         }
+    } finally {
+        // Liberar el candado al terminar (éxito o error)
+        _cargandoPermisosEnCurso = false;
     }
 }
 
