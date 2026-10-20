@@ -178,6 +178,19 @@ window.addEventListener('popstate', (event) => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-    cargarDatosDelSistema();
-    procesarCargaInicialSeccionSis();
+    cargarDatosDelSistema().then(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const seccion = urlParams.get('seccion');
+        
+        // Si no hay sección definida en la URL, cargamos permisos por defecto para evitar pantalla en blanco
+        if (!seccion || seccion === 'permisos' || seccion === '6') {
+            if (typeof window.renderizarListadoPermisosSis === 'function') {
+                window.renderizarListadoPermisosSis();
+            } else if (typeof cargarPermisosSis === 'function') {
+                cargarPermisosSis();
+            }
+        } else {
+            procesarCargaInicialSeccionSis();
+        }
+    });
 });
