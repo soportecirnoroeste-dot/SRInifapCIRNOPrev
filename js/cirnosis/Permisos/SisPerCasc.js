@@ -1,10 +1,12 @@
-// js/SisPer/SisPerCasc.js
+// ==========================================
+// MÓDULO DE PERMISOS - SISPER CASCADA / UTILIDADES
+// ==========================================
 
 function cargarPermisosSis() {
     if (typeof window.renderizarListadoPermisosSis === 'function') {
         window.renderizarListadoPermisosSis();
     } else {
-        console.error("SisPerCore no está cargado correctamente.");
+        console.error("SisPerForm no está cargado correctamente.");
     }
 }
 
@@ -15,6 +17,6 @@ function actualizarDatosPermisosSis() {
     cargarPermisosSis();
 }
 
-// Exportaciones seguras
+// Exportaciones globales seguras
 window.cargarPermisosSis = cargarPermisosSis;
 window.actualizarDatosPermisosSis = actualizarDatosPermisosSis;
