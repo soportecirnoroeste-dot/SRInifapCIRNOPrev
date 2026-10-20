@@ -93,7 +93,7 @@ function renderizarTarjetasPermisosSis(empleados) {
         return;
     }
 
-    // 🟢 Mapeo ultrarrobusto para regiones y centros (detecta cualquier nomenclatura de columnas)
+    // 🟢 1. Construcción de mapas de catálogo (admite cualquier nombre de propiedad)
     if ((!window._mapRegsCache || Object.keys(window._mapRegsCache).length === 0) && window._catRegs) {
         window._mapRegsCache = {};
         window._catRegs.forEach(r => {
@@ -102,14 +102,16 @@ function renderizarTarjetasPermisosSis(empleados) {
             if (k) window._mapRegsCache[k] = v;
         });
     }
+
     if ((!window._mapCentrosCache || Object.keys(window._mapCentrosCache).length === 0) && window._catCentros) {
         window._mapCentrosCache = {};
         window._catCentros.forEach(c => {
             const k = String(c.SRICenId || c.cenId || c.CenId || c.id || '').trim();
-            const v = c.SRICenNom || c.SRICenDesc || c.cenNom || c.cenDesc || r.NomCen || c.nombre || '';
+            const v = c.SRICenNom || c.SRICenDesc || c.cenNom || c.cenDesc || c.NomCen || c.nombre || '';
             if (k) window._mapCentrosCache[k] = v;
         });
     }
+
     if ((!window._mapDeptosCache || Object.keys(window._mapDeptosCache).length === 0) && window._catDepartamentos) {
         window._mapDeptosCache = {};
         window._catDepartamentos.forEach(d => {
@@ -118,6 +120,7 @@ function renderizarTarjetasPermisosSis(empleados) {
             if (nomCor) window._mapDeptosCache[nomCor] = nomLargo;
         });
     }
+
     if ((!window._mapPuestosCache || Object.keys(window._mapPuestosCache).length === 0) && window._catPuestos) {
         window._mapPuestosCache = {};
         window._catPuestos.forEach(p => {
@@ -129,25 +132,26 @@ function renderizarTarjetasPermisosSis(empleados) {
 
     let html = "";
     empleados.forEach(emp => {
-        const cReg = String(emp.SRIRegId || '').trim();
-        const cCentro = String(emp.SRICenId || '').trim();
+        const cReg = String(emp.SRIRegId || emp.regId || '').trim();
+        const cCentro = String(emp.SRICenId || emp.cenId || '').trim();
         const numEmp = String(emp.SRIEmpNum || emp.SRIPerNumE || '').trim();
         const nombre = emp.SRIEmpNom || emp.SRIPerNomE || "SIN NOMBRE";
 
-        const cNumPto = String(emp.SRIPtoId || '').trim();
-        let puestoVisual = cNumPto;
-        if (cNumPto && window._mapPuestosCache?.[cNumPto]) {
-            puestoVisual = window._mapPuestosCache[cNumPto];
-        }
+        // 🟢 Resolver Nombre de Región (Prioridad: Mapa -> Objeto Empleado -> Solo Código)
+        const nomReg = window._mapRegsCache?.[cReg] || emp.SRIRegNom || emp.SRIRegDesc || emp.regNom || '';
+        const regTexto = nomReg ? `${cReg} - ${nomReg}` : cReg;
 
+        // 🟢 Resolver Nombre de Centro (Prioridad: Mapa -> Objeto Empleado -> Solo Código)
+        const nomCentro = window._mapCentrosCache?.[cCentro] || emp.SRICenNom || emp.SRICenDesc || emp.cenNom || '';
+        const centroTexto = nomCentro ? `${cCentro} - ${nomCentro}` : cCentro;
+
+        // 🟢 Resolver Puesto
+        const cNumPto = String(emp.SRIPtoId || emp.SRIPrtoId || '').trim();
+        let puestoVisual = window._mapPuestosCache?.[cNumPto] || emp.SRIPtoDesc || emp.SRIPrtoDesc || cNumPto;
+
+        // 🟢 Resolver Departamento
         const cDepto = String(emp.SRIModNomC || '').trim();
-        let deptoVisual = cDepto;
-        if (cDepto && window._mapDeptosCache?.[cDepto]) {
-            deptoVisual = window._mapDeptosCache[cDepto];
-        }
-
-        const regTexto = window._mapRegsCache?.[cReg] ? `${cReg} - ${window._mapRegsCache[cReg]}` : (cReg || "100");
-        const centroTexto = window._mapCentrosCache?.[cCentro] ? `${cCentro} - ${window._mapCentrosCache[cCentro]}` : (cCentro || "N/A");
+        let deptoVisual = window._mapDeptosCache?.[cDepto] || emp.SRIModNom || cDepto || 'N/A';
 
         html += `
             <tr class="hover:bg-stone-50/80 transition-all border-b border-stone-100">
@@ -160,7 +164,7 @@ function renderizarTarjetasPermisosSis(empleados) {
                     </button>
                 </td>
                 <td class="p-3 text-stone-600 uppercase">${puestoVisual}</td>
-                <td class="p-3 text-stone-600 uppercase">${deptoVisual || 'N/A'}</td>
+                <td class="p-3 text-stone-600 uppercase">${deptoVisual}</td>
             </tr>
         `;
     });
