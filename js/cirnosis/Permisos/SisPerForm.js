@@ -197,7 +197,9 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
             window.datosSistema = dataSys;
         }
 
-        const permisosMap = await invocarBackendSis('obtenerMatrizSisPermisos', { numEmp: String(noEmp).trim() });
+        // 🟢 1. Extraer adecuadamente el mapa de permisos desde la propiedad .permisos
+        const resPermisos = await invocarBackendSis('obtenerMatrizSisPermisos', { numEmp: String(noEmp).trim() });
+        const permisosMap = resPermisos?.permisos || resPermisos || {};
 
         const deptos = window._catDepartamentos || [];
         const submodulos = window.allSubModulosData || [];
@@ -208,6 +210,7 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
                 const idMod = String(dep.SRIModId || dep.claveDep || '').trim();
                 const nombreDep = dep.SRIModNom || dep.nomDep || dep.nombre || `Departamento ${idMod}`;
                 
+                // Filtrar submódulos comparando numéricamente / en texto limpio
                 const subsDelDepto = submodulos.filter(sub => String(sub.SRIModId || sub.ClaveDep || '').trim() === idMod);
 
                 filasHTML += `
@@ -221,16 +224,17 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
                         const nombreSub = sub.SRISubMDes || sub.SModNom || sub.sModNom || sub.nombre || 'Submódulo';
                         const idSub = String(sub.SRISubMId || sub.SModClave || '').trim();
 
+                        // 🟢 2. Buscar en permisosMap[idMod][idSub]
                         const pData = permisosMap?.[idMod]?.[idSub] || permisosMap?.[idSub] || 0;
                         
                         let nivPer = 0;
                         if (typeof pData === 'object' && pData !== null) {
-                            nivPer = Number(pData.nivper || pData.ver || 0);
+                            nivPer = Number(pData.nivper || pData.nivPer || pData.ver || 0);
                         } else {
                             nivPer = Number(pData) || 0;
                         }
 
-                        // Mapeo exacto de los 4 niveles operativos en el grid
+                        // 🟢 3. Activar casillas según los niveles (1=Ver, 2=Agregar, 3=Editar, 4=Eliminar)
                         const chkVer = nivPer >= 1 ? 'checked' : '';
                         const chkAgregar = nivPer >= 2 ? 'checked' : '';
                         const chkEditar = nivPer >= 3 ? 'checked' : '';
