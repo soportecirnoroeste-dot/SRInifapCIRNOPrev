@@ -30,8 +30,6 @@ async function cargarDatosPermisosConCatalogos() {
     }
 
     try {
-        console.log("🔍 [SISPER] Iniciando carga de catálogos y personal...");
-
         // 1. Cargar catálogos si faltan
         if (!window._catPuestos || window._catPuestos.length === 0 || !window._catDepartamentos || window._catDepartamentos.length === 0) {
             const dataSys = await invocarBackendSis('obtenerDatosSistema', {});
@@ -46,10 +44,8 @@ async function cargarDatosPermisosConCatalogos() {
         if (!data || data.length === 0) {
             let resEmp = null;
             try {
-                console.log("🔍 [SISPER] Solicitando obtenerPersonalSQL...");
                 resEmp = await invocarBackendSis('obtenerPersonalSQL');
             } catch (e1) {
-                console.warn("⚠️ [SISPER] Falló obtenerPersonalSQL, intentando obtenerPersonal...", e1);
                 resEmp = await invocarBackendSis('obtenerPersonal');
             }
 
@@ -58,7 +54,6 @@ async function cargarDatosPermisosConCatalogos() {
         }
 
         window.listaEmpleadosPermisosCache = window._empleadosCache;
-        console.log(`📦 [SISPER] Total de empleados listos para pintar: ${window.listaEmpleadosPermisosCache.length}`);
 
         // 3. Renderizado seguro en pantalla
         if (window.listaEmpleadosPermisosCache && window.listaEmpleadosPermisosCache.length > 0) {
