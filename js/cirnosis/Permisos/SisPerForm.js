@@ -58,20 +58,20 @@ function renderizarListadoPermisosSis() {
                 <div class="rounded-xl bg-white">
                     <div class="max-h-[500px] overflow-y-auto overflow-x-auto custom-scrollbar">
                         <table class="w-full border-collapse text-xs min-w-[1000px] table-fixed">
-                        <thead class="bg-stone-100 font-bold text-stone-700 sticky top-0 z-10 border-b border-stone-200">
-                            <tr>
-                                <th class="p-3 w-[18%] text-left border-b border-stone-200">REGIÓN</th>
-                                <th class="p-3 w-[25%] text-left border-b border-stone-200">CENTRO</th>
-                                <th class="p-3 w-[10%] text-center border-b border-stone-200">NO. EMP</th>
-                                <th class="p-3 w-[20%] text-left border-b border-stone-200">NOMBRE</th>
-                                <th class="p-3 w-[15%] text-left border-b border-stone-200">PUESTO</th>
-                                <th class="p-3 w-[12%] text-left border-b border-stone-200">DEPARTAMENTO</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabla-personal-body" class="divide-y divide-stone-100">
-                            <tr><td colspan="6" class="p-6 text-center text-stone-400 italic">Sincronizando datos...</td></tr>
-                        </tbody>
-                    </table>
+                            <thead class="bg-stone-100 font-bold text-stone-700 sticky top-0 z-10 border-b border-stone-200">
+                                <tr>
+                                    <th class="p-3 w-[18%] text-left border-b border-stone-200">REGIÓN</th>
+                                    <th class="p-3 w-[25%] text-left border-b border-stone-200">CENTRO</th>
+                                    <th class="p-3 w-[10%] text-center border-b border-stone-200">NO. EMP</th>
+                                    <th class="p-3 w-[20%] text-left border-b border-stone-200">NOMBRE</th>
+                                    <th class="p-3 w-[15%] text-left border-b border-stone-200">PUESTO</th>
+                                    <th class="p-3 w-[12%] text-left border-b border-stone-200">DEPARTAMENTO</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-personal-body" class="divide-y divide-stone-100">
+                                <tr><td colspan="6" class="p-6 text-center text-stone-400 italic">Cargando registros...</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
