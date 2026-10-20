@@ -190,10 +190,12 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
     `;
 
     try {
-        if (!window.allSubModulosData || window.allSubModulosData.length === 0) {
+        // 1. Asegurar que tenemos los datos del sistema (departamentos y submódulos)
+        if (!window.datosSistema || !window.datosSistema.departamentos || !window.datosSistema.submodulos) {
             const dataSys = await invocarBackendSis('obtenerDatosSistema', {});
             window._catDepartamentos = dataSys?.departamentos || dataSys?.deptos || [];
             window.allSubModulosData = dataSys?.submodulos || dataSys?.subModulos || [];
+            window.datosSistema = dataSys;
         }
 
         const respuestaPermisos = await invocarBackendSis('obtenerMatrizSisPermisos', { numEmp: String(noEmp).trim() });
@@ -205,9 +207,12 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
 
         if (deptos.length > 0) {
             deptos.forEach(dep => {
-                const cDep = String(dep.claveDep || dep.ClaveDep || '').trim();
-                const nombreDep = dep.nomDep || dep.nombre || dep.NomDep || `Departamento ${cDep}`;
-                const subsDelDepto = submodulos.filter(sub => String(sub.ClaveDep || sub.claveDep || '').trim() === cDep);
+                // Mapeo exacto según Script.txt (SRIModId y SRIModNom)
+                const idMod = String(dep.SRIModId || dep.claveDep || '').trim();
+                const nombreDep = dep.SRIModNom || dep.nomDep || dep.nombre || `Departamento ${idMod}`;
+                
+                // Filtrar submódulos que pertenecen a este departamento usando SRIModId
+                const subsDelDepto = submodulos.filter(sub => String(sub.SRIModId || sub.ClaveDep || sub.claveDep || '').trim() === idMod);
 
                 filasHTML += `
                     <tr class="bg-stone-50 font-bold text-stone-800 border-t border-stone-200">
@@ -217,10 +222,11 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
 
                 if (subsDelDepto.length > 0) {
                     subsDelDepto.forEach(sub => {
-                        const nombreSub = sub.SModNom || sub.sModNom || sub.nombre || 'Submódulo';
-                        const idSub = sub.SModClave || sub.sModClave || sub.id || '';
+                        // Mapeo exacto según Script.txt (SRISubMDes para descripción y SRISubMId para clave)
+                        const nombreSub = sub.SRISubMDes || sub.SModNom || sub.sModNom || sub.nombre || 'Submódulo';
+                        const idSub = String(sub.SRISubMId || sub.SModClave || sub.sModClave || sub.id || '').trim();
 
-                        const pDep = permisosMap?.[cDep]?.[idSub] || permisosMap?.[idSub] || { ver: 0, editar: 0, eliminar: 0 };
+                        const pDep = permisosMap?.[idMod]?.[idSub] || permisosMap?.[idSub] || { ver: 0, editar: 0, eliminar: 0 };
                         const esNivel4 = Number(pDep.nivper || pDep.ver) === 4 || (Number(pDep.ver) === 1 && Number(pDep.editar) === 1 && Number(pDep.eliminar) === 1);
 
                         const chkVer = esNivel4 || Number(pDep.ver) === 1 ? 'checked' : '';
@@ -230,9 +236,9 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
                         filasHTML += `
                             <tr class="hover:bg-stone-50 transition-all border-b border-stone-100">
                                 <td class="p-3 pl-8 font-medium text-stone-600"><span>↳ ${nombreSub}</span></td>
-                                <td class="p-3 text-center"><input type="checkbox" data-depto="${cDep}" data-submodulo="${idSub}" data-tipo="ver" ${chkVer} class="accent-[#249444] w-4 h-4 cursor-pointer chk-permiso"></td>
-                                <td class="p-3 text-center"><input type="checkbox" data-depto="${cDep}" data-submodulo="${idSub}" data-tipo="editar" ${chkEditar} class="accent-[#249444] w-4 h-4 cursor-pointer chk-permiso"></td>
-                                <td class="p-3 text-center pr-4"><input type="checkbox" data-depto="${cDep}" data-submodulo="${idSub}" data-tipo="eliminar" ${chkEliminar} class="accent-[#249444] w-4 h-4 cursor-pointer chk-permiso"></td>
+                                <td class="p-3 text-center"><input type="checkbox" data-depto="${idMod}" data-submodulo="${idSub}" data-tipo="ver" ${chkVer} class="accent-[#249444] w-4 h-4 cursor-pointer chk-permiso"></td>
+                                <td class="p-3 text-center"><input type="checkbox" data-depto="${idMod}" data-submodulo="${idSub}" data-tipo="editar" ${chkEditar} class="accent-[#249444] w-4 h-4 cursor-pointer chk-permiso"></td>
+                                <td class="p-3 text-center pr-4"><input type="checkbox" data-depto="${idMod}" data-submodulo="${idSub}" data-tipo="eliminar" ${chkEliminar} class="accent-[#249444] w-4 h-4 cursor-pointer chk-permiso"></td>
                             </tr>
                         `;
                     });
@@ -281,8 +287,8 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
                     </div>
                 </div>
                 <div class="flex items-center gap-3 pt-2">
-                    <button onclick="guardarMatrizPermisosSis('${noEmp}')" class="bg-[#249444] hover:bg-[#1e7a37] text-white text-xs font-bold px-6 py-2.5 rounded-xl transition-all shadow-sm">Guardar</button>
-                    <button onclick="cargarPermisosSis()" class="bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold px-6 py-2.5 rounded-xl transition-all">Cancelar</button>
+                    <button onclick="guardarMatrizPermisosSis('${noEmp}')" class="bg-[#249444] hover:bg-[#1e7a37] text-white text-xs font-bold px-6 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer">Guardar</button>
+                    <button onclick="cargarPermisosSis()" class="bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold px-6 py-2.5 rounded-xl transition-all cursor-pointer">Cancelar</button>
                 </div>
             </div>
         `;
