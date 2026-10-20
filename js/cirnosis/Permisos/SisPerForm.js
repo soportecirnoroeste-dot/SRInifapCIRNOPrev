@@ -86,7 +86,7 @@ function renderizarListadoPermisosSis() {
 // ==========================================
 
 function renderizarTarjetasPermisosSis(empleados) {
-    const tbody = document.getElementById('grid-permisos-empleados');
+    const tbody = document.getElementById('tabla-personal-body');
     if (!tbody) return;
 
     if (!empleados || empleados.length === 0) {
