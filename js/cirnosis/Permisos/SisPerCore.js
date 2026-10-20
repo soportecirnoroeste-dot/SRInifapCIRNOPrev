@@ -19,7 +19,6 @@ let _cargandoPermisosEnCurso = false;
 
 async function cargarDatosPermisosConCatalogos() {
     if (_cargandoPermisosEnCurso) {
-        console.warn("⚠️ [SISPER] Ya hay una carga de permisos en curso. Omitiendo llamada duplicada.");
         return;
     }
 
@@ -30,13 +29,14 @@ async function cargarDatosPermisosConCatalogos() {
     }
 
     try {
-        // 1. Cargar catálogos si faltan
+        // 1. Cargar catálogos generales del sistema usando los nombres exactos del backend
         if (!window._catPuestos || window._catPuestos.length === 0 || !window._catDepartamentos || window._catDepartamentos.length === 0) {
             const dataSys = await invocarBackendSis('obtenerDatosSistema', {});
             window._catDepartamentos = dataSys?.departamentos || dataSys?.deptos || [];
             window._catPuestos = dataSys?.puestos || dataSys?.catPuestos || [];
-            window._catRegs = dataSys?.regiones || dataSys?.regs || [];
-            window._catCentros = dataSys?.centros || dataSys?.catCentros || [];
+            // 🟢 Usando las propiedades reales que expone tu Script.txt: 'regionales' y 'campos'
+            window._catRegs = dataSys?.regionales || dataSys?.regiones || dataSys?.regs || [];
+            window._catCentros = dataSys?.campos || dataSys?.centros || dataSys?.catCentros || [];
         }
 
         // 2. Obtener listado de personal si no está en caché
