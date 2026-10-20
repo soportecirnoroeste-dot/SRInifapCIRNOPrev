@@ -3,25 +3,15 @@
 // ==========================================
 
 async function invocarBackendSis(action, payload = {}) {
-    if (typeof window.FetchAPI === 'function') {
-        return await window.FetchAPI(action, payload);
-    } else if (typeof google !== 'undefined' && google.script && google.script.run) {
-        return new Promise((resolve, reject) => {
-            google.script.run
-                .withSuccessHandler(resolve)
-                .withFailureHandler(reject)[action](payload);
-        });
-    } else {
-        // Petición directa por fetch como respaldo para entornos Cloudflare/SQL
-        const response = await fetch("https://script.google.com/macros/s/AKfycbylGqLUoXKuvvECfXPMxR4kszlDSsB2m65sQQRIaypnm-0C4CSBdQHT207vNQJtAzUj0Q/exec", {
-            method: "POST",
-            redirect: "follow",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify({ action, ...payload })
-        });
-        const res = await response.json();
-        if (!res.success) throw new Error(res.message || "Error en la petición al servidor.");
-        return res;
+    try {
+        // Usamos la conexión global oficial establecida en api.js
+        if (typeof window.callAppsScript === 'function') {
+            return await window.callAppsScript(action, payload);
+        }
+        throw new Error("La función global callAppsScript no está disponible.");
+    } catch (err) {
+        console.error(`❌ Error en invocarBackendSis [${action}]:`, err);
+        throw err;
     }
 }
 
