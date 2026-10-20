@@ -18,33 +18,50 @@ async function cargarDatosPermisosConCatalogos() {
     const tbody = document.getElementById('grid-permisos-empleados');
 
     try {
+        // 1. Cargar catálogos si no existen en memoria
         if (!window._catPuestos || window._catPuestos.length === 0 || !window._catDepartamentos || window._catDepartamentos.length === 0) {
             const dataSys = await invocarBackendSis('obtenerDatosSistema', {});
             window._catDepartamentos = dataSys?.departamentos || dataSys?.deptos || [];
             window._catPuestos = dataSys?.puestos || dataSys?.catPuestos || [];
+            window._catRegs = dataSys?.regiones || dataSys?.regs || [];
+            window._catCentros = dataSys?.centros || dataSys?.catCentros || [];
         }
 
+        // 2. Obtener listado de personal intentando ambas acciones del backend
         let data = window._empleadosCache || [];
         if (!data || data.length === 0) {
-            const resEmp = await invocarBackendSis('obtenerPersonalSQL');
-            data = Array.isArray(resEmp) ? resEmp : (resEmp?.empleados || resEmp?.data || []);
+            let resEmp = null;
+            try {
+                resEmp = await invocarBackendSis('obtenerPersonalSQL');
+            } catch (e1) {
+                console.warn("Intentando respaldo con obtenerPersonal...");
+                resEmp = await invocarBackendSis('obtenerPersonal');
+            }
+
+            data = Array.isArray(resEmp) ? resEmp : (resEmp?.empleados || resEmp?.data || resEmp?.resultado || []);
             window._empleadosCache = data;
         }
 
-        // Dentro de cargarDatosPermisosConCatalogos en SisPerCore.js:
         window.listaEmpleadosPermisosCache = window._empleadosCache;
 
-        // 🟢 Invocarla a través del objeto window para que la encuentre en SisPerForm.js
-        if (typeof window.renderizarTarjetasPermisosSis === 'function') {
-            window.renderizarTarjetasPermisosSis(window.listaEmpleadosPermisosCache);
+        // 3. Renderizar la tabla de forma segura llamando globalmente a SisPerForm
+        if (window.listaEmpleadosPermisosCache && window.listaEmpleadosPermisosCache.length > 0) {
+            if (typeof window.renderizarTarjetasPermisosSis === 'function') {
+                window.renderizarTarjetasPermisosSis(window.listaEmpleadosPermisosCache);
+            } else {
+                console.error("❌ renderizarTarjetasPermisosSis no está disponible en window.");
+                if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500 text-xs">Error: Función de renderizado no encontrada.</td></tr>`;
+            }
         } else {
-            console.error("renderizarTarjetasPermisosSis no está disponible en window");
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-stone-400 italic text-xs">No se encontraron registros de personal en la base de datos.</td></tr>`;
+            }
         }
 
     } catch (err) {
-        console.error("❌ Error en carga:", err);
+        console.error("❌ Error crítico al cargar datos de permisos:", err);
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500">Error al conectar con la Base de Datos / Servidor: ${err.message || 'Error de red'}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500 text-xs font-bold">Error al conectar con la Base de Datos / Servidor: ${err.message || 'Error de red'}</td></tr>`;
         }
     }
 }
