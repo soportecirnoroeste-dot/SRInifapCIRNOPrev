@@ -135,11 +135,18 @@ function ejecutarCargaSeccionSis(idOpt) {
     const optEncontrada = opciones.find(o => o.id === String(idOpt));
     const tituloOpt = optEncontrada ? optEncontrada.title.toLowerCase() : '';
 
+    // 🟢 Si es permisos, ejecutamos DIRECTAMENTE nuestra función exclusiva y detenemos el flujo genérico
     if (idOpt === 'permisos' || idOpt === '6' || tituloOpt.includes('permiso')) { 
-        cargarPermisosSis();
-    } else {
-        renderizarVistaModuloSis(idOpt, optEncontrada ? optEncontrada.title : "Módulo del sistema.");
+        if (typeof window.renderizarListadoPermisosSis === 'function') {
+            window.renderizarListadoPermisosSis();
+        } else if (typeof cargarPermisosSis === 'function') {
+            cargarPermisosSis();
+        }
+        return;
     }
+
+    // Para cualquier otro submódulo que no sea permisos:
+    renderizarVistaModuloSis(idOpt, optEncontrada ? optEncontrada.title : "Módulo del sistema.");
 }
 
 function procesarCargaInicialSeccionSis(event) {
