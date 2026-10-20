@@ -183,7 +183,8 @@ async function guardarMatrizPermisosSis(noEmp) {
     const payload = { numEmp: noEmp, permisos: permisosEstructura };
 
     try {
-        await invocarBackendSis('guardarPermisos', payload);
+        // 🟢 Apuntando correctamente a la función del backend unificada para el submódulo
+        await invocarBackendSis('guardarMatrizSisPermisos', payload);
         alert("¡Permisos actualizados correctamente para el colaborador!");
         if (typeof cargarPermisosSis === 'function') cargarPermisosSis();
     } catch (err) {
