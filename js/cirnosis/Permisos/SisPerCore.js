@@ -110,22 +110,14 @@ function actualizarEstadoCheckboxAdminGeneral() {
     const chkAdmin = document.getElementById('chk-admin-general');
     if (!chkAdmin) return;
 
-    const checkboxes = document.querySelectorAll('.chk-permiso');
-    if (checkboxes.length === 0) {
-        chkAdmin.checked = false;
-        return;
+    // El administrador general SOLO se marca si hay una bandera explícita de nivel 5,
+    // evitamos que se marque solo porque las 4 casillas operativas estén llenas.
+    // Si viene de base de datos con nivel < 5, se mantiene desmarcado.
+    if (window._esAdminGeneralGlobal === true) {
+        chkAdmin.checked = true;
+    } else {
+        chkAdmin.checked = false; // Se queda desmarcado para nivel 4
     }
-
-    // Verificar si TODOS los checkboxes de la matriz están marcados
-    let todosMarcados = true;
-    checkboxes.forEach(chk => {
-        if (!chk.checked) {
-            todosMarcados = false;
-        }
-    });
-
-    // Solo se marcará si absolutamente todas las casillas están encendidas (Nivel 5 global)
-    chkAdmin.checked = todosMarcados;
 }
 
 async function guardarMatrizPermisosSis(noEmp) {
