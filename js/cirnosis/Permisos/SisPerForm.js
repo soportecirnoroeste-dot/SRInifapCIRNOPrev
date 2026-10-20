@@ -184,7 +184,7 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
             window.allSubModulosData = dataSys?.submodulos || dataSys?.subModulos || [];
         }
 
-        const respuestaPermisos = await invocarBackendSis('obtenerPermisosColaborador', { numEmp: String(noEmp).trim() });
+        const respuestaPermisos = await invocarBackendSis('obtenerMatrizSisPermisos', { numEmp: String(noEmp).trim() });
         const permisosMap = respuestaPermisos?.permisos || respuestaPermisos || {};
 
         const deptos = window._catDepartamentos || [];
