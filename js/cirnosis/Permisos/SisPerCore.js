@@ -158,17 +158,16 @@ async function guardarMatrizPermisosSis(noEmp) {
     Object.keys(permisosEstructura).forEach(depto => {
         Object.keys(permisosEstructura[depto]).forEach(submodulo => {
             if (esAdminActivo) {
-                permisosEstructura[depto][submodulo].ver = 1;
-                permisosEstructura[depto][submodulo].editar = 1;
-                permisosEstructura[depto][submodulo].eliminar = 1;
-                permisosEstructura[depto][submodulo].nivper = 4;
+                permisosEstructura[depto][submodulo].nivper = 5;
             } else {
                 const v = permisosEstructura[depto][submodulo].ver;
+                const ag = permisosEstructura[depto][submodulo].agregar;
                 const ed = permisosEstructura[depto][submodulo].editar;
                 const el = permisosEstructura[depto][submodulo].eliminar;
 
-                if (el === 1) permisosEstructura[depto][submodulo].nivper = 3;
-                else if (ed === 1) permisosEstructura[depto][submodulo].nivper = 2;
+                if (el === 1) permisosEstructura[depto][submodulo].nivper = 4;
+                else if (ed === 1) permisosEstructura[depto][submodulo].nivper = 3;
+                else if (ag === 1) permisosEstructura[depto][submodulo].nivper = 2;
                 else if (v === 1) permisosEstructura[depto][submodulo].nivper = 1;
                 else permisosEstructura[depto][submodulo].nivper = 0;
             }
