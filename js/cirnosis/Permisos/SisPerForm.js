@@ -274,7 +274,6 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
     }
 }
 
-// Al final de SisPerForm.js
 window.renderizarListadoPermisosSis = renderizarListadoPermisosSis;
 window.renderizarTarjetasPermisosSis = renderizarTarjetasPermisosSis;
 window.abrirMatrizPermisosUsuario = abrirMatrizPermisosUsuario;
