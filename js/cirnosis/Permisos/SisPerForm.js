@@ -84,9 +84,8 @@ function renderizarListadoPermisosSis() {
 // ==========================================
 // MÓDULO DE PERMISOS - SISPER FORM (VISTAS)
 // ==========================================
-
 function renderizarTarjetasPermisosSis(empleados) {
-    const tbody = document.getElementById('tabla-personal-body');
+    const tbody = document.getElementById('tabla-personal-body'); // 👈 Asegúrate de usar este ID
     if (!tbody) return;
 
     if (!empleados || empleados.length === 0) {
