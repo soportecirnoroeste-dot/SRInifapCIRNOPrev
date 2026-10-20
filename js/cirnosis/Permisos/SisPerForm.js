@@ -93,20 +93,20 @@ function renderizarTarjetasPermisosSis(empleados) {
         return;
     }
 
-    // 🟢 Construcción o actualización robusta de cachés con múltiples alternativas de nombres
+    // 🟢 Mapeo ultrarrobusto para regiones y centros (detecta cualquier nomenclatura de columnas)
     if ((!window._mapRegsCache || Object.keys(window._mapRegsCache).length === 0) && window._catRegs) {
         window._mapRegsCache = {};
         window._catRegs.forEach(r => {
-            const k = String(r.SRIRegId || r.regId || '').trim();
-            const v = r.SRIRegNom || r.SRIRegDesc || r.nomReg || r.nombre || '';
+            const k = String(r.SRIRegId || r.regId || r.RegId || r.id || '').trim();
+            const v = r.SRIRegNom || r.SRIRegDesc || r.regNom || r.regDesc || r.NomReg || r.nombre || '';
             if (k) window._mapRegsCache[k] = v;
         });
     }
     if ((!window._mapCentrosCache || Object.keys(window._mapCentrosCache).length === 0) && window._catCentros) {
         window._mapCentrosCache = {};
         window._catCentros.forEach(c => {
-            const k = String(c.SRICenId || c.cenId || '').trim();
-            const v = c.SRICenNom || c.SRICenDesc || c.nomCen || c.nombre || '';
+            const k = String(c.SRICenId || c.cenId || c.CenId || c.id || '').trim();
+            const v = c.SRICenNom || c.SRICenDesc || c.cenNom || c.cenDesc || r.NomCen || c.nombre || '';
             if (k) window._mapCentrosCache[k] = v;
         });
     }
