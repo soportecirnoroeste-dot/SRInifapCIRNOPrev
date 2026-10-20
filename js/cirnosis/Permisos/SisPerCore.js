@@ -107,18 +107,24 @@ function togglePermisosAdministrador(masterCheckbox) {
 }
 
 function actualizarEstadoCheckboxAdminGeneral() {
-    const chkAdminGeneral = document.getElementById('chk-admin-general');
-    if (!chkAdminGeneral) return;
+    const chkAdmin = document.getElementById('chk-admin-general');
+    if (!chkAdmin) return;
 
     const checkboxes = document.querySelectorAll('.chk-permiso');
-    if (checkboxes.length === 0) return;
+    if (checkboxes.length === 0) {
+        chkAdmin.checked = false;
+        return;
+    }
 
-    // Verificar si absolutamente todos los checkboxes de la matriz están marcados
+    // Verificar si TODOS los checkboxes de la matriz están marcados
     let todosMarcados = true;
     checkboxes.forEach(chk => {
-        if (!chk.checked) todosMarcados = false;
+        if (!chk.checked) {
+            todosMarcados = false;
+        }
     });
 
+    // Solo se marcará si absolutamente todas las casillas están encendidas (Nivel 5 global)
     chkAdmin.checked = todosMarcados;
 }
 
