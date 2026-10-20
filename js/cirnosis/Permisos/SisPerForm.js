@@ -199,7 +199,7 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
         }
 
         // 2. Consultar los permisos actuales del empleado desde la tabla SRIPerEmp vía backend
-        const respuestaPermisos = await invocarBackendSis('obtenerMatrizSisPermisos', { numEmp: String(noEmp).trim() });
+        const respuestaPermisos = await invocarBackendSis('obtenerPermisosColaborador', { numEmp: String(noEmp).trim() }); 
         const permisosMap = respuestaPermisos?.permisos || respuestaPermisos || {};
 
         const deptos = window._catDepartamentos || [];
@@ -210,7 +210,7 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
             deptos.forEach(dep => {
                 const idMod = String(dep.SRIModId || dep.claveDep || '').trim();
                 const nombreDep = dep.SRIModNom || dep.nomDep || dep.nombre || `Departamento ${idMod}`;
-                
+
                 // Filtrar submódulos que pertenecen a este departamento usando SRIModId
                 const subsDelDepto = submodulos.filter(sub => String(sub.SRIModId || sub.ClaveDep || '').trim() === idMod);
 
@@ -227,7 +227,7 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
 
                         // 🟢 Lectura precisa alineada con la estructura [idMod][idSub] de SRIPerEmp
                         const pData = permisosMap?.[idMod]?.[idSub] || permisosMap?.[idSub] || 0;
-                        
+
                         let nivPer = 0;
                         if (typeof pData === 'object' && pData !== null) {
                             nivPer = Number(pData.nivper || pData.ver || 0);
