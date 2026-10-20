@@ -197,8 +197,9 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
             window.datosSistema = dataSys;
         }
 
-        // 🟢 1. Extraer adecuadamente el mapa de permisos desde la propiedad .permisos
+        // 🟢 1. Extraer el objeto mapa de permisos con fallback
         const resPermisos = await invocarBackendSis('obtenerMatrizSisPermisos', { numEmp: String(noEmp).trim() });
+        console.log("📌 Respuesta de permisos recibida:", resPermisos); // Para verificar en consola
         const permisosMap = resPermisos?.permisos || resPermisos || {};
 
         const deptos = window._catDepartamentos || [];
@@ -224,13 +225,13 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
                         const nombreSub = sub.SRISubMDes || sub.SModNom || sub.sModNom || sub.nombre || 'Submódulo';
                         const idSub = String(sub.SRISubMId || sub.SModClave || '').trim();
 
-                        // 🟢 2. Buscar en permisosMap[idMod][idSub]
-                        const pData = permisosMap?.[idMod]?.[idSub] || permisosMap?.[idSub] || 0;
+                        // 🟢 2. Buscar por ID de departamento e ID de submódulo
+                        const pData = permisosMap?.[idMod]?.[idSub] || permisosMap?.[idSub] || null;
                         
                         let nivPer = 0;
-                        if (typeof pData === 'object' && pData !== null) {
-                            nivPer = Number(pData.nivper || pData.nivPer || pData.ver || 0);
-                        } else {
+                        if (pData && typeof pData === 'object') {
+                            nivPer = Number(pData.nivper !== undefined ? pData.nivper : pData.ver || 0);
+                        } else if (pData !== null && pData !== undefined) {
                             nivPer = Number(pData) || 0;
                         }
 
