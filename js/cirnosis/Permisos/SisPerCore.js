@@ -107,10 +107,13 @@ function togglePermisosAdministrador(masterCheckbox) {
 }
 
 function actualizarEstadoCheckboxAdminGeneral() {
-    const checkboxes = document.querySelectorAll('.chk-permiso');
-    const chkAdmin = document.getElementById('chk-admin-general');
-    if (!chkAdmin || checkboxes.length === 0) return;
+    const chkAdminGeneral = document.getElementById('chk-admin-general');
+    if (!chkAdminGeneral) return;
 
+    const checkboxes = document.querySelectorAll('.chk-permiso');
+    if (checkboxes.length === 0) return;
+
+    // Verificar si absolutamente todos los checkboxes de la matriz están marcados
     let todosMarcados = true;
     checkboxes.forEach(chk => {
         if (!chk.checked) todosMarcados = false;
