@@ -85,7 +85,7 @@ function renderizarListadoPermisosSis() {
 // MÓDULO DE PERMISOS - SISPER FORM (VISTAS)
 // ==========================================
 function renderizarTarjetasPermisosSis(empleados) {
-    const tbody = document.getElementById('tabla-personal-body'); // 👈 Asegúrate de usar este ID
+    const tbody = document.getElementById('tabla-personal-body');
     if (!tbody) return;
 
     if (!empleados || empleados.length === 0) {
@@ -93,27 +93,36 @@ function renderizarTarjetasPermisosSis(empleados) {
         return;
     }
 
-    if (!window._mapRegsCache && window._catRegs) {
+    // 🟢 Construcción o actualización robusta de cachés con múltiples alternativas de nombres
+    if ((!window._mapRegsCache || Object.keys(window._mapRegsCache).length === 0) && window._catRegs) {
         window._mapRegsCache = {};
-        window._catRegs.forEach(r => { window._mapRegsCache[String(r.SRIRegId).trim()] = r.SRIRegNom || ''; });
+        window._catRegs.forEach(r => {
+            const k = String(r.SRIRegId || r.regId || '').trim();
+            const v = r.SRIRegNom || r.SRIRegDesc || r.nomReg || r.nombre || '';
+            if (k) window._mapRegsCache[k] = v;
+        });
     }
-    if (!window._mapCentrosCache && window._catCentros) {
+    if ((!window._mapCentrosCache || Object.keys(window._mapCentrosCache).length === 0) && window._catCentros) {
         window._mapCentrosCache = {};
-        window._catCentros.forEach(c => { window._mapCentrosCache[String(c.SRICenId).trim()] = c.SRICenNom || ''; });
+        window._catCentros.forEach(c => {
+            const k = String(c.SRICenId || c.cenId || '').trim();
+            const v = c.SRICenNom || c.SRICenDesc || c.nomCen || c.nombre || '';
+            if (k) window._mapCentrosCache[k] = v;
+        });
     }
-    if (!window._mapDeptosCache && window._catDepartamentos) {
+    if ((!window._mapDeptosCache || Object.keys(window._mapDeptosCache).length === 0) && window._catDepartamentos) {
         window._mapDeptosCache = {};
         window._catDepartamentos.forEach(d => {
             const nomCor = String(d.SRIModNomC || d.claveDep || '').trim();
-            const nomLargo = d.SRIModNom || d.nomDep || d.nombre || '';
+            const nomLargo = d.SRIModNom || d.SRIModNomL || d.nomDep || d.nombre || '';
             if (nomCor) window._mapDeptosCache[nomCor] = nomLargo;
         });
     }
-    if (!window._mapPuestosCache && window._catPuestos) {
+    if ((!window._mapPuestosCache || Object.keys(window._mapPuestosCache).length === 0) && window._catPuestos) {
         window._mapPuestosCache = {};
         window._catPuestos.forEach(p => {
             const k = String(p.SRIPrtoId || p.SRIPtoId || p.NumPto || p.clave || '').trim();
-            const v = p.SRIPrtoDesc || p.NomPto || p.nombre || '';
+            const v = p.SRIPrtoDesc || p.SRIPtoDesc || p.NomPto || p.nombre || '';
             if (k) window._mapPuestosCache[k] = v;
         });
     }
