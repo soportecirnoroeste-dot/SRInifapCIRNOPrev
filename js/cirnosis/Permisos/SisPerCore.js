@@ -180,7 +180,7 @@ async function guardarMatrizPermisosSis(noEmp) {
     try {
         // 🟢 Apuntando correctamente a la función del backend unificada para el submódulo
         await invocarBackendSis('guardarPermisos', payload); 
-        alert("¡Permisos actualizados correctamente para el colaborador!");
+        alert("¡Permisos actualizados correctamente!");
         if (typeof cargarPermisosSis === 'function') cargarPermisosSis();
     } catch (err) {
         console.error("❌ Error al guardar permisos:", err);
