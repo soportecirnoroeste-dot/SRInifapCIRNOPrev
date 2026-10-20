@@ -296,17 +296,22 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
                     </div>
                     <div class="max-h-[500px] overflow-y-auto custom-scrollbar">
                         <table class="w-full text-left border-collapse text-xs">
-                            <thead class="sticky top-0 z-10 bg-stone-100">
-                                <tr class="text-stone-600 font-bold border-b border-stone-200 text-[11px]">
-                                    <th class="p-3 pl-4">DEPARTAMENTO / SUBMÓDULO</th>
-                                    <th class="p-3 text-center">VER (N1)</th>
-                                    <th class="p-3 text-center">AGREGAR (N2)</th>
-                                    <th class="p-3 text-center">EDITAR (N3)</th>
-                                    <th class="p-3 text-center pr-4">ELIMINAR / ADMIN MÓDULO (N4)</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-stone-100 text-stone-700">${filasHTML}</tbody>
-                        </table>
+                        <thead class="sticky top-0 z-10 bg-stone-100">
+                            <tr class="text-stone-600 font-bold border-b border-stone-200 text-[11px]">
+                                <th class="p-3 pl-4">REGIÓN</th>
+                                <th class="p-3">CENTRO</th>
+                                <th class="p-3">NO. EMP</th>
+                                <th class="p-3">NOMBRE</th>
+                                <th class="p-3">PUESTO</th>
+                                <th class="p-3">DEPARTAMENTO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-personal-body" class="divide-y divide-stone-100 text-stone-700">
+                            <tr>
+                                <td colspan="6" class="p-8 text-center text-stone-400 italic">Sincronizando datos...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                     </div>
                 </div>
                 <div class="flex items-center gap-3 pt-2">
