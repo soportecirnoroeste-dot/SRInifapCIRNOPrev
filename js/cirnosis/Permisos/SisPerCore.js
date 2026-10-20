@@ -24,7 +24,7 @@ async function cargarDatosPermisosConCatalogos() {
     }
 
     _cargandoPermisosEnCurso = true;
-    const tbody = document.getElementById('grid-permisos-empleados');
+    const tbody = document.getElementById('tabla-personal-body');
     if (tbody) {
         tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-stone-500 italic">Procesando ${window._empleadosCache?.length || '151'} registros de personal...</td></tr>`;
     }
