@@ -33,7 +33,7 @@ function renderizarListadoPermisosSis() {
             </div>
 
             <div id="contenedor-gestion-permisos" class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-stone-50 p-4 rounded-xl border border-stone-200">
-                <div><h4 class="font-bold text-stone-800 text-sm">Gestión de Permisos por Colaborador</h4></div>
+                <div><h4 class="font-bold text-stone-800 text-sm">Gestión de Permisos</h4></div>
                 <div class="flex gap-2">
                     <button type="button" onclick="actualizarDatosPermisosSis()" class="px-4 py-2 bg-stone-200 text-stone-700 rounded-xl text-xs font-bold hover:bg-stone-300 transition flex items-center gap-2 cursor-pointer">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
@@ -57,21 +57,21 @@ function renderizarListadoPermisosSis() {
                 
                 <div class="rounded-xl bg-white">
                     <div class="max-h-[500px] overflow-y-auto overflow-x-auto custom-scrollbar">
-                        <table class="w-full text-left border-collapse text-xs min-w-[950px]">
-                            <thead class="bg-stone-100 font-bold text-stone-700 sticky top-0 z-10 border-b border-stone-200">
-                                <tr>
-                                    <th class="p-3 border-b border-stone-200">REG</th>
-                                    <th class="p-3 border-b border-stone-200">CENTRO</th>
-                                    <th class="p-3 border-b border-stone-200 text-center">NO. EMP</th>
-                                    <th class="p-3 border-b border-stone-200">NOMBRE</th>
-                                    <th class="p-3 border-b border-stone-200">PUESTO</th>
-                                    <th class="p-3 border-b border-stone-200">DEPARTAMENTO</th>
-                                </tr>
-                            </thead>
-                            <tbody id="grid-permisos-empleados" class="divide-y divide-stone-100">
-                                <tr><td colspan="6" class="p-6 text-center text-stone-400 italic">Sincronizando datos...</td></tr>
-                            </tbody>
-                        </table>
+                        <table class="w-full border-collapse text-xs min-w-[1000px] table-fixed">
+                        <thead class="bg-stone-100 font-bold text-stone-700 sticky top-0 z-10 border-b border-stone-200">
+                            <tr>
+                                <th class="p-3 w-[18%] text-left border-b border-stone-200">REGIÓN</th>
+                                <th class="p-3 w-[25%] text-left border-b border-stone-200">CENTRO</th>
+                                <th class="p-3 w-[10%] text-center border-b border-stone-200">NO. EMP</th>
+                                <th class="p-3 w-[20%] text-left border-b border-stone-200">NOMBRE</th>
+                                <th class="p-3 w-[15%] text-left border-b border-stone-200">PUESTO</th>
+                                <th class="p-3 w-[12%] text-left border-b border-stone-200">DEPARTAMENTO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-personal-body" class="divide-y divide-stone-100">
+                            <tr><td colspan="6" class="p-6 text-center text-stone-400 italic">Cargando registros...</td></tr>
+                        </tbody>
+                    </table>
                     </div>
                 </div>
             </div>
