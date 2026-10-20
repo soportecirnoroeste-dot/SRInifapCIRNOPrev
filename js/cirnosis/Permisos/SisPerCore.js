@@ -31,8 +31,15 @@ async function cargarDatosPermisosConCatalogos() {
             window._empleadosCache = data;
         }
 
+        // Dentro de cargarDatosPermisosConCatalogos en SisPerCore.js:
         window.listaEmpleadosPermisosCache = window._empleadosCache;
-        renderizarTarjetasPermisosSis(window.listaEmpleadosPermisosCache);
+
+        // 🟢 Invocarla a través del objeto window para que la encuentre en SisPerForm.js
+        if (typeof window.renderizarTarjetasPermisosSis === 'function') {
+            window.renderizarTarjetasPermisosSis(window.listaEmpleadosPermisosCache);
+        } else {
+            console.error("renderizarTarjetasPermisosSis no está disponible en window");
+        }
 
     } catch (err) {
         console.error("❌ Error en carga:", err);
