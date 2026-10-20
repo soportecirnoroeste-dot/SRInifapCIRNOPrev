@@ -1,12 +1,12 @@
 // ==========================================
 // MÓDULO DE PERMISOS - SISPER CASCADA / UTILIDADES
 // ==========================================
-
 async function cargarPermisosSis() {
     const contenedorDinamico = document.getElementById('contenido-submodulo-dinamico');
     if (!contenedorDinamico) return;
 
-    // 1. Inyectar la estructura inicial del buscador y la tabla
+    // 1. Restaurar el contenedor con la estructura principal de la tabla
+    contenedorDinamico.className = "col-span-1 sm:col-span-2 md:col-span-3 space-y-6 animate-fade-in";
     contenedorDinamico.innerHTML = `
         <div class="w-full space-y-6 bg-white p-6 md:p-8 rounded-2xl soft-shadow border border-[#249444]/10 mb-8 animate-fade-in">
             <div class="flex items-center justify-between pb-4 border-b border-stone-100">
@@ -52,57 +52,24 @@ async function cargarPermisosSis() {
         </div>
     `;
 
-    // 2. Cargar los datos desde el backend
-    try {
-        const resListado = await invocarBackendSis('obtenerListadoEmpleadosPermisos', {});
-        const empleados = resListado?.empleados || resListado?.data || resListado || [];
-
-        const tbody = document.getElementById('tbody-permisos-empleados');
-        if (!tbody) return;
-
-        if (Array.isArray(empleados) && empleados.length > 0) {
-            let htmlFilas = "";
-            empleados.forEach(emp => {
-                const noEmp = String(emp.SRIEmpNum || emp.noEmp || emp.numEmp || '').trim();
-                const nombre = emp.SRIEmpNom || emp.nombre || 'Sin nombre';
-                const region = emp.SRIRegNom || emp.region || '-';
-                const centro = emp.SRICenNom || emp.centro || '-';
-                const puesto = emp.SRIPueNom || emp.puesto || '-';
-                const depto = emp.SRIDepNom || emp.departamento || '-';
-
-                htmlFilas += `
-                    <tr class="hover:bg-stone-50 transition-all border-b border-stone-100">
-                        <td class="p-3 pl-4 font-medium text-stone-600">${region}</td>
-                        <td class="p-3 text-stone-600">${centro}</td>
-                        <td class="p-3 font-bold text-stone-800">${noEmp}</td>
-                        <td class="p-3 font-semibold text-stone-800">${nombre}</td>
-                        <td class="p-3 text-stone-600">${puesto}</td>
-                        <td class="p-3 text-stone-600">${depto}</td>
-                        <td class="p-3 text-center pr-4">
-                            <button onclick="abrirMatrizPermisosUsuario('${nombre.replace(/'/g, "\\'")}', '${noEmp}')" class="bg-[#249444] hover:bg-[#1e7a37] text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all shadow-sm cursor-pointer">
-                                Editar Permisos
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            });
-            tbody.innerHTML = htmlFilas;
-        } else {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="p-8 text-center text-stone-400 italic">No se encontraron empleados registrados.</td>
-                </tr>
-            `;
-        }
-    } catch (err) {
-        console.error("❌ Error al cargar listado de empleados:", err);
-        const tbody = document.getElementById('tbody-permisos-empleados');
-        if (tbody) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="p-8 text-center text-red-500 text-xs font-semibold">Error al obtener el listado: ${err.message}</td>
-                </tr>
-            `;
+    // 2. Si ya existen los empleados cargados en memoria, pintarlos directamente
+    if (window.todosLosEmpleados && window.todosLosEmpleados.length > 0) {
+        renderizarTablaEmpleadosPermisos(window.todosLosEmpleados);
+    } else if (typeof cargarYRenderizarEmpleados === 'function') {
+        // O llamar a la función de carga/renderizado habitual de tu proyecto
+        await cargarYRenderizarEmpleados();
+    } else {
+        // Solicitar listado al servidor si la memoria está vacía
+        try {
+            const dataSys = await invocarBackendSis('obtenerDatosSistema', {});
+            const lista = dataSys?.colaboradores || dataSys?.empleados || window.todosLosEmpleados || [];
+            window.todosLosEmpleados = lista;
+            
+            if (typeof renderizarTablaEmpleadosPermisos === 'function') {
+                renderizarTablaEmpleadosPermisos(lista);
+            }
+        } catch (e) {
+            console.error("Error al recargar empleados:", e);
         }
     }
 }
