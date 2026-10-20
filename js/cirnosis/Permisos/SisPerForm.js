@@ -198,6 +198,7 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
             window.datosSistema = dataSys;
         }
 
+        // 2. Consultar los permisos actuales del empleado desde la tabla SRIPerEmp vía backend
         const respuestaPermisos = await invocarBackendSis('obtenerMatrizSisPermisos', { numEmp: String(noEmp).trim() });
         const permisosMap = respuestaPermisos?.permisos || respuestaPermisos || {};
 
@@ -207,12 +208,11 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
 
         if (deptos.length > 0) {
             deptos.forEach(dep => {
-                // Mapeo exacto según Script.txt (SRIModId y SRIModNom)
                 const idMod = String(dep.SRIModId || dep.claveDep || '').trim();
                 const nombreDep = dep.SRIModNom || dep.nomDep || dep.nombre || `Departamento ${idMod}`;
                 
                 // Filtrar submódulos que pertenecen a este departamento usando SRIModId
-                const subsDelDepto = submodulos.filter(sub => String(sub.SRIModId || sub.ClaveDep || sub.claveDep || '').trim() === idMod);
+                const subsDelDepto = submodulos.filter(sub => String(sub.SRIModId || sub.ClaveDep || '').trim() === idMod);
 
                 filasHTML += `
                     <tr class="bg-stone-50 font-bold text-stone-800 border-t border-stone-200">
@@ -222,16 +222,27 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
 
                 if (subsDelDepto.length > 0) {
                     subsDelDepto.forEach(sub => {
-                        // Mapeo exacto según Script.txt (SRISubMDes para descripción y SRISubMId para clave)
                         const nombreSub = sub.SRISubMDes || sub.SModNom || sub.sModNom || sub.nombre || 'Submódulo';
-                        const idSub = String(sub.SRISubMId || sub.SModClave || sub.sModClave || sub.id || '').trim();
+                        const idSub = String(sub.SRISubMId || sub.SModClave || '').trim();
 
-                        const pDep = permisosMap?.[idMod]?.[idSub] || permisosMap?.[idSub] || { ver: 0, editar: 0, eliminar: 0 };
-                        const esNivel4 = Number(pDep.nivper || pDep.ver) === 4 || (Number(pDep.ver) === 1 && Number(pDep.editar) === 1 && Number(pDep.eliminar) === 1);
+                        // 🟢 Lectura precisa alineada con la estructura [idMod][idSub] de SRIPerEmp
+                        const pData = permisosMap?.[idMod]?.[idSub] || permisosMap?.[idSub] || 0;
+                        
+                        let nivPer = 0;
+                        if (typeof pData === 'object' && pData !== null) {
+                            nivPer = Number(pData.nivper || pData.ver || 0);
+                            if (Number(pData.eliminar) === 1) nivPer = Math.max(nivPer, 4);
+                            else if (Number(pData.editar) === 1) nivPer = Math.max(nivPer, 3);
+                            else if (Number(pData.agregar) === 1) nivPer = Math.max(nivPer, 2);
+                            else if (Number(pData.ver) === 1) nivPer = Math.max(nivPer, 1);
+                        } else {
+                            nivPer = Number(pData) || 0;
+                        }
 
-                        const chkVer = esNivel4 || Number(pDep.ver) === 1 ? 'checked' : '';
-                        const chkEditar = esNivel4 || Number(pDep.editar) === 1 ? 'checked' : '';
-                        const chkEliminar = esNivel4 || Number(pDep.eliminar) === 1 ? 'checked' : '';
+                        // 🟢 Regla exacta de banderas basada en niveles (1=Ver, 2=Agregar, 3=Editar, 4=Eliminar/Admin)
+                        const chkVer = nivPer >= 1 ? 'checked' : '';
+                        const chkEditar = nivPer >= 2 ? 'checked' : '';
+                        const chkEliminar = nivPer >= 4 ? 'checked' : '';
 
                         filasHTML += `
                             <tr class="hover:bg-stone-50 transition-all border-b border-stone-100">
