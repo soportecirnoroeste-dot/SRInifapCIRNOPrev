@@ -186,11 +186,12 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
     const contenedorDinamico = document.getElementById('contenido-submodulo-dinamico');
     if (!contenedorDinamico) return;
 
-    contenedorDinamico.className = "col-span-1 sm:col-span-2 md:col-span-3 space-y-6 animate-fade-in";
+    // Asignamos directamente las clases del contenedor principal sin anidar otro div de tarjeta
+    contenedorDinamico.className = "w-full space-y-6 bg-white p-6 md:p-8 rounded-2xl soft-shadow border border-[#249444]/10 mb-8 animate-fade-in";
     
-    // 🟢 RESTAURAR SPINNER INMEDIATO AL DAR CLIC EN EL NOMBRE
+    // Spinner de carga inmediato
     contenedorDinamico.innerHTML = `
-        <div class="w-full space-y-6 bg-white p-12 rounded-2xl soft-shadow border border-[#249444]/10 mb-8 text-center animate-fade-in">
+        <div class="w-full space-y-6 text-center py-12 animate-fade-in">
             <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-[#249444] border-t-transparent"></div>
             <p class="text-xs text-stone-500 font-bold mt-3 uppercase tracking-wider">Cargando matriz de permisos para ${nombreColaborador}...</p>
         </div>
@@ -207,21 +208,19 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
 
         // 2. Extraer el objeto mapa de permisos devuelto por la consulta SQL (SRIPerEmp)
         const resPermisos = await invocarBackendSis('obtenerMatrizSisPermisos', { numEmp: String(noEmp).trim() });
-        console.log("📌 Permisos cargados desde SQL Server:", resPermisos);
         const permisosMap = resPermisos?.permisos || resPermisos || {};
 
         const deptos = window._catDepartamentos || [];
         const submodulos = window.allSubModulosData || [];
         
         let filasHTML = "";
-        let tieneNivel5Global = false; // Flag para determinar si realmente es Admin General (Nivel 5)
+        let tieneNivel5Global = false;
 
         if (deptos.length > 0) {
             deptos.forEach(dep => {
                 const idMod = String(dep.SRIModId || dep.claveDep || dep.id || '').trim();
                 const nombreDep = dep.SRIModNom || dep.nomDep || dep.nombre || `Departamento ${idMod}`;
                 
-                // Filtrar submódulos por ID de departamento
                 const subsDelDepto = submodulos.filter(sub => String(sub.SRIModId || sub.ClaveDep || sub.claveDep || '').trim() === idMod);
 
                 filasHTML += `
@@ -235,7 +234,6 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
                         const nombreSub = sub.SRISubMDes || sub.SModNom || sub.sModNom || sub.nombre || 'Submódulo';
                         const idSub = String(sub.SRISubMId || sub.SModClave || sub.sModClave || sub.id || '').trim();
 
-                        // Buscar objeto de permiso para este departamento y submódulo
                         const pData = permisosMap?.[idMod]?.[idSub] || permisosMap?.[idSub] || null;
                         
                         let nivPer = 0;
@@ -245,12 +243,10 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
                             nivPer = Number(pData) || 0;
                         }
 
-                        // Verificar si existe Nivel 5 explícito
                         if (nivPer >= 5) {
                             tieneNivel5Global = true;
                         }
 
-                        // Mapeo exacto de los 4 niveles operativos en el grid (1=Ver, 2=Agregar, 3=Editar, 4=Eliminar)
                         const chkVer = nivPer >= 1 ? 'checked' : '';
                         const chkAgregar = nivPer >= 2 ? 'checked' : '';
                         const chkEditar = nivPer >= 3 ? 'checked' : '';
@@ -276,48 +272,47 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
             });
         }
 
-        // Marcar estado global
         window._esAdminGeneralGlobal = tieneNivel5Global;
 
+        // 🟢 RENDERIZADO DIRECTO SIN EL DIV ENVOLVENTE REDUNDANTE
         contenedorDinamico.innerHTML = `
-            <div class="w-full space-y-6 bg-white p-6 md:p-8 rounded-2xl soft-shadow border border-[#249444]/10 mb-8 animate-fade-in">
-                <div class="flex items-center justify-between pb-4 border-b border-stone-100">
-                    <div class="flex items-center gap-3">
-                        <div class="p-2.5 bg-[#f0fdf4] border border-[#c6f6d5] text-[#059669] rounded-xl flex items-center justify-center">
-                            <svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M19 11v6'/><path d='M19 13h2'/><path d='M2 21a8 8 0 0 1 12.868-6.349'/><circle cx='10' cy='8' r='5'/><circle cx='19' cy='19' r='2'/></svg>
-                        </div>
-                        <div><h3 class="font-black text-stone-800 text-lg uppercase tracking-wide">Permisos</h3></div>
+            <div class="flex items-center justify-between pb-4 border-b border-stone-100">
+                <div class="flex items-center gap-3">
+                    <div class="p-2.5 bg-[#f0fdf4] border border-[#c6f6d5] text-[#059669] rounded-xl flex items-center justify-center">
+                        <svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M19 11v6'/><path d='M19 13h2'/><path d='M2 21a8 8 0 0 1 12.868-6.349'/><circle cx='10' cy='8' r='5'/><circle cx='19' cy='19' r='2'/></svg>
                     </div>
-                    
-                    <div class="flex items-center gap-2 bg-stone-50 px-4 py-2 rounded-xl border border-stone-200">
-                        <input type="checkbox" id="chk-admin-general" ${tieneNivel5Global ? 'checked' : ''} onchange="togglePermisosAdministrador(this)" class="accent-[#249444] w-4 h-4 cursor-pointer">
-                        <label for="chk-admin-general" class="text-xs font-bold text-stone-700 uppercase cursor-pointer select-none">Administrador (Todos los permisos Nivel 5)</label>
-                    </div>
+                    <div><h3 class="font-black text-stone-800 text-lg uppercase tracking-wide">Permisos</h3></div>
                 </div>
+                
+                <div class="flex items-center gap-2 bg-stone-50 px-4 py-2 rounded-xl border border-stone-200">
+                    <input type="checkbox" id="chk-admin-general" ${tieneNivel5Global ? 'checked' : ''} onchange="togglePermisosAdministrador(this)" class="accent-[#249444] w-4 h-4 cursor-pointer">
+                    <label for="chk-admin-general" class="text-xs font-bold text-stone-700 uppercase cursor-pointer select-none">Administrador (Todos los permisos Nivel 5)</label>
+                </div>
+            </div>
 
-                <div class="rounded-xl border border-stone-200 overflow-hidden shadow-sm">
-                    <div class="p-4 border-b border-stone-100 bg-white">
-                        <p class="text-xs text-stone-500">Editando permisos para: <span class="font-bold text-stone-800">${nombreColaborador}</span> (No. Empleado: ${noEmp})</p>
-                    </div>
-                    <div class="max-h-[500px] overflow-y-auto custom-scrollbar">
-                        <table class="w-full text-left border-collapse text-xs">
-                            <thead class="sticky top-0 z-10 bg-stone-100">
-                                <tr class="text-stone-600 font-bold border-b border-stone-200 text-[11px]">
-                                    <th class="p-3 pl-4">DEPARTAMENTO / SUBMÓDULO</th>
-                                    <th class="p-3 text-center">VER (N1)</th>
-                                    <th class="p-3 text-center">AGREGAR (N2)</th>
-                                    <th class="p-3 text-center">EDITAR (N3)</th>
-                                    <th class="p-3 text-center pr-4">ELIMINAR / ADMIN MÓDULO (N4)</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-stone-100 text-stone-700">${filasHTML}</tbody>
-                        </table>
-                    </div>
+            <div class="rounded-xl border border-stone-200 overflow-hidden shadow-sm">
+                <div class="p-4 border-b border-stone-100 bg-white">
+                    <p class="text-xs text-stone-500">Editando permisos para: <span class="font-bold text-stone-800">${nombreColaborador}</span> (No. Empleado: ${noEmp})</p>
                 </div>
-                <div class="flex items-center gap-3 pt-2">
-                    <button onclick="guardarMatrizPermisosSis('${noEmp}')" class="bg-[#249444] hover:bg-[#1e7a37] text-white text-xs font-bold px-6 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer">Guardar</button>
-                    <button onclick="cargarPermisosSis()" class="bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold px-6 py-2.5 rounded-xl transition-all cursor-pointer">Cancelar</button>
+                <div class="max-h-[500px] overflow-y-auto custom-scrollbar">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead class="sticky top-0 z-10 bg-stone-100">
+                            <tr class="text-stone-600 font-bold border-b border-stone-200 text-[11px]">
+                                <th class="p-3 pl-4">DEPARTAMENTO / SUBMÓDULO</th>
+                                <th class="p-3 text-center">VER (N1)</th>
+                                <th class="p-3 text-center">AGREGAR (N2)</th>
+                                <th class="p-3 text-center">EDITAR (N3)</th>
+                                <th class="p-3 text-center pr-4">ELIMINAR / ADMIN MÓDULO (N4)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-stone-100 text-stone-700">${filasHTML}</tbody>
+                    </table>
                 </div>
+            </div>
+            
+            <div class="flex items-center gap-3 pt-2">
+                <button onclick="guardarMatrizPermisosSis('${noEmp}')" class="bg-[#249444] hover:bg-[#1e7a37] text-white text-xs font-bold px-6 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer">Guardar</button>
+                <button onclick="cargarPermisosSis()" class="bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold px-6 py-2.5 rounded-xl transition-all cursor-pointer">Cancelar</button>
             </div>
         `;
 
@@ -334,4 +329,3 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
         contenedorDinamico.innerHTML = `<div class="p-6 text-center text-red-500 text-xs">Error al cargar los datos: ${err.message}</div>`;
     }
 }
-
