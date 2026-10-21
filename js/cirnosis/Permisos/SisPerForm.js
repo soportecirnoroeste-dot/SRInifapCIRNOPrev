@@ -3,10 +3,15 @@
 // ==========================================
 
 function renderizarListadoPermisosSis() {
-    const elementosPagina = document.querySelectorAll('div, section');
+    // 🟢 BARRIDO PROFUNDO: Ocultar cualquier título rezagado de vistas anteriores (como "PERSONAL")
+    const elementosPagina = document.querySelectorAll('h1, h2, h3, div, section');
     elementosPagina.forEach(el => {
-        if (el.innerText && el.innerText.includes("MENÚ DEL DEPARTAMENTO") && el.id !== 'contenido-submodulo-dinamico') {
-            el.style.display = 'none';
+        const texto = (el.innerText || "").trim().toUpperCase();
+        // Si el texto coincide exactamente con títulos de módulos padres que no deben estar aquí
+        if ((texto === "PERSONAL" || texto.includes("MENÚ DEL DEPARTAMENTO")) && el.id !== 'contenido-submodulo-dinamico') {
+            // Ocultar el contenedor o elemento padre que lo envuelve para que no deje espacios vacíos
+            const contenedorPadre = el.closest('div.flex, div.bg-white, section') || el;
+            contenedorPadre.style.display = 'none';
         }
     });
 
@@ -84,36 +89,93 @@ function renderizarListadoPermisosSis() {
 // ==========================================
 // MÓDULO DE PERMISOS - SISPER FORM (VISTAS)
 // ==========================================
-function renderizarListadoPermisosSis() {
-    // 🟢 BARRIDO PROFUNDO: Ocultar cualquier título rezagado de vistas anteriores (como "PERSONAL")
-    const elementosPagina = document.querySelectorAll('h1, h2, h3, div, section');
-    elementosPagina.forEach(el => {
-        const texto = (el.innerText || "").trim().toUpperCase();
-        // Si el texto coincide exactamente con títulos de módulos padres que no deben estar aquí
-        if ((texto === "PERSONAL" || texto.includes("MENÚ DEL DEPARTAMENTO")) && el.id !== 'contenido-submodulo-dinamico') {
-            // Ocultar el contenedor o elemento padre que lo envuelve para que no deje espacios vacíos
-            const contenedorPadre = el.closest('div.flex, div.bg-white, section') || el;
-            contenedorPadre.style.display = 'none';
-        }
-    });
+function renderizarTarjetasPermisosSis(empleados) {
+    const tbody = document.getElementById('tabla-personal-body');
+    if (!tbody) return;
 
-    let contenedorDinamico = document.getElementById('contenido-submodulo-dinamico');
-
-    if (!contenedorDinamico) {
-        const areaTrabajo = document.getElementById('app-container') || document.querySelector('main') || document.body;
-        if (areaTrabajo) {
-            contenedorDinamico = document.createElement('div');
-            contenedorDinamico.id = 'contenido-submodulo-dinamico';
-            areaTrabajo.appendChild(contenedorDinamico);
-        }
+    if (!empleados || empleados.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-stone-400">No se encontraron colaboradores registrados.</td></tr>`;
+        return;
     }
 
-    if (contenedorDinamico) {
-        contenedorDinamico.style.display = 'block';
-        contenedorDinamico.className = "w-full space-y-6 bg-white p-6 md:p-8 rounded-2xl soft-shadow border border-[#249444]/10 mb-8 animate-fade-in";
-        contenedorDinamico.innerHTML = `
-            <!-- Tu estructura normal de permisos -->
-            ...
+    // 🟢 1. Construcción de mapas de catálogo (admite cualquier nombre de propiedad)
+    if ((!window._mapRegsCache || Object.keys(window._mapRegsCache).length === 0) && window._catRegs) {
+        window._mapRegsCache = {};
+        window._catRegs.forEach(r => {
+            const k = String(r.SRIRegId || r.regId || r.RegId || r.id || '').trim();
+            const v = r.SRIRegNom || r.SRIRegDesc || r.regNom || r.regDesc || r.NomReg || r.nombre || '';
+            if (k) window._mapRegsCache[k] = v;
+        });
+    }
+
+    if ((!window._mapCentrosCache || Object.keys(window._mapCentrosCache).length === 0) && window._catCentros) {
+        window._mapCentrosCache = {};
+        window._catCentros.forEach(c => {
+            const k = String(c.SRICenId || c.cenId || c.CenId || c.id || '').trim();
+            const v = c.SRICenNom || c.SRICenDesc || c.cenNom || c.cenDesc || c.NomCen || c.nombre || '';
+            if (k) window._mapCentrosCache[k] = v;
+        });
+    }
+
+    if ((!window._mapDeptosCache || Object.keys(window._mapDeptosCache).length === 0) && window._catDepartamentos) {
+        window._mapDeptosCache = {};
+        window._catDepartamentos.forEach(d => {
+            const nomCor = String(d.SRIModNomC || d.claveDep || '').trim();
+            const nomLargo = d.SRIModNom || d.SRIModNomL || d.nomDep || d.nombre || '';
+            if (nomCor) window._mapDeptosCache[nomCor] = nomLargo;
+        });
+    }
+
+    if ((!window._mapPuestosCache || Object.keys(window._mapPuestosCache).length === 0) && window._catPuestos) {
+        window._mapPuestosCache = {};
+        window._catPuestos.forEach(p => {
+            const k = String(p.SRIPrtoId || p.SRIPtoId || p.NumPto || p.clave || '').trim();
+            const v = p.SRIPrtoDesc || p.SRIPtoDesc || p.NomPto || p.nombre || '';
+            if (k) window._mapPuestosCache[k] = v;
+        });
+    }
+
+    let html = "";
+    empleados.forEach(emp => {
+        const cReg = String(emp.SRIRegId || emp.regId || '').trim();
+        const cCentro = String(emp.SRICenId || emp.cenId || '').trim();
+        const numEmp = String(emp.SRIEmpNum || emp.SRIPerNumE || '').trim();
+        const nombre = emp.SRIEmpNom || emp.SRIPerNomE || "SIN NOMBRE";
+
+        // 🟢 Resolver Nombre de Región (Prioridad: Mapa -> Objeto Empleado -> Solo Código)
+        const nomReg = window._mapRegsCache?.[cReg] || emp.SRIRegNom || emp.SRIRegDesc || emp.regNom || '';
+        const regTexto = nomReg ? `${cReg} - ${nomReg}` : cReg;
+
+        // 🟢 Resolver Nombre de Centro (Prioridad: Mapa -> Objeto Empleado -> Solo Código)
+        const nomCentro = window._mapCentrosCache?.[cCentro] || emp.SRICenNom || emp.SRICenDesc || emp.cenNom || '';
+        const centroTexto = nomCentro ? `${cCentro} - ${nomCentro}` : cCentro;
+
+        // 🟢 Resolver Puesto
+        const cNumPto = String(emp.SRIPtoId || emp.SRIPrtoId || '').trim();
+        let puestoVisual = window._mapPuestosCache?.[cNumPto] || emp.SRIPtoDesc || emp.SRIPrtoDesc || cNumPto;
+
+        // 🟢 Resolver Departamento
+        const cDepto = String(emp.SRIModNomC || '').trim();
+        let deptoVisual = window._mapDeptosCache?.[cDepto] || emp.SRIModNom || cDepto || 'N/A';
+
+        html += `
+            <tr class="hover:bg-stone-50/80 transition-all border-b border-stone-100">
+                <td class="p-3 font-mono text-stone-600">${regTexto}</td>
+                <td class="p-3 font-mono text-stone-600">${centroTexto}</td>
+                <td class="p-3 font-mono text-stone-600 text-center">${numEmp}</td>
+                <td class="p-3 font-bold text-[#249444] uppercase">
+                    <button type="button" onclick="abrirMatrizPermisosUsuario('${nombre.replace(/'/g, "\\\'")}', '${numEmp}')" class="hover:underline text-left cursor-pointer focus:outline-none">
+                        ${nombre}
+                    </button>
+                </td>
+                <td class="p-3 text-stone-600 uppercase">${puestoVisual}</td>
+                <td class="p-3 text-stone-600 uppercase">${deptoVisual}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+}
 
 // 🟢 EXPORTACIONES OBLIGATORIAS AL FINAL DE SisPerForm.js
 window.renderizarListadoPermisosSis = renderizarListadoPermisosSis;
