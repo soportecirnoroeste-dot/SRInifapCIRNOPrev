@@ -186,12 +186,8 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
     const contenedorDinamico = document.getElementById('contenido-submodulo-dinamico');
     if (!contenedorDinamico) return;
 
-    // 🟢 ELIMINAR EL CUADRO/TARJETA: Quitamos clases de fondo, bordes y sombras del contenedor principal
-    contenedorDinamico.className = "w-full space-y-6 animate-fade-in";
-    contenedorDinamico.style.background = "transparent";
-    contenedorDinamico.style.boxShadow = "none";
-    contenedorDinamico.style.border = "none";
-    contenedorDinamico.style.padding = "0";
+    // 🟢 CONTENEDOR PRINCIPAL: Mismo diseño de tarjeta de la Imagen 2
+    contenedorDinamico.className = "w-full space-y-6 bg-white p-6 md:p-8 rounded-2xl soft-shadow border border-[#249444]/10 mb-8 animate-fade-in";
     
     // Spinner de carga inmediato
     contenedorDinamico.innerHTML = `
@@ -278,7 +274,7 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
 
         window._esAdminGeneralGlobal = tieneNivel5Global;
 
-        // 🟢 RENDERIZADO DIRECTO SIN EL DIV ENVOLVENTE REDUNDANTE
+        // 🟢 RENDERIZADO CON LA ESTRUCTURA EXACTA DE TARJETA
         contenedorDinamico.innerHTML = `
             <div class="flex items-center justify-between pb-4 border-b border-stone-100">
                 <div class="flex items-center gap-3">
