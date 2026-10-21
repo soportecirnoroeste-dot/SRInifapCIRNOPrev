@@ -186,8 +186,12 @@ async function abrirMatrizPermisosUsuario(nombreColaborador, noEmp) {
     const contenedorDinamico = document.getElementById('contenido-submodulo-dinamico');
     if (!contenedorDinamico) return;
 
-    // Asignamos directamente las clases del contenedor principal sin anidar otro div de tarjeta
-    contenedorDinamico.className = "w-full space-y-6 bg-white p-6 md:p-8 rounded-2xl soft-shadow border border-[#249444]/10 mb-8 animate-fade-in";
+    // 🟢 ELIMINAR EL CUADRO/TARJETA: Quitamos clases de fondo, bordes y sombras del contenedor principal
+    contenedorDinamico.className = "w-full space-y-6 animate-fade-in";
+    contenedorDinamico.style.background = "transparent";
+    contenedorDinamico.style.boxShadow = "none";
+    contenedorDinamico.style.border = "none";
+    contenedorDinamico.style.padding = "0";
     
     // Spinner de carga inmediato
     contenedorDinamico.innerHTML = `
